@@ -25,7 +25,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn:active{transform:scale(0.97)}
 .btn.pri{background:var(--g);border-color:var(--g);color:#fff}
 .btn.dan{background:var(--r);border-color:var(--r);color:#fff}
-.btn.pro{background:var(--p);border-color:var(--p);color:#fff}
 .btn.sm{flex:none;padding:5px 11px;font-size:12px}
 .btn.ib{flex:none;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;font-size:14px}
 .tabs{display:flex;border-bottom:0.5px solid var(--bd);flex-shrink:0;overflow-x:auto;background:var(--bg)}
@@ -37,25 +36,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tr{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;border:0.5px solid var(--bd);border-radius:var(--rad);margin-bottom:6px;background:var(--bg)}
 .tr.done{background:var(--gl);border-color:var(--gb)}
 .tr.pend{background:var(--al);border-color:var(--ab)}
-.tico{font-size:17px;width:24px;text-align:center;flex-shrink:0;padding-top:1px}
+.tico{font-size:17px;width:24px;text-align:center;flex-shrink:0;padding-top:2px}
 .tinfo{flex:1;min-width:0}
 .tname{font-size:13px;font-weight:600;color:var(--t);margin-bottom:2px}
 .tsub{font-size:11px;color:var(--t3)}
-.proof-row{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
-.proof-btn{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;border:0.5px solid var(--bd2);font-size:12px;font-weight:500;cursor:pointer;background:var(--bg);color:var(--t2)}
-.proof-btn.ticked{background:var(--gl);border-color:var(--gb);color:#085041}
-.proof-btn.photo-done{background:var(--pl);border-color:var(--pb);color:#26215C}
+.circ{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:600;cursor:pointer}
+.circ.done{background:var(--g);border-color:var(--g);color:#fff}
+.circ.pend{background:var(--ab);border-color:var(--ab);font-size:11px}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:6px}
 .pcard{border:0.5px solid var(--bd);border-radius:var(--rad);padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--bg)}
 .pcard.done{background:var(--gl);border-color:var(--gb)}
-
-.next-prayer{border-color:#1D9E75 !important;background:rgba(29,158,117,0.05) !important;}
-
-.circ{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:600}
-.circ.done{background:var(--g);border-color:var(--g);color:#fff}
+.pcard.next{border-color:var(--g)}
 .sbar{background:var(--bg2);border-radius:var(--rad);padding:11px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border:0.5px solid var(--bd)}
 .snum{font-size:22px;font-weight:700;color:var(--g)}
-.slbl2{font-size:10px;color:var(--t3);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.slbl{font-size:10px;color:var(--t3);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .lwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:var(--bg)}
 .cw{display:flex;gap:7px;justify-content:center;margin:14px 0}
 .cw input{width:42px;height:50px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--bd2);border-radius:var(--rad);padding:0;background:var(--bg);color:var(--t);-webkit-appearance:none}
@@ -76,7 +70,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rcard.unlocked{background:var(--gl);border-color:var(--gb)}
 .rcard.given{background:var(--bg2);opacity:.7}
 .rcard.selectable{border:2px solid var(--g);cursor:pointer}
-.pb{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;border:0.5px solid var(--bd)}
+.pb{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
 .pbf{height:100%;border-radius:3px;background:var(--g)}
 .seg{display:flex;border:0.5px solid var(--bd2);border-radius:var(--rad);overflow:hidden;margin-bottom:10px}
 .segb{flex:1;padding:7px;font-size:12px;font-weight:500;cursor:pointer;text-align:center;background:var(--bg);color:var(--t3);border:none}
@@ -106,44 +100,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tog::after{content:'';position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .tog.on::after{left:20px}
 .tog.off::after{left:3px}
-/* AVATAR */
-.avatar-circle{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer;border:3px solid var(--bd);position:relative;flex-shrink:0;overflow:hidden;background:var(--bg2)}
-.avatar-circle img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.avatar-circle .cam-overlay{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.4);padding:4px;text-align:center;font-size:10px;color:#fff}
-.avatar-sm{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;background:var(--bg2);border:2px solid var(--bd)}
-.avatar-sm img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.avatar-lg{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:34px;flex-shrink:0;overflow:hidden;background:var(--bg2);border:3px solid var(--bd)}
-.avatar-lg img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-/* KID PICKER */
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.saved-card{width:100%;padding:14px 16px;border:0.5px solid var(--bd);border-radius:var(--radl);cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:10px;background:var(--bg)}
+.saved-card:active{background:var(--gl)}
 .kid-picker{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .kid-pick-card{border:0.5px solid var(--bd);border-radius:var(--radl);padding:16px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:var(--bg);text-align:center}
 .kid-pick-card:active{background:var(--gl);border-color:var(--gb)}
-.kid-pick-name{font-size:14px;font-weight:600;color:var(--t)}
-.kid-pick-stars{font-size:12px;color:var(--g);font-weight:500}
-/* EMOJI PICKER */
 .emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0}
-.emoji-opt{font-size:26px;text-align:center;padding:8px;border-radius:var(--rad);cursor:pointer;border:0.5px solid transparent}
-.emoji-opt:hover{background:var(--bg2)}
+.emoji-opt{font-size:24px;text-align:center;padding:6px;border-radius:var(--rad);cursor:pointer;border:0.5px solid transparent}
 .emoji-opt.selected{border-color:var(--g);background:var(--gl)}
-/* SAVED PARENT CARD */
-.saved-parent-card{width:100%;padding:14px 16px;border:0.5px solid var(--bd);border-radius:var(--radl);cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:10px;background:var(--bg)}
-.saved-parent-card:active{background:var(--gl);border-color:var(--gb)}
-/* CHECKBOX */
 .check-row{display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer;font-size:13px;color:var(--t2)}
 .check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--g);cursor:pointer}
+/* Photo proof area */
+.proof-area{margin-top:8px;padding:8px;background:var(--bg2);border-radius:var(--rad);border:0.5px solid var(--bd)}
+.proof-btns{display:flex;gap:8px;margin-bottom:0}
+.proof-btn-tick{flex:1;padding:8px;border-radius:var(--rad);border:0.5px solid var(--gb);background:var(--gl);color:#085041;font-size:12px;font-weight:500;cursor:pointer;text-align:center}
+.proof-btn-tick:active{transform:scale(0.97)}
+.proof-btn-photo{flex:1;padding:8px;border-radius:var(--rad);border:0.5px solid var(--pb);background:var(--pl);color:#26215C;font-size:12px;font-weight:500;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px}
+.proof-btn-photo:active{transform:scale(0.97)}
+.proof-img{width:100%;max-height:90px;object-fit:cover;border-radius:6px;margin-top:7px;display:block}
 </style>
 </head>
 <body>
 <div class="app">
 
-<!-- HOME / WHO ARE YOU -->
+<!-- HOME -->
 <div class="screen active" id="s-home">
   <div class="lwrap">
     <div style="font-size:48px;margin-bottom:8px">⭐</div>
     <div style="font-size:22px;font-weight:700;margin-bottom:3px">StarKids</div>
     <div style="font-size:13px;color:var(--t3);margin-bottom:24px;text-align:center">Discipline · Habits · Rewards</div>
     <div style="width:100%" id="home-content"></div>
-    <div style="margin-top:20px;font-size:11px;color:var(--t3)">StarKids v6.1</div>
+    <div style="margin-top:18px;font-size:11px;color:var(--t3)">StarKids v7.0</div>
   </div>
 </div>
 
@@ -159,7 +148,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<!-- KID CODE ENTRY (first time) -->
+<!-- KID CODE -->
 <div class="screen" id="s-kidcode">
   <div class="topbar"><div class="tb-t">Kid login</div><button class="btn sm" onclick="SS('s-home');renderHome()">Back</button></div>
   <div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center">
@@ -169,25 +158,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="cw" id="ci"></div>
     <div id="cerr" style="font-size:12px;color:var(--r);min-height:16px;margin-bottom:10px"></div>
     <button class="btn pri" style="width:100%;max-width:260px;padding:12px" onclick="kidLogin()">Enter app</button>
-    <div style="margin-top:14px;font-size:12px;color:var(--t3)">First time? Ask your parent for the code.</div>
   </div>
 </div>
 
 <!-- LOADING -->
 <div class="screen" id="s-loading">
-  <div class="loading"><div class="spinner"></div><div id="loading-msg">Loading...</div></div>
+  <div class="loading"><div class="spinner"></div><div id="load-msg">Loading...</div></div>
 </div>
 
 <!-- PARENT MAIN -->
 <div class="screen" id="s-parent">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div id="p-avatar-top" onclick="SS('s-settings');renderSettings()" style="cursor:pointer"></div>
+      <div id="p-av-top" onclick="SS('s-settings');renderSettings()" style="cursor:pointer"></div>
       <div><div class="tb-t" id="p-tit">Dashboard</div><div class="tb-s" id="p-sub"></div></div>
     </div>
-    <div style="display:flex;align-items:center;gap:5px">
+    <div style="display:flex;gap:5px">
       <button class="btn sm" onclick="SS('s-settings');renderSettings()">⚙️</button>
-      <button class="btn sm" onclick="signOutParent()">Exit</button>
+      <button class="btn sm" onclick="doSignOut()">Exit</button>
     </div>
   </div>
   <div class="tabs">
@@ -204,10 +192,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="screen" id="s-kid">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div id="k-avatar-top"></div>
+      <div id="k-av-top"></div>
       <div><div class="tb-t" id="k-tit">My tasks</div><div class="tb-s" id="k-sub"></div></div>
     </div>
-    <div style="display:flex;align-items:center;gap:5px">
+    <div style="display:flex;gap:5px">
       <span id="k-stars" style="font-size:13px;font-weight:700;color:var(--g)"></span>
       <button class="btn sm" onclick="SS('s-home');renderHome()">Exit</button>
     </div>
@@ -220,14 +208,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- KID REWARD CHOOSER -->
-<div class="screen" id="s-kid-choose-reward">
+<div class="screen" id="s-choose-reward">
   <div class="topbar"><div class="tb-t">Choose your reward 🎉</div><button class="btn sm" onclick="SS('s-kid');renderKid()">Back</button></div>
-  <div class="content" id="kr-choose-body"></div>
+  <div class="content" id="choose-body"></div>
 </div>
 
 <!-- KID REWARDS VIEW -->
 <div class="screen" id="s-krewards">
-  <div class="topbar"><div class="tb-t" id="kr-tit">My Rewards</div><button class="btn sm" onclick="SS('s-kid');renderKid()">Back</button></div>
+  <div class="topbar"><div class="tb-t">My Rewards</div><button class="btn sm" onclick="SS('s-kid');renderKid()">Back</button></div>
   <div class="content" id="kr-body"></div>
 </div>
 
@@ -242,6 +230,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="topbar"><div class="tb-t" id="re-tit">Add reward</div><button class="btn sm" onclick="pTab('rewards');SS('s-parent')">Cancel</button></div>
   <div class="content" id="re-body"></div>
 </div>
+
+<!-- HIDDEN CAMERA INPUT — always present, never destroyed -->
+<input type="file" id="global-camera" accept="image/*" capture="environment" style="display:none;position:absolute;left:-9999px"/>
 
 </div>
 
@@ -261,7 +252,7 @@ const PC=[{n:'Morning prayer',t:'Start of day'},{n:'Midday prayer',t:'Noon'},{n:
 const SHD=[0,3];
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DS=['S','M','T','W','T','F','S'];
-const KID_EMOJIS=['👦','👧','🧒','👶','🧑','🧒‍♂️','🧒‍♀️','🦁','🐯','🦊','🐻','🐼','🐨','🦄','🐸','🐧','🦋','⭐','🌟','🚀','⚽','🎮','🎨','🎵'];
+const KEMOJIS=['👦','👧','🧒','👶','🦁','🐯','🦊','🐻','🐼','🦄','🐸','🐧','🦋','⭐','🚀','⚽','🎮','🎨','🎵','🌟','🏆','💪','🧠','🌈'];
 const DEF_TASKS=[
   {id:'t1',ico:'🛏',name:'Make bed',cat:'daily',stars:1},
   {id:'t2',ico:'🪥',name:'Brush teeth (morning)',cat:'daily',stars:1},
@@ -289,626 +280,536 @@ const DEF_REWARDS=[
 
 // ── STATE ─────────────────────────────────────────────
 let G={
-  parentUid:null,parentData:null,
+  pUid:null,pData:null,
   kids:[],tasks:DEF_TASKS,rewards:DEF_REWARDS,
   logs:{},pending:[],
-  currentKid:null,religion:'islam',currency:'SAR',prayersEnabled:true,
+  kid:null,religion:'islam',currency:'SAR',prayOn:true,
   editTask:null,editReward:null,repKid:null,
-  parentAvatar:null,// photo data url or null (uses emoji)
-  parentEmoji:'👨‍👩‍👧',
+  pEmoji:'👨‍👩‍👧',pPhoto:null,
+  apprKidTab:null,
+  prayerTimes:{},prayerCity:'',
 };
+let _unsubParent=null,_unsubLogs=null,_unsubKidLog=null;
+const LS_P='sk_p',LS_K='sk_k';
 
-// LocalStorage keys
-const LS_PARENT='sk_saved_parent';
-const LS_KIDS='sk_saved_kids';
-
-// ── UTILS ─────────────────────────────────────────────
-window.SS=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
-function uid(){return 'x'+Date.now()+Math.floor(Math.random()*999);}
-function today(){return new Date().toISOString().slice(0,10);}
-function dn(){return DAYS[new Date().getDay()];}
-function rndCode(){return String(Math.floor(100000+Math.random()*900000));}
-function prayers(){if(!G.prayersEnabled)return[];if(G.religion==='islam')return PI;if(G.religion==='christian')return PC;if(G.religion==='other')return[{n:'Morning prayer',t:'Your time'},{n:'Evening prayer',t:'Your time'}];return[];}
-function getLog(kidId,dk){if(!G.logs[kidId])G.logs[kidId]={};if(!G.logs[kidId][dk])G.logs[kidId][dk]={prayers:{},tasks:{},photos:{},ticked:{}};return G.logs[kidId][dk];}
-function calcStars(kidId,dk){const log=getLog(kidId,dk);let s=0;prayers().forEach(p=>{if(log.prayers[p.n])s++;});G.tasks.forEach(t=>{if(log.tasks[t.id]==='approved')s+=t.stars;});return s;}
-function wkeys(){const d=new Date();const dow=d.getDay();const k=[];for(let i=0;i<7;i++){const dd=new Date(d);dd.setDate(d.getDate()-dow+i);k.push(dd.toISOString().slice(0,10));}return k;}
-function mkeys(){const d=new Date();const y=d.getFullYear();const m=d.getMonth();const dm=new Date(y,m+1,0).getDate();const k=[];for(let i=1;i<=dm;i++)k.push(`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`);return k;}
-function wStars(kidId){return wkeys().reduce((a,k)=>a+calcStars(kidId,k),0);}
-function mStars(kidId){return mkeys().reduce((a,k)=>a+calcStars(kidId,k),0);}
-function avatarHtml(photo,emoji,color,size='sm'){
-  const cls=`avatar-${size}`;
-  if(photo)return`<div class="${cls}" style="border-color:${color||'var(--bd)'}"><img src="${photo}" /></div>`;
-  return`<div class="${cls}" style="background:${color||'var(--bg2)'}22;border-color:${color||'var(--bd)'}">${emoji||'⭐'}</div>`;
+// ── CAMERA — Global persistent input ─────────────────
+let _cameraCallback=null;
+const camInp=document.getElementById('global-camera');
+camInp.addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(file&&_cameraCallback){
+    const reader=new FileReader();
+    reader.onload=ev=>_cameraCallback(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+  // Reset so same file can be selected again
+  camInp.value='';
+});
+function openCamera(callback){
+  _cameraCallback=callback;
+  camInp.click();
 }
 
-// ── HOME SCREEN ───────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────
+window.SS=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+const uid=()=>'x'+Date.now()+Math.floor(Math.random()*999);
+const today=()=>new Date().toISOString().slice(0,10);
+const dn=()=>DAYS[new Date().getDay()];
+const rndCode=()=>String(Math.floor(100000+Math.random()*900000));
+const prayers=()=>{if(!G.prayOn)return[];if(G.religion==='islam')return PI;if(G.religion==='christian')return PC;if(G.religion==='other')return[{n:'Morning prayer',t:'Your time'},{n:'Evening prayer',t:'Your time'}];return[];};
+const getLog=(kidId,dk)=>{if(!G.logs[kidId])G.logs[kidId]={};if(!G.logs[kidId][dk])G.logs[kidId][dk]={prayers:{},tasks:{},photos:{},ticked:{}};return G.logs[kidId][dk];};
+const calcStars=(kidId,dk)=>{const log=getLog(kidId,dk);let s=0;prayers().forEach(p=>{if(log.prayers[p.n])s++;});G.tasks.forEach(t=>{if(log.tasks[t.id]==='approved')s+=t.stars;});return s;};
+const wkeys=()=>{const d=new Date();const dow=d.getDay();const k=[];for(let i=0;i<7;i++){const dd=new Date(d);dd.setDate(d.getDate()-dow+i);k.push(dd.toISOString().slice(0,10));}return k;};
+const mkeys=()=>{const d=new Date();const y=d.getFullYear();const m=d.getMonth();const dm=new Date(y,m+1,0).getDate();const k=[];for(let i=1;i<=dm;i++)k.push(`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`);return k;};
+const wStars=id=>wkeys().reduce((a,k)=>a+calcStars(id,k),0);
+const mStars=id=>mkeys().reduce((a,k)=>a+calcStars(id,k),0);
+const avDiv=(photo,emoji,color,size=36)=>photo?`<div class="av" style="width:${size}px;height:${size}px;border:2px solid ${color||'var(--g)'}"><img src="${photo}"/></div>`:`<div class="av" style="width:${size}px;height:${size}px;background:${color||'#1D9E75'}22;border:2px solid ${color||'var(--g)'};font-size:${Math.round(size*0.45)}px">${emoji||'⭐'}</div>`;
+
+// ── LOCAL STORAGE ─────────────────────────────────────
+const getSavedP=()=>{try{const d=localStorage.getItem(LS_P);return d?JSON.parse(d):null;}catch{return null;}};
+const getSavedK=()=>{try{const d=localStorage.getItem(LS_K);return d?JSON.parse(d):[];}catch{return[];}};
+const savePLocal=data=>{try{localStorage.setItem(LS_P,JSON.stringify(data));}catch{}};
+const saveKLocal=(kid,ws)=>{try{const kids=getSavedK();const i=kids.findIndex(k=>k.code===kid.code);const e={name:kid.name,code:kid.code,color:kid.color,emoji:kid.emoji,photo:kid.photo,ws};if(i>-1)kids[i]=e;else kids.push(e);localStorage.setItem(LS_K,JSON.stringify(kids));}catch{}};
+const clearSavedK=()=>{try{localStorage.removeItem(LS_K);}catch{}};
+window.clearSavedP=()=>{localStorage.removeItem(LS_P);renderHome();};
+
+// ── HOME ──────────────────────────────────────────────
 function renderHome(){
-  const saved=getSavedParent();
-  const savedKids=getSavedKids();
+  const sp=getSavedP();const sk=getSavedK();
   let h='';
-
-  // Saved parent quick login
-  if(saved){
+  if(sp){
     h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">👋 Welcome back</div>`;
-    h+=`<div class="saved-parent-card" onclick="quickParentLogin('${saved.email}','${saved.pass}')">`;
-    h+=`<div style="width:50px;height:50px;border-radius:50%;background:${saved.color||'#1D9E75'}22;border:2px solid ${saved.color||'#1D9E75'};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${saved.photo?`<img src="${saved.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:saved.emoji||'👨‍👩‍👧'}</div>`;
-    h+=`<div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--t)">${saved.name}</div><div style="font-size:12px;color:var(--t3)">Parent · Tap to sign in instantly</div></div><div style="font-size:20px">→</div></div>`;
-    h+=`<div style="text-align:center;margin-bottom:14px"><span style="font-size:12px;color:var(--t3);cursor:pointer" onclick="clearSavedParent()">Not you? Sign in differently</span></div>`;
+    h+=`<div class="saved-card" onclick="quickPLogin('${sp.email}','${encodeURIComponent(sp.pass)}')">`;
+    h+=avDiv(sp.photo,sp.emoji,'#1D9E75',46);
+    h+=`<div style="flex:1"><div style="font-size:14px;font-weight:600">${sp.name}</div><div style="font-size:12px;color:var(--t3)">Parent · Tap to sign in</div></div><div style="font-size:20px;color:var(--t3)">→</div></div>`;
+    h+=`<div style="text-align:center;margin-bottom:12px"><span style="font-size:12px;color:var(--t3);cursor:pointer" onclick="clearSavedP()">Not you? Sign in differently</span></div>`;
   }
-
-  // Saved kids quick login
-  if(savedKids&&savedKids.length>0){
+  if(sk.length){
     h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">👦 Kids</div>`;
     h+=`<div class="kid-picker">`;
-    savedKids.forEach(k=>{
-      h+=`<div class="kid-pick-card" onclick="quickKidLogin('${k.code}')">`;
-      if(k.photo)h+=`<div style="width:60px;height:60px;border-radius:50%;overflow:hidden;border:3px solid ${k.color||'#1D9E75'}"><img src="${k.photo}" style="width:100%;height:100%;object-fit:cover"/></div>`;
-      else h+=`<div style="width:60px;height:60px;border-radius:50%;background:${k.color||'#1D9E75'}22;border:3px solid ${k.color||'#1D9E75'};display:flex;align-items:center;justify-content:center;font-size:26px">${k.emoji||'👦'}</div>`;
-      h+=`<div class="kid-pick-name">${k.name}</div>`;
-      h+=`<div class="kid-pick-stars">⭐ ${k.weekStars||0} this week</div>`;
+    sk.forEach(k=>{
+      h+=`<div class="kid-pick-card" onclick="quickKLogin('${k.code}')">`;
+      h+=avDiv(k.photo,k.emoji||'👦',k.color||'#1D9E75',60);
+      h+=`<div style="font-size:14px;font-weight:600;color:var(--t)">${k.name}</div>`;
+      h+=`<div style="font-size:12px;color:var(--g)">⭐ ${k.ws||0} this week</div>`;
       h+=`</div>`;
     });
     h+=`</div>`;
   }
-
-  // Always show these options
-  if(!saved){
-    h+=`<div style="border:0.5px solid var(--bd);border-radius:var(--radl);padding:13px 15px;cursor:pointer;display:flex;align-items:center;gap:13px;margin-bottom:9px;background:var(--bg)" onclick="SS('s-parent-auth');renderAuthForm()"><span style="font-size:22px;width:32px;text-align:center">👨‍👩‍👧</span><div><div style="font-size:14px;font-weight:600">Parent login / sign up</div><div style="font-size:12px;color:var(--t3)">Manage family · approve tasks · rewards</div></div></div>`;
+  if(!sp){
+    h+=`<div class="saved-card" onclick="SS('s-parent-auth');renderAuthForm()"><span style="font-size:22px;width:32px;text-align:center">👨‍👩‍👧</span><div><div style="font-size:14px;font-weight:600">Parent login / sign up</div><div style="font-size:12px;color:var(--t3)">Manage family · tasks · rewards</div></div></div>`;
   }
-
-  h+=`<div style="border:0.5px solid var(--bd);border-radius:var(--radl);padding:13px 15px;cursor:pointer;display:flex;align-items:center;gap:13px;margin-bottom:9px;background:var(--bg)" onclick="SS('s-kidcode');buildCI()"><span style="font-size:22px;width:32px;text-align:center">🔑</span><div><div style="font-size:14px;font-weight:600">Enter a new code</div><div style="font-size:12px;color:var(--t3)">First time on this device? Enter your code</div></div></div>`;
-
+  h+=`<div class="saved-card" onclick="SS('s-kidcode');buildCI()"><span style="font-size:22px;width:32px;text-align:center">🔑</span><div><div style="font-size:14px;font-weight:600">Enter a new code</div><div style="font-size:12px;color:var(--t3)">First time on this device?</div></div></div>`;
   document.getElementById('home-content').innerHTML=h;
 }
 
-// ── SAVED LOGIN (localStorage) ────────────────────────
-function getSavedParent(){try{const d=localStorage.getItem(LS_PARENT);return d?JSON.parse(d):null;}catch{return null;}}
-function getSavedKids(){try{const d=localStorage.getItem(LS_KIDS);return d?JSON.parse(d):[];}catch{return[];}}
-function saveParentLocally(data){try{localStorage.setItem(LS_PARENT,JSON.stringify(data));}catch{}}
-function saveKidLocally(kid,weekStars){
-  try{
-    const kids=getSavedKids();
-    const idx=kids.findIndex(k=>k.code===kid.code);
-    const entry={name:kid.name,code:kid.code,color:kid.color,emoji:kid.emoji,photo:kid.photo,weekStars};
-    if(idx>-1)kids[idx]=entry;else kids.push(entry);
-    localStorage.setItem(LS_KIDS,JSON.stringify(kids));
-  }catch{}
+// ── FIREBASE SAVE ─────────────────────────────────────
+let _saveTimer=null;
+async function saveP(){
+  if(!G.pUid)return;
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(async()=>{
+    try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,emoji:G.pEmoji,photo:G.pPhoto||null,upd:new Date().toISOString()});}
+    catch(e){console.error('saveP',e);}
+  },600);
 }
-window.clearSavedParent=function(){localStorage.removeItem(LS_PARENT);renderHome();}
+let _logTimers={};
+async function saveLog(kidId,dk){
+  if(!G.pUid)return;
+  const key=kidId+'_'+dk;
+  clearTimeout(_logTimers[key]);
+  _logTimers[key]=setTimeout(async()=>{
+    try{await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:getLog(kidId,dk),upd:new Date().toISOString()});}
+    catch(e){console.error('saveLog',e);}
+  },500);
+}
+async function loadP(uid){
+  G.pUid=uid;
+  try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DEF_TASKS;G.rewards=d.rewards||DEF_REWARDS;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;}}
+  catch(e){console.error('loadP',e);}
+}
+async function loadLogs(kidId){
+  if(!G.pUid)return;
+  try{const q=query(collection(db,'logs'),where('pUid','==',G.pUid),where('kidId','==',kidId));const s=await getDocs(q);s.forEach(d=>{const x=d.data();if(!G.logs[kidId])G.logs[kidId]={};G.logs[kidId][x.date]=x.log;});}
+  catch(e){console.error('loadLogs',e);}
+}
 
-window.quickParentLogin=async function(email,pass){
-  SS('s-loading');document.getElementById('loading-msg').textContent='Signing you in...';
-  try{await signInWithEmailAndPassword(auth,email,pass);}
-  catch(e){SS('s-home');renderHome();alert('Auto sign-in failed. Please sign in again.');clearSavedParent();}
+// ── REAL-TIME LISTENERS ───────────────────────────────
+function startPListener(uid){
+  if(_unsubParent)_unsubParent();
+  _unsubParent=onSnapshot(doc(db,'parents',uid),snap=>{
+    if(!snap.exists())return;
+    const d=snap.data();
+    G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;
+    G.religion=d.religion||G.religion;G.currency=d.currency||G.currency;G.prayOn=d.prayOn!==false;
+    // Kid: check if current kid still exists — if not, kick to home
+    if(G.kid){
+      const stillExists=G.kids.find(k=>k.id===G.kid.id);
+      if(!stillExists){
+        stopListeners();
+        clearSavedK();
+        alert(`${G.kid.name}'s account has been removed by the parent.`);
+        G.kid=null;SS('s-home');renderHome();return;
+      }
+      // Update kid data in case it changed
+      const updated=G.kids.find(k=>k.id===G.kid.id);
+      if(updated)G.kid=updated;
+    }
+    // Parent: refresh active tab
+    if(document.getElementById('s-parent').classList.contains('active')){
+      const at=document.querySelector('.tab.active');
+      if(at)pTab(at.id.replace('t-',''));
+    }
+    // Kid: refresh if on kid screen (debounced)
+    if(document.getElementById('s-kid').classList.contains('active')){
+      schedKidRefresh();
+    }
+  },e=>console.error('pListener',e));
 }
-window.quickKidLogin=async function(code){
-  SS('s-loading');document.getElementById('loading-msg').textContent='Loading your tasks...';
-  await doKidLogin(code);
+
+function startLogListener(uid,kidId){
+  if(_unsubKidLog)_unsubKidLog();
+  const dk=today();
+  _unsubKidLog=onSnapshot(doc(db,'logs',`${uid}_${kidId}_${dk}`),snap=>{
+    if(!snap.exists())return;
+    const d=snap.data();
+    if(!G.logs[kidId])G.logs[kidId]={};
+    G.logs[kidId][dk]=d.log;
+    // Refresh kid screen with debounce
+    if(document.getElementById('s-kid').classList.contains('active'))schedKidRefresh();
+  },e=>console.error('logListener',e));
+}
+
+function startLogsListener(uid){
+  if(_unsubLogs)_unsubLogs();
+  _unsubLogs=onSnapshot(query(collection(db,'logs'),where('pUid','==',uid)),snap=>{
+    snap.docChanges().forEach(ch=>{
+      if(ch.type==='added'||ch.type==='modified'){
+        const d=ch.doc.data();
+        if(!G.logs[d.kidId])G.logs[d.kidId]={};
+        G.logs[d.kidId][d.date]=d.log;
+      }
+    });
+    rebuildPending();
+    document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';
+    document.title=G.pending.length?`(${G.pending.length}) StarKids`:'StarKids';
+    if(document.getElementById('s-parent').classList.contains('active')){
+      const at=document.querySelector('.tab.active');
+      if(at&&at.id==='t-appr')pTab('appr');
+    }
+  },e=>console.error('logsListener',e));
+}
+
+function stopListeners(){
+  if(_unsubParent){_unsubParent();_unsubParent=null;}
+  if(_unsubLogs){_unsubLogs();_unsubLogs=null;}
+  if(_unsubKidLog){_unsubKidLog();_unsubKidLog=null;}
+}
+
+function rebuildPending(){
+  const np=[];
+  Object.keys(G.logs).forEach(kidId=>{
+    const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
+    Object.keys(G.logs[kidId]).forEach(dk=>{
+      const log=G.logs[kidId][dk];if(!log||!log.tasks)return;
+      G.tasks.forEach(task=>{
+        if(log.tasks[task.id]==='pending'){
+          const ex=np.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk);
+          if(!ex)np.push({kidId,kidName:kid.name,kidPhoto:kid.photo,kidEmoji:kid.emoji,kidColor:kid.color,task,tid:task.id,date:dk,time:'',photo:log.photos?log.photos[task.id]||null:null,ticked:log.ticked?!!log.ticked[task.id]:false});
+        }
+      });
+    });
+  });
+  G.pending=np;
+}
+
+// Debounced kid refresh — prevents re-render while user is typing/tapping
+let _kidRefTimer=null;
+function schedKidRefresh(){
+  clearTimeout(_kidRefTimer);
+  _kidRefTimer=setTimeout(()=>{
+    if(document.getElementById('s-kid').classList.contains('active'))renderKid();
+  },2000);
 }
 
 // ── AUTH STATE ────────────────────────────────────────
 onAuthStateChanged(auth,async user=>{
   if(user){
-    SS('s-loading');document.getElementById('loading-msg').textContent='Loading your dashboard...';
-    await loadParentData(user.uid);
+    SS('s-loading');document.getElementById('load-msg').textContent='Loading...';
+    await loadP(user.uid);
     openParent(user);
   } else {
     renderHome();
   }
 });
 
-// ── FIREBASE ──────────────────────────────────────────
-async function saveParentData(){
-  if(!G.parentUid)return;
-  try{
-    await setDoc(doc(db,'parents',G.parentUid),{
-      name:G.parentData?.name||'Parent',
-      religion:G.religion,currency:G.currency,prayersEnabled:G.prayersEnabled,
-      kids:G.kids,tasks:G.tasks,rewards:G.rewards,
-      emoji:G.parentEmoji,photo:G.parentAvatar||null,
-      updatedAt:new Date().toISOString()
-    });
-  }catch(e){console.error('Save error',e);}
-}
-async function loadParentData(uid){
-  G.parentUid=uid;
-  try{
-    const snap=await getDoc(doc(db,'parents',uid));
-    if(snap.exists()){
-      const d=snap.data();
-      G.parentData={name:d.name};
-      G.religion=d.religion||'islam';
-      G.currency=d.currency||'SAR';
-      G.prayersEnabled=d.prayersEnabled!==false;
-      G.kids=d.kids||[];
-      G.tasks=d.tasks||DEF_TASKS;
-      G.rewards=d.rewards||DEF_REWARDS;
-      G.parentEmoji=d.emoji||'👨‍👩‍👧';
-      G.parentAvatar=d.photo||null;
-    }
-  }catch(e){console.error('Load error',e);}
-}
-let _saveLogTimers = {};
-async function saveLog(kidId,dk){
-  if(!G.parentUid)return;
-  // Debounce saves — wait 800ms before actually writing
-  const key = kidId+'_'+dk;
-  clearTimeout(_saveLogTimers[key]);
-  _saveLogTimers[key] = setTimeout(async()=>{
-    try{
-      await setDoc(doc(db,'logs',`${G.parentUid}_${kidId}_${dk}`),{
-        parentUid:G.parentUid,kidId,date:dk,
-        log:getLog(kidId,dk),
-        updatedAt:new Date().toISOString()
-      });
-    }catch(e){console.error('Log save',e);}
-  }, 800);
-}
-
-async function loadLogsForKid(kidId){
-  if(!G.parentUid)return;
-  try{
-    const q=query(collection(db,'logs'),where('parentUid','==',G.parentUid),where('kidId','==',kidId));
-    const snaps=await getDocs(q);
-    snaps.forEach(s=>{const d=s.data();if(!G.logs[kidId])G.logs[kidId]={};G.logs[kidId][d.date]=d.log;});
-  }catch(e){console.error('Log load',e);}
-}
-
-
-// ── EVENT DELEGATION FOR KID SCREEN ──────────────────
-// Called ONCE after kid logs in — survives re-renders
-let _kidDelegationInit = false;
-function initKidEventDelegation(){
-  if(_kidDelegationInit) return;
-  _kidDelegationInit = true;
-  const kBody = document.getElementById('k-body');
-  if(!kBody) return;
-
-  // Photo input change — event delegation on k-body
-  kBody.addEventListener('change', e=>{
-    if(!e.target.classList.contains('photo-inp')) return;
-    markInteracting();
-    const file = e.target.files[0];
-    if(!file) return;
-    const tid = e.target.dataset.tid;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const lg = getLog(G.currentKid.id, today());
-      lg.photos[tid] = ev.target.result;
-      const ex = G.pending.find(x=>x.kidId===G.currentKid.id&&x.tid===tid&&x.date===today());
-      if(!ex){
-        const task = G.tasks.find(x=>x.id===tid);
-        if(lg.tasks[tid]!=='approved'){
-          lg.tasks[tid]='pending';
-          G.pending.push({
-            kidId:G.currentKid.id,kidName:G.currentKid.name,
-            task,tid,date:today(),
-            time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
-            photo:ev.target.result,ticked:!!lg.ticked[tid]
-          });
-        }
-      } else {
-        ex.photo = ev.target.result;
-      }
-      saveLog(G.currentKid.id, today());
-      // Update just the task row without full re-render
-      updateTaskRowOnly(tid, lg);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // Click delegation for tick buttons and prayer cards
-  kBody.addEventListener('click', e=>{
-    markInteracting();
-  });
-}
-
-// Update a single task row without full re-render (prevents freeze)
-function updateTaskRowOnly(tid, log){
-  const task = G.tasks.find(t=>t.id===tid);
-  if(!task) return;
-  // Find the task row and update its content
-  const rows = document.querySelectorAll('#k-body .tr');
-  rows.forEach(row=>{
-    // Check if this row contains the photo input for this task
-    const inp = row.querySelector(`.photo-inp[data-tid="${tid}"]`);
-    const tickEl = row.querySelector(`[onclick*="kidTick(\'${tid}\')"]`);
-    if(inp || tickEl){
-      // Replace just this row
-      const newRowHtml = kidRow(task, log);
-      const temp = document.createElement('div');
-      temp.innerHTML = newRowHtml;
-      const newRow = temp.firstElementChild;
-      if(newRow) row.replaceWith(newRow);
-    }
-  });
-  // Update stars bar
-  const ts = calcStars(G.currentKid.id, today());
-  const ws = wStars(G.currentKid.id);
-  const snumEl = document.querySelector('.snum');
-  if(snumEl) snumEl.textContent = ts + ' ⭐';
-  const wsEl = document.querySelector('.sbar div[style*="text-align:right"] div:last-child');
-  if(wsEl) wsEl.textContent = ws + ' ⭐';
-  document.getElementById('k-stars').textContent = '⭐ ' + ws;
-}
-
-// ── REAL-TIME LISTENERS ───────────────────────────────
-let _unsubParent=null;
-let _unsubPending=null;
-let _unsubKidLog=null;
-
-function startParentListener(uid){
-  // Stop any existing listener
-  if(_unsubParent)_unsubParent();
-  _unsubParent=onSnapshot(doc(db,'parents',uid),(snap)=>{
-    if(!snap.exists())return;
-    const d=snap.data();
-    // Update kids, tasks, rewards in real time
-    G.kids=d.kids||G.kids;
-    G.tasks=d.tasks||G.tasks;
-    G.rewards=d.rewards||G.rewards;
-    G.religion=d.religion||G.religion;
-    G.currency=d.currency||G.currency;
-    G.prayersEnabled=d.prayersEnabled!==false;
-    G.parentEmoji=d.emoji||G.parentEmoji;
-    G.parentAvatar=d.photo||G.parentAvatar;
-    // If parent dashboard is open — refresh approvals and rewards
-    const activeTab=document.querySelector('.tab.active');
-    if(activeTab&&document.getElementById('s-parent').classList.contains('active')){
-      const tabId=activeTab.id.replace('t-','');
-      if(tabId==='appr'||tabId==='rewards')pTab(tabId);
-    }
-    // If kid screen open — use debounced render
-    renderKidDebounced();
-  },(e)=>console.error('Parent listener error',e));
-}
-
-function startPendingListener(uid){
-  // Listen to all logs for this parent — detect new pending submissions
-  if(_unsubPending)_unsubPending();
-  _unsubPending=onSnapshot(
-    query(collection(db,'logs'),where('parentUid','==',uid)),
-    (snap)=>{
-      snap.docChanges().forEach(change=>{
-        if(change.type==='added'||change.type==='modified'){
-          const d=change.doc.data();
-          if(!G.logs[d.kidId])G.logs[d.kidId]={};
-          G.logs[d.kidId][d.date]=d.log;
-          // Rebuild pending list from all logs
-          rebuildPendingFromLogs();
-          // Update approval badge
-          document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';
-          // If approvals tab open — refresh it
-          const activeEl=document.getElementById('t-appr');
-          if(activeEl&&activeEl.classList.contains('active')&&document.getElementById('s-parent').classList.contains('active')){
-            pTab('appr');
-          }
-          // Show notification dot in browser title
-          if(G.pending.length>0){
-            document.title=`(${G.pending.length}) StarKids`;
-          } else {
-            document.title='StarKids';
-          }
-        }
-      });
-    },(e)=>console.error('Pending listener error',e)
-  );
-}
-
-function startKidLogListener(parentUid,kidId){
-  // Listen to today's log for this kid — parent approvals show instantly
-  if(_unsubKidLog)_unsubKidLog();
-  const dk=today();
-  _unsubKidLog=onSnapshot(
-    doc(db,'logs',`${parentUid}_${kidId}_${dk}`),
-    (snap)=>{
-      if(!snap.exists())return;
-      const d=snap.data();
-      if(!G.logs[kidId])G.logs[kidId]={};
-      G.logs[kidId][dk]=d.log;
-      // Refresh kid screen if open — use debounced to avoid freezing
-      renderKidDebounced();
-    },(e)=>console.error('Kid log listener error',e)
-  );
-}
-
-function rebuildPendingFromLogs(){
-  // Rebuild the pending approvals list from all logs
-  const newPending=[];
-  Object.keys(G.logs).forEach(kidId=>{
-    const kid=G.kids.find(k=>k.id===kidId);
-    if(!kid)return;
-    Object.keys(G.logs[kidId]).forEach(dk=>{
-      const log=G.logs[kidId][dk];
-      if(!log||!log.tasks)return;
-      G.tasks.forEach(task=>{
-        if(log.tasks[task.id]==='pending'){
-          // Check not already in pending
-          const exists=newPending.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk);
-          if(!exists){
-            newPending.push({
-              kidId,kidName:kid.name,task,tid:task.id,date:dk,
-              time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
-              photo:log.photos?log.photos[task.id]||null:null,
-              ticked:log.ticked?!!log.ticked[task.id]:false
-            });
-          }
-        }
-      });
-    });
-  });
-  G.pending=newPending;
-}
-
-function stopAllListeners(){
-  if(_unsubParent){_unsubParent();_unsubParent=null;}
-  if(_unsubPending){_unsubPending();_unsubPending=null;}
-  if(_unsubKidLog){_unsubKidLog();_unsubKidLog=null;}
-}
-
-
-// ── AUTH FUNCTIONS ────────────────────────────────────
-let authMode='signin';
-window.setAuthMode=function(mode){
-  authMode=mode;
+// ── PARENT AUTH ───────────────────────────────────────
+let _authMode='signin';
+window.setAuthMode=mode=>{
+  _authMode=mode;
   document.querySelectorAll('#auth-seg .segb').forEach((b,i)=>b.classList.toggle('active',(mode==='signin'&&i===0)||(mode==='signup'&&i===1)));
   renderAuthForm();
-}
+};
 window.renderAuthForm=function(){
   const f=document.getElementById('auth-form');
-  if(authMode==='signin'){
+  if(_authMode==='signin'){
     f.innerHTML=`
       <div class="info g">Sign in to your parent account.</div>
-      <input class="inp" id="li-email" type="email" placeholder="Email address" autocomplete="email"/>
+      <input class="inp" id="li-e" type="email" placeholder="Email" autocomplete="email"/>
       <div style="position:relative;margin-bottom:10px">
-        <input class="inp" id="li-pass" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px"/>
-        <div onclick="togglePass('li-pass','li-eye')" id="li-eye" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3);user-select:none">👁</div>
+        <input class="inp" id="li-p" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px"/>
+        <div onclick="togglePw('li-p','li-eye')" id="li-eye" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3)">👁</div>
       </div>
-      <label class="check-row"><input type="checkbox" id="li-remember" checked/> Remember me on this device</label>
-      <div id="auth-err" style="color:var(--r);font-size:12px;margin-bottom:8px;min-height:16px"></div>
-      <button class="btn pri" style="width:100%;padding:12px;font-size:14px;margin-top:6px" onclick="doSignIn()">Sign in →</button>
-      <div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--g);cursor:pointer;font-weight:500" onclick="showResetPassword()">Forgot password? Reset it →</span></div>
-    `;
+      <label class="check-row"><input type="checkbox" id="li-rem" checked/> Remember me on this device</label>
+      <div id="a-err" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <button class="btn pri" style="width:100%;padding:12px;margin-top:4px" onclick="doSignIn()">Sign in →</button>
+      <div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--g);cursor:pointer;font-weight:500" onclick="showReset()">Forgot password? Reset it →</span></div>`;
   } else {
     f.innerHTML=`
-      <div class="info g">Create your parent account. Free 7-day trial.</div>
-      <input class="inp" id="su-name" placeholder="Your name" autocomplete="name"/>
-      <input class="inp" id="su-email" type="email" placeholder="Email address" autocomplete="email"/>
+      <div class="info g">Create account. Free 7-day trial.</div>
+      <input class="inp" id="su-n" placeholder="Your name" autocomplete="name"/>
+      <input class="inp" id="su-e" type="email" placeholder="Email" autocomplete="email"/>
       <div style="position:relative;margin-bottom:10px">
-        <input class="inp" id="su-pass" type="password" placeholder="Password (min 6 characters)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px"/>
-        <div onclick="togglePass('su-pass','su-eye')" id="su-eye" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3);user-select:none">👁</div>
+        <input class="inp" id="su-p" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px"/>
+        <div onclick="togglePw('su-p','su-eye')" id="su-eye" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3)">👁</div>
       </div>
-      <div class="ff"><label>Religion / prayer module</label><select id="su-rel" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;background:var(--bg);color:var(--t)"><option value="islam">Islam — 5 daily prayers</option><option value="christian">Christian — 3 prayer times</option><option value="other">Other — custom</option><option value="none">None — hide prayers</option></select></div>
-      <div class="ff"><label>Currency</label><select id="su-cur" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;background:var(--bg);color:var(--t)"><option value="SAR">SAR — Saudi Riyal</option><option value="USD">USD — US Dollar</option><option value="GBP">GBP — British Pound</option><option value="AED">AED — UAE Dirham</option></select></div>
-      <label class="check-row"><input type="checkbox" id="su-remember" checked/> Remember me on this device</label>
-      <div id="auth-err" style="color:var(--r);font-size:12px;margin-bottom:8px;min-height:16px"></div>
-      <button class="btn pri" style="width:100%;padding:12px;font-size:14px;margin-top:6px" onclick="doSignUp()">Create account →</button>
-    `;
+      <div class="ff"><label>Religion / prayer module</label><select id="su-r" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"><option value="islam">Islam — 5 daily prayers</option><option value="christian">Christian — 3 prayer times</option><option value="other">Other — custom</option><option value="none">None — hide prayers</option></select></div>
+      <div class="ff"><label>Currency</label><select id="su-c" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"><option value="SAR">SAR — Saudi Riyal</option><option value="USD">USD — US Dollar</option><option value="GBP">GBP — British Pound</option><option value="AED">AED — UAE Dirham</option></select></div>
+      <label class="check-row"><input type="checkbox" id="su-rem" checked/> Remember me on this device</label>
+      <div id="a-err" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <button class="btn pri" style="width:100%;padding:12px;margin-top:4px" onclick="doSignUp()">Create account →</button>`;
   }
-}
-window.doSignIn=async function(){
-  const email=document.getElementById('li-email').value.trim();
-  const pass=document.getElementById('li-pass').value;
-  const remember=document.getElementById('li-remember').checked;
-  const errEl=document.getElementById('auth-err');
-  if(!email||!pass){errEl.textContent='Please fill all fields.';return;}
-  errEl.textContent='Signing in...';
-  try{
-    const cred=await signInWithEmailAndPassword(auth,email,pass);
-    if(remember){
-      // Will save after loading parent data
-      G._rememberOnLoad={email,pass};
-    }
-  }catch(e){
-    errEl.textContent=e.code==='auth/invalid-credential'?'Wrong email or password.':e.message;
-  }
-}
-window.doSignUp=async function(){
-  const name=document.getElementById('su-name').value.trim();
-  const email=document.getElementById('su-email').value.trim();
-  const pass=document.getElementById('su-pass').value;
-  const rel=document.getElementById('su-rel').value;
-  const cur=document.getElementById('su-cur').value;
-  const remember=document.getElementById('su-remember').checked;
-  const errEl=document.getElementById('auth-err');
-  if(!name||!email||!pass){errEl.textContent='Please fill all fields.';return;}
-  if(pass.length<6){errEl.textContent='Password must be at least 6 characters.';return;}
-  errEl.textContent='Creating account...';
-  try{
-    const cred=await createUserWithEmailAndPassword(auth,email,pass);
-    await updateProfile(cred.user,{displayName:name});
-    G.parentUid=cred.user.uid;G.parentData={name};
-    G.religion=rel;G.currency=cur;G.prayersEnabled=rel!=='none';
-    G.kids=[];G.tasks=DEF_TASKS;G.rewards=DEF_REWARDS;
-    G.parentEmoji='👨‍👩‍👧';G.parentAvatar=null;
-    await saveParentData();
-    if(remember){saveParentLocally({email,pass,name,emoji:G.parentEmoji,photo:null,color:'#1D9E75'});}
-    openParent(cred.user);
-  }catch(e){errEl.textContent=e.code==='auth/email-already-in-use'?'Email already used. Try signing in.':e.message;}
-}
-window.signOutParent=async function(){
-  stopAllListeners();
-  await signOut(auth);
-  G.parentUid=null;G.parentData=null;G.kids=[];G.logs={};G.pending=[];
-  document.title='StarKids';
-  SS('s-home');renderHome();
-}
+};
+window.togglePw=(iid,eid)=>{const i=document.getElementById(iid);const e=document.getElementById(eid);if(!i)return;i.type=i.type==='password'?'text':'password';if(e)e.textContent=i.type==='password'?'👁':'🙈';};
+window.showReset=()=>{
+  document.getElementById('auth-form').innerHTML=`
+    <div class="info a">Enter your email to receive a password reset link.</div>
+    <input class="inp" id="rst-e" type="email" placeholder="Your email"/>
+    <div id="rst-msg" style="font-size:13px;min-height:18px;text-align:center;margin-bottom:8px"></div>
+    <button class="btn pri" style="width:100%;padding:12px" onclick="doReset()">Send reset link →</button>
+    <div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--t3);cursor:pointer" onclick="renderAuthForm()">← Back to sign in</span></div>`;
+};
+window.doReset=async()=>{
+  const e=document.getElementById('rst-e').value.trim();const m=document.getElementById('rst-msg');
+  if(!e){m.style.color='var(--r)';m.textContent='Enter your email.';return;}
+  m.style.color='var(--t3)';m.textContent='Sending...';
+  try{await sendPasswordResetEmail(auth,e);m.style.color='var(--g)';m.textContent='✅ Reset link sent! Check your inbox.';}
+  catch(err){m.style.color='var(--r)';m.textContent=err.code==='auth/user-not-found'?'No account found with this email.':err.message;}
+};
+window.doSignIn=async()=>{
+  const e=document.getElementById('li-e').value.trim();const p=document.getElementById('li-p').value;const rem=document.getElementById('li-rem').checked;
+  const err=document.getElementById('a-err');if(!e||!p){err.textContent='Fill all fields.';return;}err.textContent='Signing in...';
+  try{await signInWithEmailAndPassword(auth,e,p);if(rem)G._remSave={email:e,pass:p};}
+  catch(ex){err.textContent=ex.code==='auth/invalid-credential'?'Wrong email or password.':ex.message;}
+};
+window.doSignUp=async()=>{
+  const n=document.getElementById('su-n').value.trim();const e=document.getElementById('su-e').value.trim();const p=document.getElementById('su-p').value;
+  const rel=document.getElementById('su-r').value;const cur=document.getElementById('su-c').value;const rem=document.getElementById('su-rem').checked;
+  const err=document.getElementById('a-err');if(!n||!e||!p){err.textContent='Fill all fields.';return;}if(p.length<6){err.textContent='Password min 6 characters.';return;}err.textContent='Creating...';
+  try{const c=await createUserWithEmailAndPassword(auth,e,p);await updateProfile(c.user,{displayName:n});G.pUid=c.user.uid;G.pData={name:n};G.religion=rel;G.currency=cur;G.prayOn=rel!=='none';G.kids=[];G.tasks=DEF_TASKS;G.rewards=DEF_REWARDS;G.pEmoji='👨‍👩‍👧';G.pPhoto=null;await saveP();if(rem)G._remSave={email:e,pass:p};openParent(c.user);}
+  catch(ex){err.textContent=ex.code==='auth/email-already-in-use'?'Email already used. Try signing in.':ex.message;}
+};
+window.quickPLogin=async(email,passEnc)=>{
+  SS('s-loading');document.getElementById('load-msg').textContent='Signing you in...';
+  try{await signInWithEmailAndPassword(auth,email,decodeURIComponent(passEnc));}
+  catch(e){SS('s-home');renderHome();clearSavedP();alert('Session expired. Please sign in again.');}
+};
+window.doSignOut=async()=>{stopListeners();await signOut(auth);G.pUid=null;G.pData=null;G.kids=[];G.logs={};G.pending=[];G.kid=null;document.title='StarKids';SS('s-home');renderHome();};
 function openParent(user){
-  G.parentData=G.parentData||{name:user.displayName||'Parent'};
-  if(G._rememberOnLoad){
-    saveParentLocally({email:G._rememberOnLoad.email,pass:G._rememberOnLoad.pass,name:G.parentData.name,emoji:G.parentEmoji,photo:G.parentAvatar,color:'#1D9E75'});
-    G._rememberOnLoad=null;
-  }
-  document.getElementById('p-tit').textContent=(G.parentData.name||'Parent')+"'s dashboard";
+  G.pData=G.pData||{name:user.displayName||'Parent'};
+  if(G._remSave){savePLocal({email:G._remSave.email,pass:G._remSave.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._remSave=null;}
+  document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";
   document.getElementById('p-sub').textContent=dn()+' · '+today()+' · 🟢 Live';
-  const avEl=document.getElementById('p-avatar-top');
-  if(avEl){if(G.parentAvatar)avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid var(--g)"><img src="${G.parentAvatar}" style="width:100%;height:100%;object-fit:cover"/></div>`;else avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:#1D9E7522;border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-size:18px">${G.parentEmoji}</div>`;}
-  // Start real-time listeners for parent
-  startParentListener(user.uid);
-  startPendingListener(user.uid);
-  // Schedule daily report notification
-  requestNotificationPermission().then(granted=>{
-    if(granted) scheduleParentDailyReport();
-  });
+  const av=document.getElementById('p-av-top');if(av)av.innerHTML=avDiv(G.pPhoto,G.pEmoji,'#1D9E75',36);
+  startPListener(user.uid);startLogsListener(user.uid);
+  requestNotifPerm().then(ok=>{if(ok)schedParentNotif();});
   SS('s-parent');pTab('appr');
 }
 
 // ── KID LOGIN ─────────────────────────────────────────
-window.buildCI=function(){const w=document.getElementById('ci');if(!w)return;w.innerHTML='';for(let i=0;i<6;i++){const inp=document.createElement('input');inp.type='text';inp.maxLength=1;inp.inputMode='numeric';inp.id='ci'+i;inp.oninput=e=>{const v=e.target.value.replace(/\D/,'');e.target.value=v;if(v&&i<5)document.getElementById('ci'+(i+1)).focus();};inp.onkeydown=e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)document.getElementById('ci'+(i-1)).focus();};w.appendChild(inp);}}
-function getCode(){let c='';for(let i=0;i<6;i++)c+=(document.getElementById('ci'+i)||{}).value||'';return c;}
-window.kidLogin=async function(){
-  const code=getCode();
-  if(code.length<6){document.getElementById('cerr').textContent='Enter all 6 digits.';return;}
-  document.getElementById('cerr').textContent='Looking up code...';
-  SS('s-loading');await doKidLogin(code);
-}
+window.buildCI=()=>{const w=document.getElementById('ci');if(!w)return;w.innerHTML='';for(let i=0;i<6;i++){const inp=document.createElement('input');inp.type='text';inp.maxLength=1;inp.inputMode='numeric';inp.id='ci'+i;inp.oninput=e=>{const v=e.target.value.replace(/\D/,'');e.target.value=v;if(v&&i<5)document.getElementById('ci'+(i+1)).focus();};inp.onkeydown=e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)document.getElementById('ci'+(i-1)).focus();};w.appendChild(inp);}};
+const getCode=()=>{let c='';for(let i=0;i<6;i++)c+=(document.getElementById('ci'+i)||{}).value||'';return c;};
+window.kidLogin=async()=>{const code=getCode();if(code.length<6){document.getElementById('cerr').textContent='Enter all 6 digits.';return;}document.getElementById('cerr').textContent='Looking up...';SS('s-loading');await doKidLogin(code);};
+window.quickKLogin=async code=>{SS('s-loading');document.getElementById('load-msg').textContent='Loading tasks...';await doKidLogin(code);};
 async function doKidLogin(code){
   try{
-    const parentsSnap=await getDocs(collection(db,'parents'));
-    let foundKid=null;let foundPD=null;
-    parentsSnap.forEach(ps=>{
-      const pd=ps.data();
-      if(pd.kids){const k=pd.kids.find(k=>k.code===code);if(k){foundKid=k;foundPD={...pd,uid:ps.id};}}
-    });
-    if(!foundKid){
-      SS('s-kidcode');buildCI();
-      const el=document.getElementById('cerr');if(el)el.textContent='Code not found. Ask your parent.';
-      return;
-    }
-    G.parentUid=foundPD.uid;G.parentData={name:foundPD.name};
-    G.religion=foundPD.religion||'islam';G.currency=foundPD.currency||'SAR';
-    G.prayersEnabled=foundPD.prayersEnabled!==false;
-    G.kids=foundPD.kids||[];G.tasks=foundPD.tasks||DEF_TASKS;G.rewards=foundPD.rewards||DEF_REWARDS;
-    G.currentKid=foundKid;
-    await loadLogsForKid(foundKid.id);
-    const ws=wStars(foundKid.id);
-    // Save kid locally for quick login next time
-    saveKidLocally(foundKid,ws);
-    // Set topbar avatar
-    const avEl=document.getElementById('k-avatar-top');
-    if(avEl){
-      if(foundKid.photo)avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid ${foundKid.color||'var(--g)'}"><img src="${foundKid.photo}" style="width:100%;height:100%;object-fit:cover"/></div>`;
-      else avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:${foundKid.color||'#1D9E75'}22;border:2px solid ${foundKid.color||'var(--g)'};display:flex;align-items:center;justify-content:center;font-size:18px">${foundKid.emoji||'👦'}</div>`;
-    }
-    document.getElementById('k-tit').textContent=foundKid.name+"'s tasks";
+    const snap=await getDocs(collection(db,'parents'));
+    let fKid=null,fPD=null;
+    snap.forEach(ps=>{const d=ps.data();if(d.kids){const k=d.kids.find(k=>k.code===code);if(k){fKid=k;fPD={...d,uid:ps.id};}}});
+    if(!fKid){SS('s-kidcode');buildCI();const el=document.getElementById('cerr');if(el)el.textContent='Code not found. Ask your parent.';return;}
+    G.pUid=fPD.uid;G.pData={name:fPD.name};G.religion=fPD.religion||'islam';G.currency=fPD.currency||'SAR';G.prayOn=fPD.prayOn!==false;G.kids=fPD.kids||[];G.tasks=fPD.tasks||DEF_TASKS;G.rewards=fPD.rewards||DEF_REWARDS;
+    G.kid=fKid;
+    await loadLogs(fKid.id);
+    const ws=wStars(fKid.id);
+    saveKLocal(fKid,ws);
+    // Update saved kids list with current data
+    const allSaved=getSavedK();
+    const updated=allSaved.filter(k=>G.kids.find(gk=>gk.code===k.code));
+    try{localStorage.setItem(LS_K,JSON.stringify(updated));}catch{}
+
+    const av=document.getElementById('k-av-top');if(av)av.innerHTML=avDiv(fKid.photo,fKid.emoji||'👦',fKid.color||'#1D9E75',36);
+    document.getElementById('k-tit').textContent=fKid.name+"'s tasks";
     document.getElementById('k-sub').textContent=dn()+' · '+today()+' · 🟢 Live';
-    // Start real-time listener — kid sees parent approvals instantly
-    startKidLogListener(foundPD.uid,foundKid.id);
-    // Also listen to parent data so tasks/rewards update live
-    startParentListener(foundPD.uid);
-    SS('s-kid');
-    _kidDelegationInit = false; // Reset delegation for new kid session
-    renderKid();
-    // Init event delegation for photo/tick inputs
-    setTimeout(()=>initKidEventDelegation(), 100);
-    // Init notifications and prayer times
-    initKidNotifications();
+    startPListener(fPD.uid);
+    startLogListener(fPD.uid,fKid.id);
+    SS('s-kid');renderKid();
+    initPrayerTimes();
   }catch(e){SS('s-home');renderHome();alert('Error: '+e.message);}
 }
 
 // ── KID DASHBOARD ─────────────────────────────────────
 function renderKid(){
-  const kid=G.currentKid;const dk=today();const log=getLog(kid.id,dk);
+  const kid=G.kid;if(!kid)return;
+  const dk=today();const log=getLog(kid.id,dk);
   const ts=calcStars(kid.id,dk);const ws=wStars(kid.id);
   document.getElementById('k-stars').textContent='⭐ '+ws;
   const dow=new Date().getDay();const pr=prayers();
-  const claimable=G.rewards.filter(r=>{const check=r.period==='month'?mStars(kid.id):ws;return check>=r.stars&&!r.given&&!r.claimed;});
+  const claimable=G.rewards.filter(r=>{const c=r.period==='month'?mStars(kid.id):ws;return c>=r.stars&&!r.given&&!r.claimed;});
   let h='';
-  if(claimable.length){h+=`<div class="unlock-banner"><div><div style="font-size:13px;font-weight:600">🏆 ${claimable.length} reward${claimable.length>1?'s':''} to claim!</div><div style="font-size:11px;opacity:.85">Tap to choose your reward</div></div><button class="btn sm" style="background:#fff;color:var(--g);border-color:#fff;flex:none" onclick="showRewardChooser()">Choose ✨</button></div>`;}
-  h+=`<div class="sbar"><div><div class="slbl2">Today's stars</div><div class="snum">${ts} ⭐</div></div><div style="text-align:right"><div class="slbl2">This week</div><div style="font-size:18px;font-weight:700;color:var(--t)">${ws} ⭐</div></div></div>`;
+  if(claimable.length)h+=`<div class="unlock-banner"><div><div style="font-size:13px;font-weight:600">🏆 ${claimable.length} reward${claimable.length>1?'s':''} ready!</div><div style="font-size:11px;opacity:.85">Tap to choose</div></div><button class="btn sm" style="background:#fff;color:var(--g);border-color:#fff;flex:none" onclick="showRewardChooser()">Choose ✨</button></div>`;
+  h+=`<div class="sbar"><div><div class="slbl">Today</div><div class="snum">${ts} ⭐</div></div><div style="text-align:right"><div class="slbl">This week</div><div style="font-size:18px;font-weight:700;color:var(--t)">${ws} ⭐</div></div></div>`;
+
+  // Prayers
   if(pr.length){
-    const cityLabel = G.prayerCity ? ` · 📍 ${G.prayerCity.split('/').pop().replace('_',' ')}` : '';
-    h+=`<div class="sl">🙏 Daily prayers${cityLabel}</div><div class="pgrid">`;
-    pr.forEach(p=>{
+    const city=G.prayerCity?` · 📍${G.prayerCity}`:'';
+    h+=`<div class="sl">🙏 Daily prayers${city}</div><div class="pgrid">`;
+    pr.forEach((p,pi)=>{
       const done=!!log.prayers[p.n];
-      const timeStr = getPrayerTimeDisplay ? getPrayerTimeDisplay(p.n) : '';
-      const timeDisplay = timeStr ? timeStr : p.t;
-      const isNext = !done && timeStr && isNextPrayer(p.n);
-      h+=`<div class="pcard${done?' done':''}${isNext?' next-prayer':''}" onclick="togPrayer('${p.n}')">
+      const timeStr=G.prayerTimes[p.n]||p.t;
+      const isNext=!done&&G.prayerTimes[p.n]&&isNextPrayer(pi,pr,log);
+      h+=`<div class="pcard${done?' done':''}${isNext?' next':''}" onclick="tapPrayer('${p.n}')">
         <div>
-          <div style="font-size:13px;font-weight:600">${p.n}${isNext?'<span style="font-size:9px;background:#1D9E75;color:#fff;padding:1px 5px;border-radius:4px;margin-left:4px">NEXT</span>':''}</div>
-          <div style="font-size:11px;color:var(--t3)">${timeDisplay}</div>
+          <div style="font-size:13px;font-weight:600">${p.n}${isNext?'<span style="font-size:9px;background:var(--g);color:#fff;padding:1px 5px;border-radius:4px;margin-left:5px">NEXT</span>':''}</div>
+          <div style="font-size:11px;color:var(--t3)">${timeStr}</div>
         </div>
         <div class="circ${done?' done':''}">${done?'✓':''}</div>
       </div>`;
     });
     h+=`</div>`;
   }
+
+  // Tasks
   const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));
   const bonus=G.tasks.filter(t=>t.cat==='bonus');
-  h+=`<div class="sl">📋 Daily tasks</div>`;daily.forEach(t=>{h+=kidRow(t,log);});
-  if(bonus.length){h+=`<div class="sl">⭐ Bonus tasks</div>`;bonus.forEach(t=>{h+=kidRow(t,log);});}
+  h+=`<div class="sl">📋 Daily tasks</div>`;
+  daily.forEach(t=>h+=buildTaskHtml(t,log));
+  if(bonus.length){h+=`<div class="sl">⭐ Bonus tasks</div>`;bonus.forEach(t=>h+=buildTaskHtml(t,log));}
   document.getElementById('k-body').innerHTML=h;
-  // Photo inputs handled by event delegation (see initKidEventDelegation)
-  // Re-init delegation if needed (survives re-renders)
-  setTimeout(()=>initKidEventDelegation(), 50);
 }
-function kidRow(t,log){
-  const status=log.tasks[t.id]||'none';const ticked=!!log.ticked[t.id];const photo=log.photos&&log.photos[t.id];
-  let cls='tr';if(status==='approved')cls+=' done';else if(status==='pending')cls+=' pend';
-  const sub=status==='approved'?`Approved ✓ · +${t.stars}⭐`:status==='pending'?'Waiting for parent approval':`+${t.stars}⭐ · Tick ✓ and/or add 📷`;
-  let proofHtml='';
-  if(status!=='approved'){
-    const tCls=ticked?'proof-btn ticked':'proof-btn';const pCls=photo?'proof-btn photo-done':'proof-btn';
-    proofHtml=`<div class="proof-row"><div class="${tCls}" onclick="kidTick('${t.id}')">${ticked?'✅ Done':'☐ Tick done'}</div><label class="${pCls}" style="cursor:pointer"><input type="file" accept="image/*" capture="environment" class="photo-inp" data-tid="${t.id}" style="display:none"/>${photo?'📷 Photo ✓':'📷 Add photo'}</label></div>`;
-    if(photo)proofHtml+=`<img src="${photo}" style="width:100%;max-height:80px;object-fit:cover;border-radius:6px;margin-top:5px"/>`;
-  }else{if(photo)proofHtml=`<img src="${photo}" style="width:100%;max-height:80px;object-fit:cover;border-radius:6px;margin-top:5px"/>`;}
-  const stIco=status==='approved'?'<div class="circ done">✓</div>':status==='pending'?'<div class="circ" style="background:var(--ab);border-color:var(--ab);font-size:11px">⏳</div>':'<div class="circ" style="font-size:10px;color:var(--t3)">—</div>';
-  return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">${sub}</div>${proofHtml}</div>${stIco}</div>`;
-}
-window.kidTick=function(id){
-  markInteracting();
-  const lg=getLog(G.currentKid.id,today());if(lg.tasks[id]==='approved')return;
-  lg.ticked[id]=!lg.ticked[id];
-  const ex=G.pending.find(x=>x.kidId===G.currentKid.id&&x.tid===id&&x.date===today());
-  if(lg.ticked[id]){if(!ex&&lg.tasks[id]!=='approved'){const task=G.tasks.find(t=>t.id===id);lg.tasks[id]='pending';G.pending.push({kidId:G.currentKid.id,kidName:G.currentKid.name,task,tid:id,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:lg.photos[id]||null,ticked:true});}else if(ex)ex.ticked=true;}
-  else{if(ex)ex.ticked=false;if(!lg.photos[id]&&!lg.ticked[id]){lg.tasks[id]='none';const idx=G.pending.findIndex(x=>x.kidId===G.currentKid.id&&x.tid===id&&x.date===today());if(idx>-1)G.pending.splice(idx,1);}}
-  saveLog(G.currentKid.id,today());renderKid();
-}
-window.togPrayer=function(name){
-  markInteracting();
-  const lg=getLog(G.currentKid.id,today());
-  lg.prayers[name]=!lg.prayers[name];
-  // Update prayer card immediately without full re-render
-  const cards=document.querySelectorAll('.pcard');
-  cards.forEach(card=>{
-    if(card.textContent.includes(name)){
-      const done=lg.prayers[name];
-      card.className='pcard'+(done?' done':'');
-      const circ=card.querySelector('.circ');
-      if(circ){circ.className='circ'+(done?' done':'');circ.textContent=done?'✓':'';}
-    }
-  });
-  // Update stars
-  const ts=calcStars(G.currentKid.id,today());
-  const snumEl=document.querySelector('.snum');
-  if(snumEl)snumEl.textContent=ts+' ⭐';
-  saveLog(G.currentKid.id,today());
-}
-window.submitDay=function(){alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');}
 
-// ── REWARD CHOOSER ────────────────────────────────────
-window.showRewardChooser=function(){
-  const kid=G.currentKid;const ws=wStars(kid.id);const ms=mStars(kid.id);
-  const claimable=G.rewards.filter(r=>{const check=r.period==='month'?ms:ws;return check>=r.stars&&!r.given&&!r.claimed;});
-  let h=`<div class="info g">🎉 You earned these! Choose one to claim. Your parent will confirm.</div>`;
-  claimable.forEach(r=>{
-    const ri=G.rewards.indexOf(r);
-    h+=`<div class="rcard selectable" onclick="claimReward(${ri})"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><div style="font-size:14px;font-weight:600">${r.name}</div><div style="font-size:14px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div style="font-size:12px;color:var(--t2)">${r.period==='month'?'📆 Monthly':'📅 Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="margin-top:8px;text-align:center;padding:7px;background:var(--g);border-radius:6px;color:#fff;font-size:13px;font-weight:500">Tap to choose this reward →</div></div>`;
-  });
-  document.getElementById('kr-choose-body').innerHTML=h;SS('s-kid-choose-reward');
+function buildTaskHtml(t,log){
+  const status=log.tasks[t.id]||'none';
+  const ticked=!!log.ticked[t.id];
+  const photo=log.photos&&log.photos[t.id];
+  let cls='tr';
+  if(status==='approved')cls+=' done';
+  else if(status==='pending')cls+=' pend';
+  const sub=status==='approved'?`Approved ✓ · +${t.stars}⭐`:status==='pending'?'Waiting for parent approval':`+${t.stars}⭐`;
+
+  let inner=`<div class="tname">${t.name}</div><div class="tsub">${sub}</div>`;
+
+  // Show tick + photo buttons only when not approved
+  if(status!=='approved'){
+    inner+=`<div class="proof-area"><div class="proof-btns">`;
+    // TICK BUTTON
+    inner+=`<div class="proof-btn-tick${ticked?' ':' '}" onclick="tapTick('${t.id}')" style="${ticked?'background:var(--g);color:#fff;border-color:var(--g)':''}">${ticked?'✅ Ticked':'☐ Tick done'}</div>`;
+    // PHOTO BUTTON — calls global camera
+    inner+=`<div class="proof-btn-photo" onclick="tapPhoto('${t.id}')">${photo?'📷 Change photo':'📷 Take photo'}</div>`;
+    inner+=`</div>`;
+    if(photo)inner+=`<img class="proof-img" src="${photo}"/>`;
+    inner+=`</div>`;
+  } else {
+    if(photo)inner+=`<img class="proof-img" src="${photo}" style="margin-top:6px"/>`;
+  }
+
+  const stIco=status==='approved'?'<div class="circ done">✓</div>':status==='pending'?'<div class="circ pend">⏳</div>':'';
+  return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo">${inner}</div>${stIco}</div>`;
 }
-window.claimReward=function(idx){G.rewards[idx].claimed=true;G.rewards[idx].claimedBy=G.currentKid.name;G.rewards[idx].claimedAt=new Date().toISOString();saveParentData();alert(`🎉 You chose "${G.rewards[idx].name}"!\n\nYour parent will confirm and give you this reward!`);SS('s-kid');renderKid();}
-window.showKidRewards=function(){
-  const kid=G.currentKid;const ws=wStars(kid.id);const ms=mStars(kid.id);
-  document.getElementById('kr-tit').textContent=kid.name+' — My Rewards';
-  let h=`<div class="sbar"><div><div class="slbl2">This week</div><div class="snum">${ws}⭐</div></div><div style="text-align:right"><div class="slbl2">This month</div><div style="font-size:18px;font-weight:700;color:var(--t)">${ms}⭐</div></div></div><div class="sl">🏆 Reward chart</div>`;
-  [...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{
-    const check=r.period==='month'?ms:ws;const ok=check>=r.stars;const pct=Math.min(100,Math.round(check/r.stars*100));
-    h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 Claimed - awaiting parent':ok?'🏆 Unlocked!':check+'/'+r.stars+' stars'} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;
+
+// ── TASK INTERACTIONS ─────────────────────────────────
+window.tapTick=function(id){
+  const kid=G.kid;if(!kid)return;
+  const lg=getLog(kid.id,today());
+  if(lg.tasks[id]==='approved')return;
+  lg.ticked[id]=!lg.ticked[id];
+  if(lg.ticked[id]){
+    if(lg.tasks[id]!=='pending'){
+      lg.tasks[id]='pending';
+      addPending(kid,id,lg);
+    }
+  } else {
+    // Unticking
+    if(!lg.photos[id]){
+      // No photo either — remove pending
+      lg.tasks[id]='none';
+      G.pending=G.pending.filter(p=>!(p.kidId===kid.id&&p.tid===id&&p.date===today()));
+    }
+  }
+  saveLog(kid.id,today());
+  renderKid();
+};
+
+window.tapPhoto=function(id){
+  const kid=G.kid;if(!kid)return;
+  const lg=getLog(kid.id,today());
+  if(lg.tasks[id]==='approved')return;
+  openCamera(dataUrl=>{
+    lg.photos[id]=dataUrl;
+    if(lg.tasks[id]!=='pending'){
+      lg.tasks[id]='pending';
+      addPending(kid,id,lg);
+    } else {
+      // Update photo in existing pending
+      const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===id&&p.date===today());
+      if(ex)ex.photo=dataUrl;
+    }
+    saveLog(kid.id,today());
+    renderKid();
   });
+};
+
+function addPending(kid,tid,lg){
+  const task=G.tasks.find(t=>t.id===tid);if(!task)return;
+  const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===tid&&p.date===today());
+  if(!ex){
+    G.pending.push({kidId:kid.id,kidName:kid.name,kidPhoto:kid.photo,kidEmoji:kid.emoji,kidColor:kid.color,task,tid,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:lg.photos[tid]||null,ticked:!!lg.ticked[tid]});
+  }
+}
+
+window.tapPrayer=function(name){
+  const kid=G.kid;if(!kid)return;
+  const lg=getLog(kid.id,today());
+  lg.prayers[name]=!lg.prayers[name];
+  saveLog(kid.id,today());
+  renderKid();
+};
+
+window.submitDay=()=>alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');
+
+// ── PRAYER TIMES ──────────────────────────────────────
+function isNextPrayer(idx,pr,log){
+  const now=new Date();const nowM=now.getHours()*60+now.getMinutes();
+  for(let i=0;i<pr.length;i++){
+    if(log.prayers[pr[i].n])continue;
+    const t=G.prayerTimes[pr[i].n];
+    if(t){const[h,m]=t.split(':').map(Number);if((h*60+m)>=nowM)return i===idx;}
+    else return i===idx;
+    break;
+  }
+  return false;
+}
+async function initPrayerTimes(){
+  if(!G.prayOn||G.religion!=='islam')return;
+  try{
+    const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
+    const lat=pos.coords.latitude.toFixed(4);const lng=pos.coords.longitude.toFixed(4);
+    const d=new Date();const ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+    const r=await fetch(`https://api.aladhan.com/v1/timings/${ds}?latitude=${lat}&longitude=${lng}&method=4`);
+    const data=await r.json();
+    if(data.code===200){const t=data.data.timings;G.prayerTimes={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};G.prayerCity=data.data.meta.timezone?.split('/').pop().replace(/_/g,' ')||'';schedPrayerNotifs();renderKid();}
+  }catch{
+    try{const d=new Date();const ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;const r=await fetch(`https://api.aladhan.com/v1/timingsByCity/${ds}?city=Riyadh&country=SA&method=4`);const data=await r.json();if(data.code===200){const t=data.data.timings;G.prayerTimes={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};G.prayerCity='Riyadh';schedPrayerNotifs();renderKid();}}catch{}
+  }
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────
+async function requestNotifPerm(){if(!('Notification'in window))return false;if(Notification.permission==='granted')return true;if(Notification.permission==='denied')return false;return(await Notification.requestPermission())==='granted';}
+let _prayerTimers=[];
+function schedPrayerNotifs(){
+  _prayerTimers.forEach(t=>clearTimeout(t));_prayerTimers=[];
+  if(Notification.permission!=='granted')return;
+  const now=new Date();
+  Object.entries(G.prayerTimes).forEach(([name,ts])=>{
+    const[h,m]=ts.split(':').map(Number);const pt=new Date();pt.setHours(h,m,0,0);const diff=pt-now;
+    if(diff>0&&diff<86400000){_prayerTimers.push(setTimeout(()=>{new Notification('🕌 '+name+' Prayer Time',{body:'Time for '+name+' prayer.',icon:'/starkids/icon-192.png',tag:'prayer-'+name});},diff));}
+  });
+  requestNotifPerm().then(ok=>{if(ok)schedPrayerNotifs();});
+}
+let _parentNotifTimer=null;
+function schedParentNotif(){
+  clearTimeout(_parentNotifTimer);
+  const now=new Date();const t=new Date();t.setHours(20,30,0,0);if(t<=now)t.setDate(t.getDate()+1);
+  _parentNotifTimer=setTimeout(()=>{
+    if(Notification.permission==='granted'&&G.pending.length>0)new Notification('⭐ StarKids Daily Report',{body:`You have ${G.pending.length} pending approval${G.pending.length>1?'s':''}.`,icon:'/starkids/icon-192.png',tag:'daily'});
+    schedParentNotif();
+  },t-now);
+}
+
+// ── KID REWARDS ───────────────────────────────────────
+window.showRewardChooser=()=>{
+  const ws=wStars(G.kid.id);const ms=mStars(G.kid.id);
+  const cl=G.rewards.filter(r=>{const c=r.period==='month'?ms:ws;return c>=r.stars&&!r.given&&!r.claimed;});
+  let h=`<div class="info g">🎉 Choose one reward to claim. Your parent will confirm it.</div>`;
+  cl.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard selectable" onclick="claimReward(${ri})"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="font-size:14px;font-weight:600">${r.name}</div><div style="font-size:14px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div style="font-size:12px;color:var(--t2)">${r.period==='month'?'📆 Monthly':'📅 Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="margin-top:8px;padding:8px;background:var(--g);border-radius:6px;color:#fff;text-align:center;font-size:13px;font-weight:500">Tap to choose →</div></div>`;});
+  document.getElementById('choose-body').innerHTML=h;SS('s-choose-reward');
+};
+window.claimReward=ri=>{G.rewards[ri].claimed=true;G.rewards[ri].claimedBy=G.kid.name;G.rewards[ri].claimedAt=new Date().toISOString();saveP();alert(`🎉 You chose "${G.rewards[ri].name}"!\nYour parent will confirm it soon!`);SS('s-kid');renderKid();};
+window.showKidRewards=()=>{
+  const ws=wStars(G.kid.id);const ms=mStars(G.kid.id);
+  let h=`<div class="sbar"><div><div class="slbl">This week</div><div class="snum">${ws}⭐</div></div><div style="text-align:right"><div class="slbl">This month</div><div style="font-size:18px;font-weight:700">${ms}⭐</div></div></div><div class="sl">🏆 Reward chart</div>`;
+  [...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{const c=r.period==='month'?ms:ws;const ok=c>=r.stars;const pct=Math.min(100,Math.round(c/r.stars*100));h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 Claimed - awaiting parent':ok?'🏆 Unlocked!':c+'/'+r.stars} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;});
   document.getElementById('kr-body').innerHTML=h;SS('s-krewards');
-}
+};
 
 // ── PARENT TABS ───────────────────────────────────────
 window.pTab=function(tab){
@@ -920,187 +821,120 @@ window.pTab=function(tab){
   if(tab==='appr'){
     const claimed=G.rewards.filter(r=>r.claimed&&!r.given);
     let h='';
-
-    // Claimed rewards needing confirmation (shown at top always)
+    // Claimed rewards
     if(claimed.length){
       h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 Reward claims</div>`;
-      claimed.forEach(r=>{
-        const ri=G.rewards.indexOf(r);
-        h+=`<div class="card" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:4px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="font-size:11px;color:#085041;margin-bottom:8px">${r.stars}⭐ · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="declineReward(${ri})">Decline</button><button class="btn pri sm" onclick="confirmReward(${ri})">✓ Confirm &amp; give</button></div></div>`;
-      });
+      claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="card" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:4px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="font-size:11px;color:#085041;margin-bottom:8px">${r.stars}⭐${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="declineR(${ri})">Decline</button><button class="btn pri sm" onclick="confirmR(${ri})">✓ Give reward</button></div></div>`;});
     }
-
-    if(!G.pending.length&&!claimed.length){
-      pc.innerHTML='<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';
-      return;
-    }
-
+    if(!G.pending.length&&!claimed.length){pc.innerHTML=h+'<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';return;}
     if(G.pending.length){
-      // Group pending by kid
-      const byKid = {};
-      G.pending.forEach((a,idx)=>{
-        if(!byKid[a.kidId]) byKid[a.kidId] = {name:a.kidName,kidId:a.kidId,items:[]};
-        byKid[a.kidId].items.push({...a,idx});
-      });
-      const kidIds = Object.keys(byKid);
-
-      // Kid selector tabs
-      if(!G._apprKidTab || !byKid[G._apprKidTab]) G._apprKidTab = kidIds[0];
+      // Group by kid
+      const byKid={};
+      G.pending.forEach((a,idx)=>{if(!byKid[a.kidId])byKid[a.kidId]={name:a.kidName,photo:a.kidPhoto,emoji:a.kidEmoji,color:a.kidColor,items:[]};byKid[a.kidId].items.push({...a,idx});});
+      const kidIds=Object.keys(byKid);
+      if(!G.apprKidTab||!byKid[G.apprKidTab])G.apprKidTab=kidIds[0];
+      // Kid tabs
       h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">`;
-      kidIds.forEach(kid=>{
-        const k=G.kids.find(x=>x.id===kid)||{name:byKid[kid].name,color:'#1D9E75',emoji:'👦'};
-        const count=byKid[kid].items.length;
-        const isActive=G._apprKidTab===kid;
-        const avHtml=k.photo?`<img src="${k.photo}" style="width:22px;height:22px;border-radius:50%;object-fit:cover"/>`:`<span style="font-size:14px">${k.emoji||'👦'}</span>`;
-        h+=`<div onclick="G._apprKidTab='${kid}';pTab('appr')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1.5px solid ${isActive?'var(--g)':'var(--bd)'};background:${isActive?'var(--gl)':'var(--bg)'};cursor:pointer;font-size:13px;font-weight:500;color:${isActive?'#085041':'var(--t)'}">
-          ${avHtml} ${k.name} <span style="background:${isActive?'#1D9E75':'var(--bd2)'};color:${isActive?'#fff':'var(--t3)'};border-radius:10px;padding:0 6px;font-size:11px">${count}</span>
-        </div>`;
+      kidIds.forEach(kId=>{
+        const kd=byKid[kId];const isA=G.apprKidTab===kId;
+        h+=`<div onclick="G.apprKidTab='${kId}';pTab('appr')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1.5px solid ${isA?'var(--g)':'var(--bd)'};background:${isA?'var(--gl)':'var(--bg)'};cursor:pointer">`;
+        h+=avDiv(kd.photo,kd.emoji||'👦',kd.color||'#1D9E75',22);
+        h+=`<span style="font-size:13px;font-weight:500;color:${isA?'#085041':'var(--t)'}">${kd.name}</span>`;
+        h+=`<span style="background:${isA?'var(--g)':'var(--bd2)'};color:${isA?'#fff':'var(--t3)'};border-radius:10px;padding:0 7px;font-size:11px">${kd.items.length}</span></div>`;
       });
       h+=`</div>`;
-
-      // Show selected kid's approvals
-      const selectedKid = byKid[G._apprKidTab];
-      if(selectedKid){
-        const k=G.kids.find(x=>x.id===selectedKid.kidId)||{};
-        const ws=wStars(selectedKid.kidId);
+      // Selected kid's items
+      const sel=byKid[G.apprKidTab];
+      if(sel){
+        const ws=wStars(G.apprKidTab);
         h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">`;
-        if(k.photo)h+=`<img src="${k.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${k.color||'var(--g)'}"/>`;
-        else h+=`<div style="width:36px;height:36px;border-radius:50%;background:${k.color||'#1D9E75'}22;border:2px solid ${k.color||'var(--g)'};display:flex;align-items:center;justify-content:center;font-size:18px">${k.emoji||'👦'}</div>`;
-        h+=`<div><div style="font-size:13px;font-weight:600">${selectedKid.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ this week · ${selectedKid.items.length} pending</div></div></div>`;
-
-        selectedKid.items.forEach(a=>{
-          const hp=!!a.photo;const ht=!!a.ticked;
-          const pl=hp&&ht?'📷 Photo + ✓ Tick':hp?'📷 Photo submitted':ht?'✓ Tick submitted':'Submitted';
-          const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:110px;object-fit:cover;border-radius:8px;margin:8px 0"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">✓ Tick — no photo</div>`;
-          h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="reject(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px 10px;font-size:12px;text-align:center;color:var(--t2)">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="approve(${a.idx})">✓ Approve</button></div></div>`;
+        h+=avDiv(sel.photo,sel.emoji||'👦',sel.color||'#1D9E75',38);
+        h+=`<div><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ this week · ${sel.items.length} pending</div></div></div>`;
+        sel.items.forEach(a=>{
+          const hp=!!a.photo;const ht=!!a.ticked;const pl=hp&&ht?'📷 Photo + ✓ Tick':hp?'📷 Photo':ht?'✓ Tick':'Submitted';
+          const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:110px;object-fit:cover;border-radius:8px;margin:8px 0"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">${ht?'✓ Tick submitted':'No proof yet'}</div>`;
+          h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="rejectA(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px;text-align:center;font-size:12px">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="approveA(${a.idx})">✓ Approve</button></div></div>`;
         });
       }
     }
     pc.innerHTML=h;return;
   }
+
   if(tab==='tasks'){
     const daily=G.tasks.filter(t=>t.cat==='daily');const bonus=G.tasks.filter(t=>t.cat==='bonus');
-    let h=`<div class="info g">Kids see ✓ Tick and 📷 Photo on every task.</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="sl" style="margin:0">Daily (${daily.length})</div><button class="btn pri sm" onclick="openTaskForm(null)">+ Add</button></div>`;
-    daily.forEach(t=>{h+=pTaskRow(t);});
-    h+=`<div class="sl">Bonus (${bonus.length})</div>`;bonus.forEach(t=>{h+=pTaskRow(t);});
-    h+=`<button class="btn" style="width:100%;margin-top:6px" onclick="openTaskForm(null)">+ Add bonus task</button>`;
+    let h=`<div class="info g">Kids see ✓ Tick and 📷 Photo on every task.</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="sl" style="margin:0">Daily (${daily.length})</div><button class="btn pri sm" onclick="openTF(null)">+ Add</button></div>`;
+    daily.forEach(t=>h+=pTRow(t));
+    h+=`<div class="sl">Bonus (${bonus.length})</div>`;bonus.forEach(t=>h+=pTRow(t));
+    h+=`<button class="btn" style="width:100%;margin-top:6px" onclick="openTF(null)">+ Add bonus task</button>`;
     pc.innerHTML=h;return;
   }
+
   if(tab==='kids'){
     let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Children (${G.kids.length})</div></div>`;
     G.kids.forEach((k,ki)=>{
       const ws=wStars(k.id);
-      let avHtml=k.photo?`<div style="width:50px;height:50px;border-radius:50%;overflow:hidden;border:3px solid ${k.color||'var(--g)'}"><img src="${k.photo}" style="width:100%;height:100%;object-fit:cover"/></div>`:`<div style="width:50px;height:50px;border-radius:50%;background:${k.color||'#1D9E75'}22;border:3px solid ${k.color||'var(--g)'};display:flex;align-items:center;justify-content:center;font-size:24px">${k.emoji||'👦'}</div>`;
-      h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avHtml}<div style="flex:1"><div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐</div></div><button class="btn sm" onclick="editKidAvatar(${ki})">Edit photo</button></div>`;
+      h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">`;
+      h+=avDiv(k.photo,k.emoji||'👦',k.color||'#1D9E75',50);
+      h+=`<div style="flex:1"><div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐</div></div><button class="btn sm" onclick="editKidAv(${ki})">Edit photo</button></div>`;
       h+=`<div class="codebox"><div class="codedigits">${k.code}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">Login code — share with ${k.name} only</div></div>`;
       h+=`<div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm" onclick="regenCode('${k.id}')">🔄 New code</button><button class="btn dan sm" onclick="removeKid('${k.id}')">Remove</button></div></div>`;
     });
-    h+=`<div class="sl">Add new child</div>
-    <div style="margin-bottom:8px"><label style="font-size:12px;color:var(--t2);display:block;margin-bottom:3px;font-weight:600">Child's name</label><input id="ki-inp" placeholder="e.g. Hamza" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;background:var(--bg);color:var(--t)"/></div>
-    <div style="margin-bottom:8px"><label style="font-size:12px;color:var(--t2);display:block;margin-bottom:6px;font-weight:600">Choose emoji or add photo later</label>
-    <div class="emoji-grid" id="new-kid-emoji-grid">${KID_EMOJIS.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="selectNewKidEmoji(this,'${e}')">${e}</div>`).join('')}</div></div>
-    <button class="btn pri" style="width:100%" onclick="addKid()">+ Add child</button>`;
+    h+=`<div class="sl">Add new child</div>`;
+    h+=`<div class="ff"><label>Name</label><input id="ki-n" placeholder="e.g. Hamza" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/></div>`;
+    h+=`<div class="ff"><label>Choose emoji</label><div class="emoji-grid" id="nk-eg">${KEMOJIS.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="selNKEmoji(this,'${e}')">${e}</div>`).join('')}</div></div>`;
+    h+=`<button class="btn pri" style="width:100%" onclick="addKid()">+ Add child</button>`;
     pc.innerHTML=h;return;
   }
+
   if(tab==='rewards'){
     const claimed=G.rewards.filter(r=>r.claimed&&!r.given);
-    let h=`<div class="info g"><strong>Kids choose their reward</strong> when stars are reached. You confirm delivery here.</div>`;
-    if(claimed.length){h+=`<div class="sl" style="color:var(--g)">Action needed 🔔</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:6px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="declineReward(${ri})">Decline</button><button class="btn pri sm" onclick="confirmReward(${ri})">✓ Give reward</button></div></div>`;});}
-    h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">All rewards</div><button class="btn pri sm" onclick="openRewardForm(null)">+ Add</button></div>`;
+    let h=`<div class="info g"><strong>Kids choose their reward</strong> when stars are reached.</div>`;
+    if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🔔 Action needed</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:6px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="declineR(${ri})">Decline</button><button class="btn pri sm" onclick="confirmR(${ri})">✓ Give reward</button></div></div>`;});}
+    h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">All rewards</div><button class="btn pri sm" onclick="openRF(null)">+ Add</button></div>`;
     G.kids.forEach(k=>{
       const ws=wStars(k.id);const ms=mStars(k.id);
-      h+=`<div style="font-size:13px;font-weight:600;margin:10px 0 6px;display:flex;align-items:center;gap:8px">${k.photo?`<div style="width:24px;height:24px;border-radius:50%;overflow:hidden"><img src="${k.photo}" style="width:100%;height:100%;object-fit:cover"/></div>`:`<div style="width:24px;height:24px;border-radius:50%;background:${k.color||'#1D9E75'}22;display:flex;align-items:center;justify-content:center;font-size:13px">${k.emoji||'👦'}</div>`}${k.name} · Week ${ws}⭐ · Month ${ms}⭐</div>`;
+      h+=`<div style="font-size:13px;font-weight:600;margin:10px 0 6px;display:flex;align-items:center;gap:8px">${avDiv(k.photo,k.emoji||'👦',k.color||'#1D9E75',24)}${k.name} · Week ${ws}⭐ · Month ${ms}⭐</div>`;
       [...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{
-        const ai=G.rewards.indexOf(r);const check=r.period==='month'?ms:ws;const ok=check>=r.stars;const pct=Math.min(100,Math.round(check/r.stars*100));
-        h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="display:flex;gap:4px"><button class="btn ib" onclick="openRewardForm(${ai})">✏️</button><button class="btn ib dan" onclick="delReward(${ai})">🗑️</button></div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 '+r.claimedBy+' chose this':ok?'Unlocked!':check+'/'+r.stars} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;
+        const ri=G.rewards.indexOf(r);const c=r.period==='month'?ms:ws;const ok=c>=r.stars;const pct=Math.min(100,Math.round(c/r.stars*100));
+        h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="display:flex;gap:4px"><button class="btn ib" onclick="openRF(${ri})">✏️</button><button class="btn ib dan" onclick="delR(${ri})">🗑️</button></div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 '+r.claimedBy+' chose this':ok?'Unlocked!':c+'/'+r.stars} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;
       });
     });
     pc.innerHTML=h;return;
   }
-  if(tab==='report'){renderReportTab(pc);return;}
-}
+  if(tab==='report'){renderReport(pc);return;}
+};
 
-window.confirmReward=function(idx){G.rewards[idx].given=true;G.rewards[idx].claimed=false;saveParentData();pTab('appr');alert('Reward confirmed and given! ✅');}
-window.declineReward=function(idx){G.rewards[idx].claimed=false;delete G.rewards[idx].claimedBy;saveParentData();pTab('appr');}
-window.approve=function(idx){const a=G.pending[idx];const log=getLog(a.kidId,a.date);log.tasks[a.tid]='approved';saveLog(a.kidId,a.date);G.pending.splice(idx,1);pTab('appr');}
-window.reject=function(idx){const a=G.pending[idx];const log=getLog(a.kidId,a.date);log.tasks[a.tid]='none';delete log.photos[a.tid];delete log.ticked[a.tid];saveLog(a.kidId,a.date);G.pending.splice(idx,1);pTab('appr');}
+window.approveA=idx=>{const a=G.pending[idx];if(!a)return;const lg=getLog(a.kidId,a.date);lg.tasks[a.tid]='approved';saveLog(a.kidId,a.date);G.pending.splice(idx,1);pTab('appr');};
+window.rejectA=idx=>{const a=G.pending[idx];if(!a)return;const lg=getLog(a.kidId,a.date);lg.tasks[a.tid]='none';if(lg.photos)delete lg.photos[a.tid];if(lg.ticked)delete lg.ticked[a.tid];saveLog(a.kidId,a.date);G.pending.splice(idx,1);pTab('appr');};
+window.confirmR=ri=>{G.rewards[ri].given=true;G.rewards[ri].claimed=false;saveP();pTab('appr');alert('Reward given! ✅');};
+window.declineR=ri=>{G.rewards[ri].claimed=false;delete G.rewards[ri].claimedBy;saveP();pTab('appr');};
 
-// ── AVATAR EDITING ────────────────────────────────────
-let _editingKidIdx=null;
-let _newKidEmoji='👦';
-window.selectNewKidEmoji=function(el,emoji){document.querySelectorAll('#new-kid-emoji-grid .emoji-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');_newKidEmoji=emoji;}
-window.editKidAvatar=function(ki){
-  _editingKidIdx=ki;const kid=G.kids[ki];
-  const oldBody=document.getElementById('p-body').innerHTML;
-  let h=`<div style="text-align:center;margin-bottom:16px"><div style="font-size:15px;font-weight:600;margin-bottom:14px">Edit ${kid.name}'s photo / emoji</div>`;
-  h+=`<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid ${kid.color||'var(--g)'};margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:34px;background:${kid.color||'#1D9E75'}22" id="kid-avatar-preview">${kid.photo?`<img src="${kid.photo}" style="width:100%;height:100%;object-fit:cover" id="kid-av-img"/>`:(kid.emoji||'👦')}</div>`;
-  h+=`<label class="btn pri sm" style="cursor:pointer;display:inline-block">📷 Upload photo<input type="file" accept="image/*" style="display:none" onchange="uploadKidPhoto(this)"/></label></div>`;
-  h+=`<div class="sl">Or choose an emoji</div><div class="emoji-grid">${KID_EMOJIS.map(e=>`<div class="emoji-opt${(kid.emoji||'👦')===e?' selected':''}" onclick="setKidEmoji(this,'${e}')">${e}</div>`).join('')}</div>`;
-  h+=`<div style="display:flex;gap:8px;margin-top:14px"><button class="btn" onclick="pTab('kids')">Cancel</button><button class="btn pri" onclick="saveKidAvatar()">Save</button></div>`;
-  document.getElementById('p-body').innerHTML=h;
-}
-window.uploadKidPhoto=function(inp){
-  const file=inp.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const prev=document.getElementById('kid-avatar-preview');
-    if(prev)prev.innerHTML=`<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover"/>`;
-    G._pendingKidPhoto=ev.target.result;
-  };reader.readAsDataURL(file);
-}
-window.setKidEmoji=function(el,emoji){
-  document.querySelectorAll('.emoji-grid .emoji-opt').forEach(e=>e.classList.remove('selected'));
-  el.classList.add('selected');
-  G._pendingKidEmoji=emoji;
-  G._pendingKidPhoto=null;
-  const prev=document.getElementById('kid-avatar-preview');
-  if(prev)prev.innerHTML=emoji;
-}
-window.saveKidAvatar=function(){
-  if(_editingKidIdx===null)return;
-  const kid=G.kids[_editingKidIdx];
-  if(G._pendingKidPhoto){kid.photo=G._pendingKidPhoto;kid.emoji=null;}
-  else if(G._pendingKidEmoji){kid.emoji=G._pendingKidEmoji;kid.photo=null;}
-  G._pendingKidPhoto=null;G._pendingKidEmoji=null;_editingKidIdx=null;
-  saveParentData();pTab('kids');
-}
+// Tasks
+let _nkEmoji='👦';
+window.selNKEmoji=(el,e)=>{document.querySelectorAll('#nk-eg .emoji-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');_nkEmoji=e;};
+function pTRow(t){return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="openTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="delT('${t.id}')">🗑️</button></div></div>`;}
+window.openTF=id=>{const t=id?G.tasks.find(x=>x.id===id):null;G.editTask=id||null;let h=`<div class="sl">${t?'Edit':'New'} task</div><div class="ff"><label>Icon</label><input id="tf-i" maxlength="4" value="${t?t.ico:''}" placeholder="📚"/></div><div class="ff"><label>Name</label><input id="tf-n" value="${t?t.name:''}" placeholder="e.g. Read 20 min"/></div><div class="ff"><label>Category</label><select id="tf-c"><option value="daily"${!t||t.cat==='daily'?' selected':''}>Daily</option><option value="bonus"${t&&t.cat==='bonus'?' selected':''}>Bonus</option></select></div><div class="ff"><label>Stars</label><select id="tf-s"><option value="1"${!t||t.stars==1?' selected':''}>1</option><option value="2"${t&&t.stars==2?' selected':''}>2</option><option value="3"${t&&t.stars==3?' selected':''}>3</option></select></div><div style="display:flex;gap:8px;margin-top:10px">${t?`<button class="btn dan" onclick="delT('${t.id}');pTab('tasks')">Delete</button>`:''}<button class="btn pri" onclick="saveT()">Save</button></div>`;document.getElementById('p-body').innerHTML=h;};
+window.saveT=()=>{const i=document.getElementById('tf-i').value.trim()||'📌';const n=document.getElementById('tf-n').value.trim();if(!n){alert('Enter name.');return;}const c=document.getElementById('tf-c').value;const s=parseInt(document.getElementById('tf-s').value);if(G.editTask){const t=G.tasks.find(x=>x.id===G.editTask);if(t){t.ico=i;t.name=n;t.cat=c;t.stars=s;}}else G.tasks.push({id:uid(),ico:i,name:n,cat:c,stars:s});G.editTask=null;saveP();pTab('tasks');};
+window.delT=id=>{if(!confirm('Delete task?'))return;G.tasks=G.tasks.filter(t=>t.id!==id);saveP();pTab('tasks');};
+window.addKid=()=>{const n=document.getElementById('ki-n');if(!n||!n.value.trim())return;const cols=['#1D9E75','#7F77DD','#D85A30','#378ADD','#D4537E'];G.kids.push({id:'k'+Date.now(),name:n.value.trim(),color:cols[G.kids.length%cols.length],code:rndCode(),emoji:_nkEmoji,photo:null});n.value='';_nkEmoji='👦';saveP();pTab('kids');};
+window.regenCode=id=>{const k=G.kids.find(x=>x.id===id);if(k){k.code=rndCode();saveP();pTab('kids');}};
+window.removeKid=id=>{if(!confirm('Remove child? This cannot be undone.'))return;G.kids=G.kids.filter(k=>k.id!==id);saveP();pTab('kids');};
+// Edit kid avatar
+let _editKi=null;
+window.editKidAv=ki=>{_editKi=ki;const k=G.kids[ki];let h=`<div style="text-align:center;margin-bottom:14px"><div style="font-size:15px;font-weight:600;margin-bottom:12px">Edit ${k.name}'s photo</div>`;h+=`<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid ${k.color||'var(--g)'};margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:34px;background:${k.color||'#1D9E75'}22" id="kav-prev">${k.photo?`<img src="${k.photo}" style="width:100%;height:100%;object-fit:cover"/>`:k.emoji||'👦'}</div>`;h+=`<button class="btn pri sm" onclick="openCamera(d=>{const k=G.kids[_editKi];k.photo=d;k.emoji=null;const p=document.getElementById('kav-prev');if(p)p.innerHTML='<img src=\\''+d+'\\'style=\\'width:100%;height:100%;object-fit:cover\\'/>';})">📷 Upload photo</button></div>`;h+=`<div class="sl">Or choose emoji</div><div class="emoji-grid">${KEMOJIS.map(e=>`<div class="emoji-opt${(k.emoji||'👦')===e?' selected':''}" onclick="setKE(this,'${e}')">${e}</div>`).join('')}</div>`;h+=`<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" onclick="pTab('kids')">Cancel</button><button class="btn pri" onclick="saveKidAv()">Save</button></div>`;document.getElementById('p-body').innerHTML=h;};
+window.setKE=(el,e)=>{document.querySelectorAll('.emoji-grid .emoji-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');const k=G.kids[_editKi];k.emoji=e;k.photo=null;const p=document.getElementById('kav-prev');if(p)p.innerHTML=e;};
+window.saveKidAv=()=>{saveP();pTab('kids');};
 
-// Edit parent avatar in settings
-window.uploadParentPhoto=function(inp){
-  const file=inp.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{G.parentAvatar=ev.target.result;saveParentData();renderSettings();openParent(auth.currentUser);};
-  reader.readAsDataURL(file);
-}
-window.setParentEmoji=function(el,emoji){
-  document.querySelectorAll('#parent-emoji-grid .emoji-opt').forEach(e=>e.classList.remove('selected'));
-  el.classList.add('selected');G.parentEmoji=emoji;G.parentAvatar=null;
-  saveParentData();
-  const avEl=document.getElementById('p-avatar-top');
-  if(avEl)avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:#1D9E7522;border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-size:18px">${emoji}</div>`;
-}
-
-function pTaskRow(t){return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="openTaskForm('${t.id}')">✏️</button><button class="btn ib dan" onclick="delTask('${t.id}')">🗑️</button></div></div>`;}
-window.openTaskForm=function(id){const t=id?G.tasks.find(x=>x.id===id):null;G.editTask=id||null;let h=`<div class="sl">${t?'Edit':'New'} task</div><div class="ff"><label>Icon</label><input id="tf-ico" maxlength="4" value="${t?t.ico:''}" placeholder="📚"/></div><div class="ff"><label>Name</label><input id="tf-n" value="${t?t.name:''}" placeholder="e.g. Read 20 min"/></div><div class="ff"><label>Category</label><select id="tf-cat"><option value="daily"${!t||t.cat==='daily'?' selected':''}>Daily</option><option value="bonus"${t&&t.cat==='bonus'?' selected':''}>Bonus</option></select></div><div class="ff"><label>Stars</label><select id="tf-s"><option value="1"${!t||t.stars==1?' selected':''}>1 star</option><option value="2"${t&&t.stars==2?' selected':''}>2 stars</option><option value="3"${t&&t.stars==3?' selected':''}>3 stars</option></select></div><div style="display:flex;gap:8px;margin-top:10px">${t?`<button class="btn dan" onclick="delTask('${t.id}');pTab('tasks')">Delete</button>`:''}<button class="btn pri" onclick="saveTask()">Save</button></div>`;document.getElementById('p-body').innerHTML=h;}
-window.saveTask=function(){const ico=document.getElementById('tf-ico').value.trim()||'📌';const name=document.getElementById('tf-n').value.trim();if(!name){alert('Enter a task name.');return;}const cat=document.getElementById('tf-cat').value;const stars=parseInt(document.getElementById('tf-s').value);if(G.editTask){const t=G.tasks.find(x=>x.id===G.editTask);if(t){t.ico=ico;t.name=name;t.cat=cat;t.stars=stars;}}else G.tasks.push({id:uid(),ico,name,cat,stars});G.editTask=null;saveParentData();pTab('tasks');}
-window.delTask=function(id){if(!confirm('Delete task?'))return;G.tasks=G.tasks.filter(t=>t.id!==id);saveParentData();pTab('tasks');}
-window.addKid=function(){
-  const inp=document.getElementById('ki-inp');const name=inp?inp.value.trim():'';if(!name)return;
-  const cols=['#1D9E75','#7F77DD','#D85A30','#378ADD','#D4537E'];
-  G.kids.push({id:'k'+Date.now(),name,color:cols[G.kids.length%cols.length],code:rndCode(),emoji:_newKidEmoji,photo:null});
-  if(inp)inp.value='';_newKidEmoji='👦';saveParentData();pTab('kids');
-}
-window.regenCode=function(id){const k=G.kids.find(x=>x.id===id);if(k){k.code=rndCode();saveParentData();pTab('kids');}}
-window.removeKid=function(id){if(!confirm('Remove child?'))return;G.kids=G.kids.filter(k=>k.id!==id);saveParentData();pTab('kids');}
-window.openRewardForm=function(idx){G.editReward=idx;const r=idx!=null?G.rewards[idx]:null;document.getElementById('re-tit').textContent=r?'Edit reward':'Add reward';let h=`<div class="ff"><label>Reward name</label><input id="rf-n" value="${r?r.name:''}" placeholder="e.g. Pizza night"/></div><div class="ff"><label>Stars required</label><input id="rf-s" type="number" min="1" value="${r?r.stars:30}"/></div><div class="ff"><label>Period</label><div class="seg" id="rf-per"><div class="segb${!r||r.period==='week'?' active':''}" onclick="setSeg('rf-per',0)">📅 Weekly</div><div class="segb${r&&r.period==='month'?' active':''}" onclick="setSeg('rf-per',1)">📆 Monthly</div></div></div><div class="ff"><label>Type</label><div class="seg" id="rf-type"><div class="segb${!r||r.type==='treat'?' active':''}" onclick="setSeg('rf-type',0);document.getElementById('rf-money').style.display='none'">🎉 Treat</div><div class="segb${r&&r.type==='money'?' active':''}" onclick="setSeg('rf-type',1);document.getElementById('rf-money').style.display='block'">💰 Cash</div></div></div><div id="rf-money" style="display:${r&&r.type==='money'?'block':'none'}"><div class="ff"><label>Amount (${G.currency})</label><input id="rf-amt" type="number" value="${r&&r.amount?r.amount:''}"/></div><div class="ff"><label>Payment</label><select id="rf-pay"><option value="cash">Cash</option><option value="transfer"${r&&r.payType==='transfer'?' selected':''}>Bank transfer</option><option value="wallet"${r&&r.payType==='wallet'?' selected':''}>STC Pay</option></select></div></div><div style="display:flex;gap:8px;margin-top:12px">${idx!=null?`<button class="btn dan" onclick="delReward(${idx});pTab('rewards');SS('s-parent')">Delete</button>`:''}<button class="btn pri" onclick="saveReward()">Save</button></div>`;document.getElementById('re-body').innerHTML=h;SS('s-redit');}
-window.setSeg=function(id,ai){document.querySelectorAll(`#${id} .segb`).forEach((b,i)=>b.classList.toggle('active',i===ai));}
-window.saveReward=function(){const name=document.getElementById('rf-n').value.trim();if(!name){alert('Enter name.');return;}const stars=parseInt(document.getElementById('rf-s').value)||20;const period=document.querySelectorAll('#rf-per .segb')[1].classList.contains('active')?'month':'week';const type=document.querySelectorAll('#rf-type .segb')[1].classList.contains('active')?'money':'treat';const amount=type==='money'?parseFloat(document.getElementById('rf-amt').value)||0:null;const payType=type==='money'?document.getElementById('rf-pay').value:null;const obj={id:uid(),name,stars,period,type,amount,payType,given:false};if(G.editReward!=null)G.rewards[G.editReward]=obj;else G.rewards.push(obj);G.editReward=null;saveParentData();pTab('rewards');SS('s-parent');}
-window.delReward=function(idx){if(!confirm('Delete?'))return;G.rewards.splice(idx,1);saveParentData();pTab('rewards');}
+// Rewards
+window.openRF=idx=>{G.editReward=idx;const r=idx!=null?G.rewards[idx]:null;document.getElementById('re-tit').textContent=r?'Edit reward':'Add reward';let h=`<div class="ff"><label>Name</label><input id="rf-n" value="${r?r.name:''}" placeholder="e.g. Pizza night"/></div><div class="ff"><label>Stars required</label><input id="rf-s" type="number" min="1" value="${r?r.stars:30}"/></div><div class="ff"><label>Period</label><div class="seg" id="rf-per"><div class="segb${!r||r.period==='week'?' active':''}" onclick="setSeg('rf-per',0)">📅 Weekly</div><div class="segb${r&&r.period==='month'?' active':''}" onclick="setSeg('rf-per',1)">📆 Monthly</div></div></div><div class="ff"><label>Type</label><div class="seg" id="rf-type"><div class="segb${!r||r.type==='treat'?' active':''}" onclick="setSeg('rf-type',0);document.getElementById('rf-m').style.display='none'">🎉 Treat</div><div class="segb${r&&r.type==='money'?' active':''}" onclick="setSeg('rf-type',1);document.getElementById('rf-m').style.display='block'">💰 Cash</div></div></div><div id="rf-m" style="display:${r&&r.type==='money'?'block':'none'}"><div class="ff"><label>Amount (${G.currency})</label><input id="rf-a" type="number" value="${r&&r.amount?r.amount:''}"/></div><div class="ff"><label>Payment</label><select id="rf-py"><option value="cash">Cash</option><option value="transfer"${r&&r.payType==='transfer'?' selected':''}>Bank transfer</option><option value="wallet"${r&&r.payType==='wallet'?' selected':''}>STC Pay</option></select></div></div><div style="display:flex;gap:8px;margin-top:12px">${idx!=null?`<button class="btn dan" onclick="delR(${idx});pTab('rewards');SS('s-parent')">Delete</button>`:''}<button class="btn pri" onclick="saveR()">Save</button></div>`;document.getElementById('re-body').innerHTML=h;SS('s-redit');};
+window.setSeg=(id,ai)=>document.querySelectorAll(`#${id} .segb`).forEach((b,i)=>b.classList.toggle('active',i===ai));
+window.saveR=()=>{const n=document.getElementById('rf-n').value.trim();if(!n){alert('Enter name.');return;}const s=parseInt(document.getElementById('rf-s').value)||20;const period=document.querySelectorAll('#rf-per .segb')[1].classList.contains('active')?'month':'week';const type=document.querySelectorAll('#rf-type .segb')[1].classList.contains('active')?'money':'treat';const amount=type==='money'?parseFloat(document.getElementById('rf-a').value)||0:null;const payType=type==='money'?document.getElementById('rf-py').value:null;const obj={id:uid(),name:n,stars:s,period,type,amount,payType,given:false};if(G.editReward!=null)G.rewards[G.editReward]=obj;else G.rewards.push(obj);G.editReward=null;saveP();pTab('rewards');SS('s-parent');};
+window.delR=idx=>{if(!confirm('Delete reward?'))return;G.rewards.splice(idx,1);saveP();pTab('rewards');};
 
 // ── REPORT ────────────────────────────────────────────
-function renderReportTab(pc){let h=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="rk-sel">`;G.kids.forEach((k,i)=>{h+=`<div class="badge ${i===0?'pro':'free'}" style="cursor:pointer;padding:5px 12px" onclick="selRK('${k.id}')">${k.emoji||'👦'} ${k.name}</div>`;});h+=`</div><div id="rb"></div>`;pc.innerHTML=h;if(G.kids.length)selRK(G.kids[0].id);}
-window.selRK=function(id){G.repKid=id;document.querySelectorAll('#rk-sel .badge').forEach(b=>b.className='badge free');const kid=G.kids.find(k=>k.id===id);const ab=Array.from(document.querySelectorAll('#rk-sel .badge')).find(b=>b.textContent.trim().includes(kid?.name));if(ab)ab.className='badge pro';const rb=document.getElementById('rb');if(!rb)return;rb.innerHTML=`<div class="seg" id="rp-seg"><div class="segb active" onclick="setRP('week')">📅 Weekly</div><div class="segb" onclick="setRP('month')">📆 Monthly</div></div><div id="rc"></div>`;setRP('week');}
-window.setRP=function(p){document.querySelectorAll('#rp-seg .segb').forEach((b,i)=>b.classList.toggle('active',(p==='week'&&i===0)||(p==='month'&&i===1)));genRep(G.repKid,p);}
+function renderReport(pc){let h=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="rk-sel">`;G.kids.forEach((k,i)=>{h+=`<div class="badge ${i===0?'pro':'free'}" style="cursor:pointer;padding:5px 12px" onclick="selRK('${k.id}')">${k.emoji||'👦'} ${k.name}</div>`;});h+=`</div><div id="rb"></div>`;pc.innerHTML=h;if(G.kids.length)selRK(G.kids[0].id);}
+window.selRK=id=>{G.repKid=id;document.querySelectorAll('#rk-sel .badge').forEach(b=>b.className='badge free');const k=G.kids.find(x=>x.id===id);const ab=Array.from(document.querySelectorAll('#rk-sel .badge')).find(b=>b.textContent.includes(k?.name||''));if(ab)ab.className='badge pro';const rb=document.getElementById('rb');if(!rb)return;rb.innerHTML=`<div class="seg" id="rp-seg"><div class="segb active" onclick="setRP('week')">📅 Weekly</div><div class="segb" onclick="setRP('month')">📆 Monthly</div></div><div id="rc"></div>`;setRP('week');};
+window.setRP=p=>{document.querySelectorAll('#rp-seg .segb').forEach((b,i)=>b.classList.toggle('active',(p==='week'&&i===0)||(p==='month'&&i===1)));genRep(G.repKid,p);};
 function genRep(kidId,period){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
   const keys=period==='week'?wkeys():mkeys();const pr=prayers();const td=today();
@@ -1109,235 +943,37 @@ function genRep(kidId,period){
   const tp=tt?Math.round(td2/tt*100):0;const pp=pr.length?Math.round(pd/keys.length*100):null;
   const now=new Date();const dl=period==='week'?`${wkeys()[0]} → ${wkeys()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;
   const grade=tp>=90?'🥇 Excellent':tp>=70?'🥈 Very good':tp>=50?'🥉 Good':'💪 Keep going';
-  const msg=tp>=90?`Outstanding ${period} from ${kid.name}!`:tp>=70?`Great effort this ${period}!`:tp>=50?`Progress — aim for more!`:`Let's encourage ${kid.name} more.`;
+  const msg=tp>=90?`Outstanding ${period} from ${kid.name}!`:tp>=70?`Great effort!`:tp>=50?`Progress — aim for more!`:`Let's encourage ${kid.name} more.`;
   let h=`<div class="rphdr"><div style="font-size:17px;font-weight:700">⭐ ${kid.name}'s Report</div><div style="font-size:12px;opacity:.85;margin-top:3px">${period==='week'?'Weekly':'Monthly'} · ${dl}</div></div>`;
   h+=`<div class="sgrid"><div class="scard"><div class="sgnum">${ts}</div><div class="sglbl">⭐ Stars</div></div><div class="scard"><div class="sgnum">${tp}%</div><div class="sglbl">📋 Tasks</div></div>`;
   if(pp!==null)h+=`<div class="scard"><div class="sgnum">${pp}%</div><div class="sglbl">🙏 Prayers</div></div>`;
   h+=`<div class="scard"><div class="sgnum">${bd}</div><div class="sglbl">⭐ Bonus</div></div></div>`;
   [{l:'Daily tasks',v:tp,max:100,u:'%'},{l:'Stars earned',v:ts,max:Math.max(ts,50),u:'⭐'}].forEach(b=>{const pct=b.max?Math.min(100,Math.round(b.v/b.max*100)):0;h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500"><span>${b.l}</span><span>${b.v}${b.u}</span></div><div class="pb"><div class="pbf" style="width:${pct}%"></div></div></div>`;});
-  h+=`<div class="sl">Day by day</div><div class="dgrid">`;
-  (period==='week'?keys:wkeys()).forEach((dk,i)=>{const s=calcStars(kidId,dk);h+=`<div class="dcell${dk===td?' today':''}"><div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div></div>`;});
+  h+=`<div class="sl">Day by day</div><div class="dgrid">`;(period==='week'?keys:wkeys()).forEach((dk,i)=>{const s=calcStars(kidId,dk);h+=`<div class="dcell${dk===td?' today':''}"><div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div></div>`;});
   h+=`</div><div class="info g" style="text-align:center"><div style="font-size:20px;margin-bottom:4px">${grade}</div><div style="font-size:13px">${msg}</div></div>`;
   document.getElementById('rc').innerHTML=h;
 }
 
 // ── SETTINGS ──────────────────────────────────────────
-window.renderSettings=function(){
-  const PEMOJIS=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','🧑','👩‍💼','👨‍💼','🧑‍💼'];
+window.renderSettings=()=>{
+  const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼','🧑‍💼'];
   let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center">`;
-  h+=`<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.parentAvatar?`<img src="${G.parentAvatar}" style="width:100%;height:100%;object-fit:cover"/>`:G.parentEmoji||'👨‍👩‍👧'}</div>`;
-  h+=`<div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.parentData?.name||'Parent'}</div>`;
+  h+=`<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div>`;
+  h+=`<div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div>`;
   h+=`<div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div>`;
-  h+=`<label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" accept="image/*" style="display:none" onchange="uploadParentPhoto(this)"/></label>`;
-  h+=`<div class="emoji-grid" id="parent-emoji-grid">${PEMOJIS.map(e=>`<div class="emoji-opt${(G.parentEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="setParentEmoji(this,'${e}')">${e}</div>`).join('')}</div>`;
-  h+=`<button class="btn dan" style="width:100%;margin-top:10px" onclick="signOutParent()">Sign out</button></div>`;
-  h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayersEnabled?'on':'off'}" onclick="G.prayersEnabled=!G.prayersEnabled;saveParentData();renderSettings()"></button></div>`;
-  if(G.prayersEnabled)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveParentData()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam — 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian — 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;
-  h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveParentData()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div>`;
-  h+=`<div class="sl">Saved logins</div><div class="card"><div style="font-size:13px;color:var(--t2);margin-bottom:8px">Devices that remember your login:</div><button class="btn dan sm" onclick="localStorage.removeItem('${LS_PARENT}');localStorage.removeItem('${LS_KIDS}');alert('Saved logins cleared.');renderSettings()">Clear all saved logins</button></div>`;
+  h+=`<button class="btn sm" style="margin-bottom:10px" onclick="openCamera(d=>{G.pPhoto=d;G.pEmoji=null;saveP();renderSettings();const av=document.getElementById('p-av-top');if(av)av.innerHTML=avDiv(G.pPhoto,G.pEmoji,'#1D9E75',36);})">📷 Change photo</button>`;
+  h+=`<div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="G.pEmoji=this.textContent;G.pPhoto=null;saveP();renderSettings();const av=document.getElementById('p-av-top');if(av)av.innerHTML=avDiv(null,G.pEmoji,'#1D9E75',36);">${e}</div>`).join('')}</div>`;
+  h+=`<button class="btn dan" style="width:100%;margin-top:10px" onclick="doSignOut()">Sign out</button></div>`;
+  h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();renderSettings()"></button></div>`;
+  if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam — 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian — 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;
+  h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div>`;
+  h+=`<div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');renderSettings()">Clear all saved logins</button></div>`;
   document.getElementById('set-body').innerHTML=h;
-}
-
-
-// ── PASSWORD RESET ────────────────────────────────────
-window.showResetPassword=function(){
-  const f=document.getElementById('auth-form');
-  f.innerHTML=`
-    <div class="info a">Enter your email address and we will send you a link to reset your password.</div>
-    <input class="inp" id="reset-email" type="email" placeholder="Your email address" autocomplete="email"/>
-    <div id="reset-msg" style="font-size:13px;min-height:18px;margin-bottom:8px;text-align:center"></div>
-    <button class="btn pri" style="width:100%;padding:12px;font-size:14px" onclick="doResetPassword()">Send reset link →</button>
-    <div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--t3);cursor:pointer" onclick="renderAuthForm()">← Back to sign in</span></div>
-  `;
-}
-window.doResetPassword=async function(){
-  const email=document.getElementById('reset-email').value.trim();
-  const msgEl=document.getElementById('reset-msg');
-  if(!email){msgEl.style.color='var(--r)';msgEl.textContent='Please enter your email address.';return;}
-  msgEl.style.color='var(--t3)';msgEl.textContent='Sending...';
-  try{
-    await sendPasswordResetEmail(auth,email);
-    msgEl.style.color='var(--g)';
-    msgEl.textContent='✅ Reset link sent! Check your email inbox (and spam folder).';
-    setTimeout(()=>{renderAuthForm();},4000);
-  }catch(e){
-    msgEl.style.color='var(--r)';
-    msgEl.textContent=e.code==='auth/user-not-found'?'No account found with this email.':e.code==='auth/invalid-email'?'Please enter a valid email address.':'Error: '+e.message;
-  }
-}
-
-// ── SHOW/HIDE PASSWORD ────────────────────────────────
-window.togglePass=function(inputId,eyeId){
-  const inp=document.getElementById(inputId);
-  const eye=document.getElementById(eyeId);
-  if(!inp)return;
-  if(inp.type==='password'){inp.type='text';if(eye)eye.textContent='🙈';}
-  else{inp.type='password';if(eye)eye.textContent='👁';}
-}
-
-
-
-// ── DEBOUNCE + INTERACTION LOCK ───────────────────────
-let _renderKidTimer = null;
-let _userInteracting = false;
-let _interactionTimer = null;
-
-// Mark user as interacting — pause auto re-renders
-function markInteracting(){
-  _userInteracting = true;
-  clearTimeout(_interactionTimer);
-  _interactionTimer = setTimeout(()=>{ _userInteracting = false; }, 3000);
-}
-
-// Debounced renderKid — waits 1.5s after last call, skips if user is interacting
-function renderKidDebounced(){
-  clearTimeout(_renderKidTimer);
-  _renderKidTimer = setTimeout(()=>{
-    if(!_userInteracting && document.getElementById('s-kid').classList.contains('active')){
-      renderKid();
-    }
-  }, 1500);
-}
-
-// ── PRAYER TIMES (Azan.ca API) ────────────────────────
-let G_prayerTimes = {};
-let G_prayerTimers = [];
-
-async function fetchPrayerTimes(){
-  if(!G.prayersEnabled || G.religion !== 'islam') return;
-  try{
-    // Get user location
-    const pos = await new Promise((res,rej)=>
-      navigator.geolocation.getCurrentPosition(res, rej, {timeout:8000})
-    );
-    const lat = pos.coords.latitude.toFixed(4);
-    const lng = pos.coords.longitude.toFixed(4);
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth()+1).padStart(2,'0');
-    const d = String(today.getDate()).padStart(2,'0');
-    const url = `https://api.aladhan.com/v1/timings/${d}-${m}-${y}?latitude=${lat}&longitude=${lng}&method=4`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if(data.code === 200){
-      const t = data.data.timings;
-      G_prayerTimes = {
-        Fajr: t.Fajr,
-        Dhuhr: t.Dhuhr,
-        Asr: t.Asr,
-        Maghrib: t.Maghrib,
-        Isha: t.Isha
-      };
-      G.prayerCity = data.data.meta.timezone || '';
-      schedulePrayerNotifications();
-      updatePrayerTimesUI();
-    }
-  } catch(e){
-    // Fallback: try by timezone without GPS
-    try{
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const today = new Date();
-      const d = String(today.getDate()).padStart(2,'0');
-      const m = String(today.getMonth()+1).padStart(2,'0');
-      const y = today.getFullYear();
-      const url = `https://api.aladhan.com/v1/timingsByCity/${d}-${m}-${y}?city=Riyadh&country=SA&method=4`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if(data.code === 200){
-        const t = data.data.timings;
-        G_prayerTimes = {Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
-        schedulePrayerNotifications();
-        updatePrayerTimesUI();
-      }
-    } catch(e2){ console.log('Prayer times unavailable', e2); }
-  }
-}
-
-function updatePrayerTimesUI(){
-  // Update prayer cards if kid screen is active
-  if(document.getElementById('s-kid').classList.contains('active')){
-    renderKid();
-  }
-}
-
-function schedulePrayerNotifications(){
-  // Clear old timers
-  G_prayerTimers.forEach(t=>clearTimeout(t));
-  G_prayerTimers = [];
-  if(!('Notification' in window)) return;
-  const now = new Date();
-  Object.entries(G_prayerTimes).forEach(([name, timeStr])=>{
-    const [h,min] = timeStr.split(':').map(Number);
-    const prayerTime = new Date();
-    prayerTime.setHours(h, min, 0, 0);
-    const diff = prayerTime - now;
-    if(diff > 0 && diff < 86400000){ // Within next 24 hours
-      const timer = setTimeout(()=>{
-        if(Notification.permission === 'granted'){
-          new Notification('🕌 Prayer Time — ' + name, {
-            body: 'Time for ' + name + ' prayer. Tap to open StarKids.',
-            icon: '/starkids/icon-192.png',
-            badge: '/starkids/icon-192.png',
-            tag: 'prayer-' + name
-          });
-        }
-      }, diff);
-      G_prayerTimers.push(timer);
-    }
-  });
-}
-
-async function requestNotificationPermission(){
-  if(!('Notification' in window)) return false;
-  if(Notification.permission === 'granted') return true;
-  if(Notification.permission === 'denied') return false;
-  const result = await Notification.requestPermission();
-  return result === 'granted';
-}
-
-function getPrayerTimeDisplay(prayerName){
-  return G_prayerTimes[prayerName] || '';
-}
-
-// Request notification permission when kid logs in
-async function initKidNotifications(){
-  if(G.prayersEnabled && G.religion === 'islam'){
-    const granted = await requestNotificationPermission();
-    if(granted){
-      await fetchPrayerTimes();
-    } else {
-      // Still try to get times for display
-      fetchPrayerTimes().catch(()=>{});
-    }
-  }
-}
-
-// Daily parent notification at 8:30 PM
-function scheduleParentDailyReport(){
-  const now = new Date();
-  const report = new Date();
-  report.setHours(20, 30, 0, 0);
-  if(report <= now) report.setDate(report.getDate() + 1);
-  const diff = report - now;
-  setTimeout(()=>{
-    if(Notification.permission === 'granted' && G.pending.length > 0){
-      new Notification('⭐ StarKids Daily Report', {
-        body: `You have ${G.pending.length} pending approval${G.pending.length>1?'s':''}. Tap to review.`,
-        icon: '/starkids/icon-192.png',
-        tag: 'daily-report'
-      });
-    }
-    // Reschedule for next day
-    scheduleParentDailyReport();
-  }, diff);
-}
+};
 
 // ── INIT ──────────────────────────────────────────────
-renderHome();
-buildCI();
-setAuthMode('signin');
-renderAuthForm();
+renderHome();buildCI();setAuthMode('signin');renderAuthForm();
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
 </body>
 </html>

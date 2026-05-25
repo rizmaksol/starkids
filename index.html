@@ -244,7 +244,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,updateProfile}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,updateProfile,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,doc,setDoc,getDoc,collection,query,where,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FC={apiKey:"AIzaSyBRFMAu5DxyT_ORclTOWjXwkbM1EIuXVcc",authDomain:"starkids-773c3.firebaseapp.com",projectId:"starkids-773c3",storageBucket:"starkids-773c3.firebasestorage.app",messagingSenderId:"356520993318",appId:"1:356520993318:web:475977e92d5a5dbb5d3ce7"};
@@ -452,17 +452,24 @@ window.renderAuthForm=function(){
     f.innerHTML=`
       <div class="info g">Sign in to your parent account.</div>
       <input class="inp" id="li-email" type="email" placeholder="Email address" autocomplete="email"/>
-      <input class="inp" id="li-pass" type="password" placeholder="Password" autocomplete="current-password"/>
+      <div style="position:relative;margin-bottom:10px">
+        <input class="inp" id="li-pass" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px"/>
+        <div onclick="togglePass('li-pass','li-eye')" id="li-eye" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3);user-select:none">👁</div>
+      </div>
       <label class="check-row"><input type="checkbox" id="li-remember" checked/> Remember me on this device</label>
       <div id="auth-err" style="color:var(--r);font-size:12px;margin-bottom:8px;min-height:16px"></div>
       <button class="btn pri" style="width:100%;padding:12px;font-size:14px;margin-top:6px" onclick="doSignIn()">Sign in →</button>
+      <div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--g);cursor:pointer;font-weight:500" onclick="showResetPassword()">Forgot password? Reset it →</span></div>
     `;
   } else {
     f.innerHTML=`
       <div class="info g">Create your parent account. Free 7-day trial.</div>
       <input class="inp" id="su-name" placeholder="Your name" autocomplete="name"/>
       <input class="inp" id="su-email" type="email" placeholder="Email address" autocomplete="email"/>
-      <input class="inp" id="su-pass" type="password" placeholder="Password (min 6 characters)" autocomplete="new-password"/>
+      <div style="position:relative;margin-bottom:10px">
+        <input class="inp" id="su-pass" type="password" placeholder="Password (min 6 characters)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px"/>
+        <div onclick="togglePass('su-pass','su-eye')" id="su-eye" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3);user-select:none">👁</div>
+      </div>
       <div class="ff"><label>Religion / prayer module</label><select id="su-rel" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;background:var(--bg);color:var(--t)"><option value="islam">Islam — 5 daily prayers</option><option value="christian">Christian — 3 prayer times</option><option value="other">Other — custom</option><option value="none">None — hide prayers</option></select></div>
       <div class="ff"><label>Currency</label><select id="su-cur" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;background:var(--bg);color:var(--t)"><option value="SAR">SAR — Saudi Riyal</option><option value="USD">USD — US Dollar</option><option value="GBP">GBP — British Pound</option><option value="AED">AED — UAE Dirham</option></select></div>
       <label class="check-row"><input type="checkbox" id="su-remember" checked/> Remember me on this device</label>
@@ -834,6 +841,43 @@ window.renderSettings=function(){
   h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveParentData()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div>`;
   h+=`<div class="sl">Saved logins</div><div class="card"><div style="font-size:13px;color:var(--t2);margin-bottom:8px">Devices that remember your login:</div><button class="btn dan sm" onclick="localStorage.removeItem('${LS_PARENT}');localStorage.removeItem('${LS_KIDS}');alert('Saved logins cleared.');renderSettings()">Clear all saved logins</button></div>`;
   document.getElementById('set-body').innerHTML=h;
+}
+
+
+// ── PASSWORD RESET ────────────────────────────────────
+window.showResetPassword=function(){
+  const f=document.getElementById('auth-form');
+  f.innerHTML=`
+    <div class="info a">Enter your email address and we will send you a link to reset your password.</div>
+    <input class="inp" id="reset-email" type="email" placeholder="Your email address" autocomplete="email"/>
+    <div id="reset-msg" style="font-size:13px;min-height:18px;margin-bottom:8px;text-align:center"></div>
+    <button class="btn pri" style="width:100%;padding:12px;font-size:14px" onclick="doResetPassword()">Send reset link →</button>
+    <div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--t3);cursor:pointer" onclick="renderAuthForm()">← Back to sign in</span></div>
+  `;
+}
+window.doResetPassword=async function(){
+  const email=document.getElementById('reset-email').value.trim();
+  const msgEl=document.getElementById('reset-msg');
+  if(!email){msgEl.style.color='var(--r)';msgEl.textContent='Please enter your email address.';return;}
+  msgEl.style.color='var(--t3)';msgEl.textContent='Sending...';
+  try{
+    await sendPasswordResetEmail(auth,email);
+    msgEl.style.color='var(--g)';
+    msgEl.textContent='✅ Reset link sent! Check your email inbox (and spam folder).';
+    setTimeout(()=>{renderAuthForm();},4000);
+  }catch(e){
+    msgEl.style.color='var(--r)';
+    msgEl.textContent=e.code==='auth/user-not-found'?'No account found with this email.':e.code==='auth/invalid-email'?'Please enter a valid email address.':'Error: '+e.message;
+  }
+}
+
+// ── SHOW/HIDE PASSWORD ────────────────────────────────
+window.togglePass=function(inputId,eyeId){
+  const inp=document.getElementById(inputId);
+  const eye=document.getElementById(eyeId);
+  if(!inp)return;
+  if(inp.type==='password'){inp.type='text';if(eye)eye.textContent='🙈';}
+  else{inp.type='password';if(eye)eye.textContent='👁';}
 }
 
 // ── INIT ──────────────────────────────────────────────

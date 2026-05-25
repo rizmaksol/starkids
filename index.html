@@ -428,15 +428,21 @@ async function loadParentData(uid){
     }
   }catch(e){console.error('Load error',e);}
 }
+let _saveLogTimers = {};
 async function saveLog(kidId,dk){
   if(!G.parentUid)return;
-  try{
-    await setDoc(doc(db,'logs',`${G.parentUid}_${kidId}_${dk}`),{
-      parentUid:G.parentUid,kidId,date:dk,
-      log:getLog(kidId,dk),
-      updatedAt:new Date().toISOString()
-    });
-  }catch(e){console.error('Log save',e);}
+  // Debounce saves — wait 800ms before actually writing
+  const key = kidId+'_'+dk;
+  clearTimeout(_saveLogTimers[key]);
+  _saveLogTimers[key] = setTimeout(async()=>{
+    try{
+      await setDoc(doc(db,'logs',`${G.parentUid}_${kidId}_${dk}`),{
+        parentUid:G.parentUid,kidId,date:dk,
+        log:getLog(kidId,dk),
+        updatedAt:new Date().toISOString()
+      });
+    }catch(e){console.error('Log save',e);}
+  }, 800);
 }
 
 async function loadLogsForKid(kidId){
@@ -446,6 +452,84 @@ async function loadLogsForKid(kidId){
     const snaps=await getDocs(q);
     snaps.forEach(s=>{const d=s.data();if(!G.logs[kidId])G.logs[kidId]={};G.logs[kidId][d.date]=d.log;});
   }catch(e){console.error('Log load',e);}
+}
+
+
+// ── EVENT DELEGATION FOR KID SCREEN ──────────────────
+// Called ONCE after kid logs in — survives re-renders
+let _kidDelegationInit = false;
+function initKidEventDelegation(){
+  if(_kidDelegationInit) return;
+  _kidDelegationInit = true;
+  const kBody = document.getElementById('k-body');
+  if(!kBody) return;
+
+  // Photo input change — event delegation on k-body
+  kBody.addEventListener('change', e=>{
+    if(!e.target.classList.contains('photo-inp')) return;
+    markInteracting();
+    const file = e.target.files[0];
+    if(!file) return;
+    const tid = e.target.dataset.tid;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const lg = getLog(G.currentKid.id, today());
+      lg.photos[tid] = ev.target.result;
+      const ex = G.pending.find(x=>x.kidId===G.currentKid.id&&x.tid===tid&&x.date===today());
+      if(!ex){
+        const task = G.tasks.find(x=>x.id===tid);
+        if(lg.tasks[tid]!=='approved'){
+          lg.tasks[tid]='pending';
+          G.pending.push({
+            kidId:G.currentKid.id,kidName:G.currentKid.name,
+            task,tid,date:today(),
+            time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+            photo:ev.target.result,ticked:!!lg.ticked[tid]
+          });
+        }
+      } else {
+        ex.photo = ev.target.result;
+      }
+      saveLog(G.currentKid.id, today());
+      // Update just the task row without full re-render
+      updateTaskRowOnly(tid, lg);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Click delegation for tick buttons and prayer cards
+  kBody.addEventListener('click', e=>{
+    markInteracting();
+  });
+}
+
+// Update a single task row without full re-render (prevents freeze)
+function updateTaskRowOnly(tid, log){
+  const task = G.tasks.find(t=>t.id===tid);
+  if(!task) return;
+  // Find the task row and update its content
+  const rows = document.querySelectorAll('#k-body .tr');
+  rows.forEach(row=>{
+    // Check if this row contains the photo input for this task
+    const inp = row.querySelector(`.photo-inp[data-tid="${tid}"]`);
+    const tickEl = row.querySelector(`[onclick*="kidTick(\'${tid}\')"]`);
+    if(inp || tickEl){
+      // Replace just this row
+      const newRowHtml = kidRow(task, log);
+      const temp = document.createElement('div');
+      temp.innerHTML = newRowHtml;
+      const newRow = temp.firstElementChild;
+      if(newRow) row.replaceWith(newRow);
+    }
+  });
+  // Update stars bar
+  const ts = calcStars(G.currentKid.id, today());
+  const ws = wStars(G.currentKid.id);
+  const snumEl = document.querySelector('.snum');
+  if(snumEl) snumEl.textContent = ts + ' ⭐';
+  const wsEl = document.querySelector('.sbar div[style*="text-align:right"] div:last-child');
+  if(wsEl) wsEl.textContent = ws + ' ⭐';
+  document.getElementById('k-stars').textContent = '⭐ ' + ws;
 }
 
 // ── REAL-TIME LISTENERS ───────────────────────────────
@@ -474,10 +558,8 @@ function startParentListener(uid){
       const tabId=activeTab.id.replace('t-','');
       if(tabId==='appr'||tabId==='rewards')pTab(tabId);
     }
-    // If kid screen open — check for newly approved tasks
-    if(document.getElementById('s-kid').classList.contains('active')){
-      renderKid();
-    }
+    // If kid screen open — use debounced render
+    renderKidDebounced();
   },(e)=>console.error('Parent listener error',e));
 }
 
@@ -524,10 +606,8 @@ function startKidLogListener(parentUid,kidId){
       const d=snap.data();
       if(!G.logs[kidId])G.logs[kidId]={};
       G.logs[kidId][dk]=d.log;
-      // Refresh kid screen if open
-      if(document.getElementById('s-kid').classList.contains('active')){
-        renderKid();
-      }
+      // Refresh kid screen if open — use debounced to avoid freezing
+      renderKidDebounced();
     },(e)=>console.error('Kid log listener error',e)
   );
 }
@@ -716,7 +796,11 @@ async function doKidLogin(code){
     startKidLogListener(foundPD.uid,foundKid.id);
     // Also listen to parent data so tasks/rewards update live
     startParentListener(foundPD.uid);
-    SS('s-kid');renderKid();
+    SS('s-kid');
+    _kidDelegationInit = false; // Reset delegation for new kid session
+    renderKid();
+    // Init event delegation for photo/tick inputs
+    setTimeout(()=>initKidEventDelegation(), 100);
     // Init notifications and prayer times
     initKidNotifications();
   }catch(e){SS('s-home');renderHome();alert('Error: '+e.message);}
@@ -755,20 +839,9 @@ function renderKid(){
   h+=`<div class="sl">📋 Daily tasks</div>`;daily.forEach(t=>{h+=kidRow(t,log);});
   if(bonus.length){h+=`<div class="sl">⭐ Bonus tasks</div>`;bonus.forEach(t=>{h+=kidRow(t,log);});}
   document.getElementById('k-body').innerHTML=h;
-  document.querySelectorAll('.photo-inp').forEach(inp=>{
-    inp.addEventListener('change',e=>{
-      const file=e.target.files[0];if(!file)return;
-      const tid=inp.dataset.tid;
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        const lg=getLog(G.currentKid.id,today());lg.photos[tid]=ev.target.result;
-        const ex=G.pending.find(x=>x.kidId===G.currentKid.id&&x.tid===tid&&x.date===today());
-        if(!ex){const task=G.tasks.find(x=>x.id===tid);if(lg.tasks[tid]!=='approved'){lg.tasks[tid]='pending';G.pending.push({kidId:G.currentKid.id,kidName:G.currentKid.name,task,tid,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:ev.target.result,ticked:!!lg.ticked[tid]});}}
-        else ex.photo=ev.target.result;
-        saveLog(G.currentKid.id,today());renderKid();
-      };reader.readAsDataURL(file);
-    });
-  });
+  // Photo inputs handled by event delegation (see initKidEventDelegation)
+  // Re-init delegation if needed (survives re-renders)
+  setTimeout(()=>initKidEventDelegation(), 50);
 }
 function kidRow(t,log){
   const status=log.tasks[t.id]||'none';const ticked=!!log.ticked[t.id];const photo=log.photos&&log.photos[t.id];
@@ -784,6 +857,7 @@ function kidRow(t,log){
   return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">${sub}</div>${proofHtml}</div>${stIco}</div>`;
 }
 window.kidTick=function(id){
+  markInteracting();
   const lg=getLog(G.currentKid.id,today());if(lg.tasks[id]==='approved')return;
   lg.ticked[id]=!lg.ticked[id];
   const ex=G.pending.find(x=>x.kidId===G.currentKid.id&&x.tid===id&&x.date===today());
@@ -791,7 +865,26 @@ window.kidTick=function(id){
   else{if(ex)ex.ticked=false;if(!lg.photos[id]&&!lg.ticked[id]){lg.tasks[id]='none';const idx=G.pending.findIndex(x=>x.kidId===G.currentKid.id&&x.tid===id&&x.date===today());if(idx>-1)G.pending.splice(idx,1);}}
   saveLog(G.currentKid.id,today());renderKid();
 }
-window.togPrayer=function(name){const lg=getLog(G.currentKid.id,today());lg.prayers[name]=!lg.prayers[name];saveLog(G.currentKid.id,today());renderKid();}
+window.togPrayer=function(name){
+  markInteracting();
+  const lg=getLog(G.currentKid.id,today());
+  lg.prayers[name]=!lg.prayers[name];
+  // Update prayer card immediately without full re-render
+  const cards=document.querySelectorAll('.pcard');
+  cards.forEach(card=>{
+    if(card.textContent.includes(name)){
+      const done=lg.prayers[name];
+      card.className='pcard'+(done?' done':'');
+      const circ=card.querySelector('.circ');
+      if(circ){circ.className='circ'+(done?' done':'');circ.textContent=done?'✓':'';}
+    }
+  });
+  // Update stars
+  const ts=calcStars(G.currentKid.id,today());
+  const snumEl=document.querySelector('.snum');
+  if(snumEl)snumEl.textContent=ts+' ⭐';
+  saveLog(G.currentKid.id,today());
+}
 window.submitDay=function(){alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');}
 
 // ── REWARD CHOOSER ────────────────────────────────────
@@ -1082,6 +1175,29 @@ window.togglePass=function(inputId,eyeId){
   else{inp.type='password';if(eye)eye.textContent='👁';}
 }
 
+
+
+// ── DEBOUNCE + INTERACTION LOCK ───────────────────────
+let _renderKidTimer = null;
+let _userInteracting = false;
+let _interactionTimer = null;
+
+// Mark user as interacting — pause auto re-renders
+function markInteracting(){
+  _userInteracting = true;
+  clearTimeout(_interactionTimer);
+  _interactionTimer = setTimeout(()=>{ _userInteracting = false; }, 3000);
+}
+
+// Debounced renderKid — waits 1.5s after last call, skips if user is interacting
+function renderKidDebounced(){
+  clearTimeout(_renderKidTimer);
+  _renderKidTimer = setTimeout(()=>{
+    if(!_userInteracting && document.getElementById('s-kid').classList.contains('active')){
+      renderKid();
+    }
+  }, 1500);
+}
 
 // ── PRAYER TIMES (Azan.ca API) ────────────────────────
 let G_prayerTimes = {};

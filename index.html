@@ -294,19 +294,43 @@ const LS_P='sk_p',LS_K='sk_k';
 
 // ── CAMERA — Global persistent input ─────────────────
 let _cameraCallback=null;
+let _cameraOpen=false;
 const camInp=document.getElementById('global-camera');
+
 camInp.addEventListener('change',e=>{
+  _cameraOpen=false;
+  // Resume listeners
+  resumeListeners();
   const file=e.target.files[0];
   if(file&&_cameraCallback){
     const reader=new FileReader();
-    reader.onload=ev=>_cameraCallback(ev.target.result);
+    reader.onload=ev=>{
+      const cb=_cameraCallback;
+      _cameraCallback=null;
+      cb(ev.target.result);
+    };
     reader.readAsDataURL(file);
+  } else {
+    _cameraCallback=null;
   }
-  // Reset so same file can be selected again
   camInp.value='';
 });
+
+// If user cancels camera (no change event fires) — resume after 10s
+let _camCancelTimer=null;
 function openCamera(callback){
   _cameraCallback=callback;
+  _cameraOpen=true;
+  // Pause all real-time listeners so they don't interfere
+  pauseListeners();
+  clearTimeout(_camCancelTimer);
+  _camCancelTimer=setTimeout(()=>{
+    if(_cameraOpen){
+      _cameraOpen=false;
+      _cameraCallback=null;
+      resumeListeners();
+    }
+  },30000); // 30 second timeout
   camInp.click();
 }
 
@@ -394,6 +418,26 @@ async function loadLogs(kidId){
   catch(e){console.error('loadLogs',e);}
 }
 
+// ── PAUSE / RESUME LISTENERS ─────────────────────────
+let _listenersPaused=false;
+let _pendingRefresh=false;
+
+function pauseListeners(){
+  _listenersPaused=true;
+}
+
+function resumeListeners(){
+  _listenersPaused=false;
+  if(_pendingRefresh){
+    _pendingRefresh=false;
+    if(document.getElementById('s-kid').classList.contains('active')) renderKid();
+    if(document.getElementById('s-parent').classList.contains('active')){
+      const at=document.querySelector('.tab.active');
+      if(at) pTab(at.id.replace('t-',''));
+    }
+  }
+}
+
 // ── REAL-TIME LISTENERS ───────────────────────────────
 function startPListener(uid){
   if(_unsubParent)_unsubParent();
@@ -406,21 +450,21 @@ function startPListener(uid){
     if(G.kid){
       const stillExists=G.kids.find(k=>k.id===G.kid.id);
       if(!stillExists){
-        stopListeners();
-        clearSavedK();
-        alert(`${G.kid.name}'s account has been removed by the parent.`);
+        stopListeners();clearSavedK();
+        alert(G.kid.name+"'s account has been removed by the parent.");
         G.kid=null;SS('s-home');renderHome();return;
       }
-      // Update kid data in case it changed
       const updated=G.kids.find(k=>k.id===G.kid.id);
       if(updated)G.kid=updated;
     }
+    // If paused (camera open) — mark pending refresh
+    if(_listenersPaused){_pendingRefresh=true;return;}
     // Parent: refresh active tab
     if(document.getElementById('s-parent').classList.contains('active')){
       const at=document.querySelector('.tab.active');
       if(at)pTab(at.id.replace('t-',''));
     }
-    // Kid: refresh if on kid screen (debounced)
+    // Kid: refresh (debounced)
     if(document.getElementById('s-kid').classList.contains('active')){
       schedKidRefresh();
     }
@@ -435,7 +479,8 @@ function startLogListener(uid,kidId){
     const d=snap.data();
     if(!G.logs[kidId])G.logs[kidId]={};
     G.logs[kidId][dk]=d.log;
-    // Refresh kid screen with debounce
+    // Don't refresh if camera is open
+    if(_listenersPaused){_pendingRefresh=true;return;}
     if(document.getElementById('s-kid').classList.contains('active'))schedKidRefresh();
   },e=>console.error('logListener',e));
 }
@@ -452,7 +497,9 @@ function startLogsListener(uid){
     });
     rebuildPending();
     document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';
-    document.title=G.pending.length?`(${G.pending.length}) StarKids`:'StarKids';
+    document.title=G.pending.length?'('+G.pending.length+') StarKids':'StarKids';
+    // Don't refresh UI if paused
+    if(_listenersPaused){_pendingRefresh=true;return;}
     if(document.getElementById('s-parent').classList.contains('active')){
       const at=document.querySelector('.tab.active');
       if(at&&at.id==='t-appr')pTab('appr');
@@ -486,10 +533,11 @@ function rebuildPending(){
 // Debounced kid refresh — prevents re-render while user is typing/tapping
 let _kidRefTimer=null;
 function schedKidRefresh(){
+  if(_listenersPaused)return;
   clearTimeout(_kidRefTimer);
   _kidRefTimer=setTimeout(()=>{
-    if(document.getElementById('s-kid').classList.contains('active'))renderKid();
-  },2000);
+    if(!_listenersPaused&&document.getElementById('s-kid').classList.contains('active'))renderKid();
+  },3000); // 3 second debounce on mobile
 }
 
 // ── AUTH STATE ────────────────────────────────────────

@@ -48,6 +48,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:6px}
 .pcard{border:0.5px solid var(--bd);border-radius:var(--rad);padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--bg)}
 .pcard.done{background:var(--gl);border-color:var(--gb)}
+
+.next-prayer{border-color:#1D9E75 !important;background:rgba(29,158,117,0.05) !important;}
+
 .circ{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:600}
 .circ.done{background:var(--g);border-color:var(--g);color:#fff}
 .sbar{background:var(--bg2);border-radius:var(--rad);padding:11px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border:0.5px solid var(--bd)}
@@ -663,6 +666,10 @@ function openParent(user){
   // Start real-time listeners for parent
   startParentListener(user.uid);
   startPendingListener(user.uid);
+  // Schedule daily report notification
+  requestNotificationPermission().then(granted=>{
+    if(granted) scheduleParentDailyReport();
+  });
   SS('s-parent');pTab('appr');
 }
 
@@ -710,6 +717,8 @@ async function doKidLogin(code){
     // Also listen to parent data so tasks/rewards update live
     startParentListener(foundPD.uid);
     SS('s-kid');renderKid();
+    // Init notifications and prayer times
+    initKidNotifications();
   }catch(e){SS('s-home');renderHome();alert('Error: '+e.message);}
 }
 
@@ -723,7 +732,24 @@ function renderKid(){
   let h='';
   if(claimable.length){h+=`<div class="unlock-banner"><div><div style="font-size:13px;font-weight:600">🏆 ${claimable.length} reward${claimable.length>1?'s':''} to claim!</div><div style="font-size:11px;opacity:.85">Tap to choose your reward</div></div><button class="btn sm" style="background:#fff;color:var(--g);border-color:#fff;flex:none" onclick="showRewardChooser()">Choose ✨</button></div>`;}
   h+=`<div class="sbar"><div><div class="slbl2">Today's stars</div><div class="snum">${ts} ⭐</div></div><div style="text-align:right"><div class="slbl2">This week</div><div style="font-size:18px;font-weight:700;color:var(--t)">${ws} ⭐</div></div></div>`;
-  if(pr.length){h+=`<div class="sl">🙏 Daily prayers</div><div class="pgrid">`;pr.forEach(p=>{const done=!!log.prayers[p.n];h+=`<div class="pcard${done?' done':''}" onclick="togPrayer('${p.n}')"><div><div style="font-size:13px;font-weight:600">${p.n}</div><div style="font-size:11px;color:var(--t3)">${p.t}</div></div><div class="circ${done?' done':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
+  if(pr.length){
+    const cityLabel = G.prayerCity ? ` · 📍 ${G.prayerCity.split('/').pop().replace('_',' ')}` : '';
+    h+=`<div class="sl">🙏 Daily prayers${cityLabel}</div><div class="pgrid">`;
+    pr.forEach(p=>{
+      const done=!!log.prayers[p.n];
+      const timeStr = getPrayerTimeDisplay ? getPrayerTimeDisplay(p.n) : '';
+      const timeDisplay = timeStr ? timeStr : p.t;
+      const isNext = !done && timeStr && isNextPrayer(p.n);
+      h+=`<div class="pcard${done?' done':''}${isNext?' next-prayer':''}" onclick="togPrayer('${p.n}')">
+        <div>
+          <div style="font-size:13px;font-weight:600">${p.n}${isNext?'<span style="font-size:9px;background:#1D9E75;color:#fff;padding:1px 5px;border-radius:4px;margin-left:4px">NEXT</span>':''}</div>
+          <div style="font-size:11px;color:var(--t3)">${timeDisplay}</div>
+        </div>
+        <div class="circ${done?' done':''}">${done?'✓':''}</div>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
   const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));
   const bonus=G.tasks.filter(t=>t.cat==='bonus');
   h+=`<div class="sl">📋 Daily tasks</div>`;daily.forEach(t=>{h+=kidRow(t,log);});
@@ -801,17 +827,61 @@ window.pTab=function(tab){
   if(tab==='appr'){
     const claimed=G.rewards.filter(r=>r.claimed&&!r.given);
     let h='';
+
+    // Claimed rewards needing confirmation (shown at top always)
     if(claimed.length){
-      claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="card" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:4px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="font-size:11px;color:#085041;margin-bottom:8px">${r.stars}⭐ · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="declineReward(${ri})">Decline</button><button class="btn pri sm" onclick="confirmReward(${ri})">✓ Confirm &amp; give</button></div></div>`;});
-    }
-    if(!G.pending.length&&!claimed.length){pc.innerHTML='<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';return;}
-    if(G.pending.length){
-      h+=`<div class="info g" style="margin-bottom:10px">Stars are set per task. Approve or reject each submission.</div>`;
-      G.pending.forEach((a,idx)=>{
-        const hp=!!a.photo;const ht=!!a.ticked;const pl=hp&&ht?'📷+✓':hp?'📷':ht?'✓':'?';
-        const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:100px;object-fit:cover;border-radius:8px;margin:8px 0"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">✓ Tick only</div>`;
-        h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><div style="font-size:14px;font-weight:600">${a.kidName} · ${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:4px"><button class="btn dan sm" onclick="reject(${idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px;font-size:12px;text-align:center">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="approve(${idx})">✓ Approve</button></div></div>`;
+      h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 Reward claims</div>`;
+      claimed.forEach(r=>{
+        const ri=G.rewards.indexOf(r);
+        h+=`<div class="card" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:4px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="font-size:11px;color:#085041;margin-bottom:8px">${r.stars}⭐ · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="declineReward(${ri})">Decline</button><button class="btn pri sm" onclick="confirmReward(${ri})">✓ Confirm &amp; give</button></div></div>`;
       });
+    }
+
+    if(!G.pending.length&&!claimed.length){
+      pc.innerHTML='<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';
+      return;
+    }
+
+    if(G.pending.length){
+      // Group pending by kid
+      const byKid = {};
+      G.pending.forEach((a,idx)=>{
+        if(!byKid[a.kidId]) byKid[a.kidId] = {name:a.kidName,kidId:a.kidId,items:[]};
+        byKid[a.kidId].items.push({...a,idx});
+      });
+      const kidIds = Object.keys(byKid);
+
+      // Kid selector tabs
+      if(!G._apprKidTab || !byKid[G._apprKidTab]) G._apprKidTab = kidIds[0];
+      h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">`;
+      kidIds.forEach(kid=>{
+        const k=G.kids.find(x=>x.id===kid)||{name:byKid[kid].name,color:'#1D9E75',emoji:'👦'};
+        const count=byKid[kid].items.length;
+        const isActive=G._apprKidTab===kid;
+        const avHtml=k.photo?`<img src="${k.photo}" style="width:22px;height:22px;border-radius:50%;object-fit:cover"/>`:`<span style="font-size:14px">${k.emoji||'👦'}</span>`;
+        h+=`<div onclick="G._apprKidTab='${kid}';pTab('appr')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1.5px solid ${isActive?'var(--g)':'var(--bd)'};background:${isActive?'var(--gl)':'var(--bg)'};cursor:pointer;font-size:13px;font-weight:500;color:${isActive?'#085041':'var(--t)'}">
+          ${avHtml} ${k.name} <span style="background:${isActive?'#1D9E75':'var(--bd2)'};color:${isActive?'#fff':'var(--t3)'};border-radius:10px;padding:0 6px;font-size:11px">${count}</span>
+        </div>`;
+      });
+      h+=`</div>`;
+
+      // Show selected kid's approvals
+      const selectedKid = byKid[G._apprKidTab];
+      if(selectedKid){
+        const k=G.kids.find(x=>x.id===selectedKid.kidId)||{};
+        const ws=wStars(selectedKid.kidId);
+        h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">`;
+        if(k.photo)h+=`<img src="${k.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ${k.color||'var(--g)'}"/>`;
+        else h+=`<div style="width:36px;height:36px;border-radius:50%;background:${k.color||'#1D9E75'}22;border:2px solid ${k.color||'var(--g)'};display:flex;align-items:center;justify-content:center;font-size:18px">${k.emoji||'👦'}</div>`;
+        h+=`<div><div style="font-size:13px;font-weight:600">${selectedKid.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ this week · ${selectedKid.items.length} pending</div></div></div>`;
+
+        selectedKid.items.forEach(a=>{
+          const hp=!!a.photo;const ht=!!a.ticked;
+          const pl=hp&&ht?'📷 Photo + ✓ Tick':hp?'📷 Photo submitted':ht?'✓ Tick submitted':'Submitted';
+          const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:110px;object-fit:cover;border-radius:8px;margin:8px 0"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">✓ Tick — no photo</div>`;
+          h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="reject(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px 10px;font-size:12px;text-align:center;color:var(--t2)">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="approve(${a.idx})">✓ Approve</button></div></div>`;
+        });
+      }
     }
     pc.innerHTML=h;return;
   }
@@ -1010,6 +1080,140 @@ window.togglePass=function(inputId,eyeId){
   if(!inp)return;
   if(inp.type==='password'){inp.type='text';if(eye)eye.textContent='🙈';}
   else{inp.type='password';if(eye)eye.textContent='👁';}
+}
+
+
+// ── PRAYER TIMES (Azan.ca API) ────────────────────────
+let G_prayerTimes = {};
+let G_prayerTimers = [];
+
+async function fetchPrayerTimes(){
+  if(!G.prayersEnabled || G.religion !== 'islam') return;
+  try{
+    // Get user location
+    const pos = await new Promise((res,rej)=>
+      navigator.geolocation.getCurrentPosition(res, rej, {timeout:8000})
+    );
+    const lat = pos.coords.latitude.toFixed(4);
+    const lng = pos.coords.longitude.toFixed(4);
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,'0');
+    const d = String(today.getDate()).padStart(2,'0');
+    const url = `https://api.aladhan.com/v1/timings/${d}-${m}-${y}?latitude=${lat}&longitude=${lng}&method=4`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.code === 200){
+      const t = data.data.timings;
+      G_prayerTimes = {
+        Fajr: t.Fajr,
+        Dhuhr: t.Dhuhr,
+        Asr: t.Asr,
+        Maghrib: t.Maghrib,
+        Isha: t.Isha
+      };
+      G.prayerCity = data.data.meta.timezone || '';
+      schedulePrayerNotifications();
+      updatePrayerTimesUI();
+    }
+  } catch(e){
+    // Fallback: try by timezone without GPS
+    try{
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const today = new Date();
+      const d = String(today.getDate()).padStart(2,'0');
+      const m = String(today.getMonth()+1).padStart(2,'0');
+      const y = today.getFullYear();
+      const url = `https://api.aladhan.com/v1/timingsByCity/${d}-${m}-${y}?city=Riyadh&country=SA&method=4`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.code === 200){
+        const t = data.data.timings;
+        G_prayerTimes = {Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+        schedulePrayerNotifications();
+        updatePrayerTimesUI();
+      }
+    } catch(e2){ console.log('Prayer times unavailable', e2); }
+  }
+}
+
+function updatePrayerTimesUI(){
+  // Update prayer cards if kid screen is active
+  if(document.getElementById('s-kid').classList.contains('active')){
+    renderKid();
+  }
+}
+
+function schedulePrayerNotifications(){
+  // Clear old timers
+  G_prayerTimers.forEach(t=>clearTimeout(t));
+  G_prayerTimers = [];
+  if(!('Notification' in window)) return;
+  const now = new Date();
+  Object.entries(G_prayerTimes).forEach(([name, timeStr])=>{
+    const [h,min] = timeStr.split(':').map(Number);
+    const prayerTime = new Date();
+    prayerTime.setHours(h, min, 0, 0);
+    const diff = prayerTime - now;
+    if(diff > 0 && diff < 86400000){ // Within next 24 hours
+      const timer = setTimeout(()=>{
+        if(Notification.permission === 'granted'){
+          new Notification('🕌 Prayer Time — ' + name, {
+            body: 'Time for ' + name + ' prayer. Tap to open StarKids.',
+            icon: '/starkids/icon-192.png',
+            badge: '/starkids/icon-192.png',
+            tag: 'prayer-' + name
+          });
+        }
+      }, diff);
+      G_prayerTimers.push(timer);
+    }
+  });
+}
+
+async function requestNotificationPermission(){
+  if(!('Notification' in window)) return false;
+  if(Notification.permission === 'granted') return true;
+  if(Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+function getPrayerTimeDisplay(prayerName){
+  return G_prayerTimes[prayerName] || '';
+}
+
+// Request notification permission when kid logs in
+async function initKidNotifications(){
+  if(G.prayersEnabled && G.religion === 'islam'){
+    const granted = await requestNotificationPermission();
+    if(granted){
+      await fetchPrayerTimes();
+    } else {
+      // Still try to get times for display
+      fetchPrayerTimes().catch(()=>{});
+    }
+  }
+}
+
+// Daily parent notification at 8:30 PM
+function scheduleParentDailyReport(){
+  const now = new Date();
+  const report = new Date();
+  report.setHours(20, 30, 0, 0);
+  if(report <= now) report.setDate(report.getDate() + 1);
+  const diff = report - now;
+  setTimeout(()=>{
+    if(Notification.permission === 'granted' && G.pending.length > 0){
+      new Notification('⭐ StarKids Daily Report', {
+        body: `You have ${G.pending.length} pending approval${G.pending.length>1?'s':''}. Tap to review.`,
+        icon: '/starkids/icon-192.png',
+        tag: 'daily-report'
+      });
+    }
+    // Reschedule for next day
+    scheduleParentDailyReport();
+  }, diff);
 }
 
 // ── INIT ──────────────────────────────────────────────

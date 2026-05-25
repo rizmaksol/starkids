@@ -245,7 +245,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,updateProfile,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,doc,setDoc,getDoc,collection,query,where,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getFirestore,doc,setDoc,getDoc,collection,query,where,getDocs,onSnapshot}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FC={apiKey:"AIzaSyBRFMAu5DxyT_ORclTOWjXwkbM1EIuXVcc",authDomain:"starkids-773c3.firebaseapp.com",projectId:"starkids-773c3",storageBucket:"starkids-773c3.firebasestorage.app",messagingSenderId:"356520993318",appId:"1:356520993318:web:475977e92d5a5dbb5d3ce7"};
 const fbApp=initializeApp(FC);
@@ -427,9 +427,15 @@ async function loadParentData(uid){
 }
 async function saveLog(kidId,dk){
   if(!G.parentUid)return;
-  try{await setDoc(doc(db,'logs',`${G.parentUid}_${kidId}_${dk}`),{parentUid:G.parentUid,kidId,date:dk,log:getLog(kidId,dk),updatedAt:new Date().toISOString()});}
-  catch(e){console.error('Log save',e);}
+  try{
+    await setDoc(doc(db,'logs',`${G.parentUid}_${kidId}_${dk}`),{
+      parentUid:G.parentUid,kidId,date:dk,
+      log:getLog(kidId,dk),
+      updatedAt:new Date().toISOString()
+    });
+  }catch(e){console.error('Log save',e);}
 }
+
 async function loadLogsForKid(kidId){
   if(!G.parentUid)return;
   try{
@@ -438,6 +444,125 @@ async function loadLogsForKid(kidId){
     snaps.forEach(s=>{const d=s.data();if(!G.logs[kidId])G.logs[kidId]={};G.logs[kidId][d.date]=d.log;});
   }catch(e){console.error('Log load',e);}
 }
+
+// ── REAL-TIME LISTENERS ───────────────────────────────
+let _unsubParent=null;
+let _unsubPending=null;
+let _unsubKidLog=null;
+
+function startParentListener(uid){
+  // Stop any existing listener
+  if(_unsubParent)_unsubParent();
+  _unsubParent=onSnapshot(doc(db,'parents',uid),(snap)=>{
+    if(!snap.exists())return;
+    const d=snap.data();
+    // Update kids, tasks, rewards in real time
+    G.kids=d.kids||G.kids;
+    G.tasks=d.tasks||G.tasks;
+    G.rewards=d.rewards||G.rewards;
+    G.religion=d.religion||G.religion;
+    G.currency=d.currency||G.currency;
+    G.prayersEnabled=d.prayersEnabled!==false;
+    G.parentEmoji=d.emoji||G.parentEmoji;
+    G.parentAvatar=d.photo||G.parentAvatar;
+    // If parent dashboard is open — refresh approvals and rewards
+    const activeTab=document.querySelector('.tab.active');
+    if(activeTab&&document.getElementById('s-parent').classList.contains('active')){
+      const tabId=activeTab.id.replace('t-','');
+      if(tabId==='appr'||tabId==='rewards')pTab(tabId);
+    }
+    // If kid screen open — check for newly approved tasks
+    if(document.getElementById('s-kid').classList.contains('active')){
+      renderKid();
+    }
+  },(e)=>console.error('Parent listener error',e));
+}
+
+function startPendingListener(uid){
+  // Listen to all logs for this parent — detect new pending submissions
+  if(_unsubPending)_unsubPending();
+  _unsubPending=onSnapshot(
+    query(collection(db,'logs'),where('parentUid','==',uid)),
+    (snap)=>{
+      snap.docChanges().forEach(change=>{
+        if(change.type==='added'||change.type==='modified'){
+          const d=change.doc.data();
+          if(!G.logs[d.kidId])G.logs[d.kidId]={};
+          G.logs[d.kidId][d.date]=d.log;
+          // Rebuild pending list from all logs
+          rebuildPendingFromLogs();
+          // Update approval badge
+          document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';
+          // If approvals tab open — refresh it
+          const activeEl=document.getElementById('t-appr');
+          if(activeEl&&activeEl.classList.contains('active')&&document.getElementById('s-parent').classList.contains('active')){
+            pTab('appr');
+          }
+          // Show notification dot in browser title
+          if(G.pending.length>0){
+            document.title=`(${G.pending.length}) StarKids`;
+          } else {
+            document.title='StarKids';
+          }
+        }
+      });
+    },(e)=>console.error('Pending listener error',e)
+  );
+}
+
+function startKidLogListener(parentUid,kidId){
+  // Listen to today's log for this kid — parent approvals show instantly
+  if(_unsubKidLog)_unsubKidLog();
+  const dk=today();
+  _unsubKidLog=onSnapshot(
+    doc(db,'logs',`${parentUid}_${kidId}_${dk}`),
+    (snap)=>{
+      if(!snap.exists())return;
+      const d=snap.data();
+      if(!G.logs[kidId])G.logs[kidId]={};
+      G.logs[kidId][dk]=d.log;
+      // Refresh kid screen if open
+      if(document.getElementById('s-kid').classList.contains('active')){
+        renderKid();
+      }
+    },(e)=>console.error('Kid log listener error',e)
+  );
+}
+
+function rebuildPendingFromLogs(){
+  // Rebuild the pending approvals list from all logs
+  const newPending=[];
+  Object.keys(G.logs).forEach(kidId=>{
+    const kid=G.kids.find(k=>k.id===kidId);
+    if(!kid)return;
+    Object.keys(G.logs[kidId]).forEach(dk=>{
+      const log=G.logs[kidId][dk];
+      if(!log||!log.tasks)return;
+      G.tasks.forEach(task=>{
+        if(log.tasks[task.id]==='pending'){
+          // Check not already in pending
+          const exists=newPending.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk);
+          if(!exists){
+            newPending.push({
+              kidId,kidName:kid.name,task,tid:task.id,date:dk,
+              time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+              photo:log.photos?log.photos[task.id]||null:null,
+              ticked:log.ticked?!!log.ticked[task.id]:false
+            });
+          }
+        }
+      });
+    });
+  });
+  G.pending=newPending;
+}
+
+function stopAllListeners(){
+  if(_unsubParent){_unsubParent();_unsubParent=null;}
+  if(_unsubPending){_unsubPending();_unsubPending=null;}
+  if(_unsubKidLog){_unsubKidLog();_unsubKidLog=null;}
+}
+
 
 // ── AUTH FUNCTIONS ────────────────────────────────────
 let authMode='signin';
@@ -519,22 +644,25 @@ window.doSignUp=async function(){
   }catch(e){errEl.textContent=e.code==='auth/email-already-in-use'?'Email already used. Try signing in.':e.message;}
 }
 window.signOutParent=async function(){
+  stopAllListeners();
   await signOut(auth);
   G.parentUid=null;G.parentData=null;G.kids=[];G.logs={};G.pending=[];
+  document.title='StarKids';
   SS('s-home');renderHome();
 }
 function openParent(user){
   G.parentData=G.parentData||{name:user.displayName||'Parent'};
-  // Save to local if remember flag set
   if(G._rememberOnLoad){
     saveParentLocally({email:G._rememberOnLoad.email,pass:G._rememberOnLoad.pass,name:G.parentData.name,emoji:G.parentEmoji,photo:G.parentAvatar,color:'#1D9E75'});
     G._rememberOnLoad=null;
   }
   document.getElementById('p-tit').textContent=(G.parentData.name||'Parent')+"'s dashboard";
-  document.getElementById('p-sub').textContent=dn()+' · '+today();
-  // Avatar in topbar
+  document.getElementById('p-sub').textContent=dn()+' · '+today()+' · 🟢 Live';
   const avEl=document.getElementById('p-avatar-top');
   if(avEl){if(G.parentAvatar)avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid var(--g)"><img src="${G.parentAvatar}" style="width:100%;height:100%;object-fit:cover"/></div>`;else avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:#1D9E7522;border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-size:18px">${G.parentEmoji}</div>`;}
+  // Start real-time listeners for parent
+  startParentListener(user.uid);
+  startPendingListener(user.uid);
   SS('s-parent');pTab('appr');
 }
 
@@ -576,7 +704,11 @@ async function doKidLogin(code){
       else avEl.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:${foundKid.color||'#1D9E75'}22;border:2px solid ${foundKid.color||'var(--g)'};display:flex;align-items:center;justify-content:center;font-size:18px">${foundKid.emoji||'👦'}</div>`;
     }
     document.getElementById('k-tit').textContent=foundKid.name+"'s tasks";
-    document.getElementById('k-sub').textContent=dn()+' · '+today();
+    document.getElementById('k-sub').textContent=dn()+' · '+today()+' · 🟢 Live';
+    // Start real-time listener — kid sees parent approvals instantly
+    startKidLogListener(foundPD.uid,foundKid.id);
+    // Also listen to parent data so tasks/rewards update live
+    startParentListener(foundPD.uid);
     SS('s-kid');renderKid();
   }catch(e){SS('s-home');renderHome();alert('Error: '+e.message);}
 }

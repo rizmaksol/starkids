@@ -571,7 +571,7 @@ function renderKid(){
   const ts=calcStars(kid.id,dk);const ws=wStars(kid.id);
   document.getElementById('k-stars').textContent='⭐ '+ws;
   const dow=new Date().getDay();const pr=prayers();
-  const claimable=G.rewards.filter(r=>{const c=r.period==='month'?mStars(kid.id):ws;return c>=r.stars&&!r.given&&!r.claimed&&r.approved===true;});
+  const claimable=G.rewards.filter(r=>{const c=r.period==='month'?mStars(kid.id):ws;return c>=r.stars&&!r.given&&!r.claimed.approved===true;});
   // Issue 5: count rejected tasks
   const rejected=G.tasks.filter(t=>log.tasks[t.id]==='rejected');
   let h='';
@@ -669,32 +669,7 @@ window.resubmit=function(id){
   saveLog(kid.id,today());
 };
 window.tapP=function(name){const kid=G.kid;if(!kid)return;const lg=getLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];renderKid();saveLog(kid.id,today());};
-window.submitDay=function(){
- const kid=G.kid;if(!kid)return;
- const lg=getLog(kid.id,today());
- G.tasks.forEach(t=>{
-   const proof=(lg.ticked&&lg.ticked[t.id])||(lg.photos&&lg.photos[t.id]);
-   if(proof && (!lg.tasks[t.id]||lg.tasks[t.id]==='none'||lg.tasks[t.id]==='rejected')){
-      lg.tasks[t.id]='pending';
-   }
- });
- saveLog(kid.id,today());
- rebuildP();
- alert('Tasks submitted for parent approval ⏳');
- renderKid();
-};if(!kid)return;
-const lg=getLog(kid.id,today());
-G.tasks.forEach(t=>{
-const proof=(lg.ticked&&lg.ticked[t.id])||(lg.photos&&lg.photos[t.id]);
-if(proof&&(!lg.tasks[t.id]||lg.tasks[t.id]=='none'||lg.tasks[t.id]=='rejected')){
-lg.tasks[t.id]='pending';
-}
-});
-saveLog(kid.id,today());
-rebuildP();
-renderKid();
-alert('Tasks sent for parent approval ⏳');
-};
+window.submitDay=()=>alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');
 window.refreshKid=async()=>{
   if(!G.kid||!G.pUid)return;
   try{
@@ -751,18 +726,8 @@ window.saveKidProfile=async function(){
 };
 
 // ── REWARD CHOOSER ────────────────────────────────────
-window.showRewardChooser=()=>{const ws=wStars(G.kid.id);const ms=mStars(G.kid.id);const cl=G.rewards.filter(r=>{const c=r.period==='month'?ms:ws;return c>=r.stars&&!r.given&&!r.claimed&&r.approved===true;});let h=`<div class="info g">🎉 Choose one reward. Your parent will confirm it.</div>`;cl.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard selectable" onclick="claimR(${ri})"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="font-size:14px;font-weight:600">${r.name}</div><div style="font-size:14px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div style="font-size:12px;color:var(--t2)">${r.period==='month'?'📆 Monthly':'📅 Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="margin-top:8px;padding:8px;background:var(--g);border-radius:6px;color:#fff;text-align:center;font-size:13px;font-weight:500">Tap to choose →</div></div>`;});document.getElementById('choose-body').innerHTML=h;SS('s-choose');};
-window.claimR=function(ri){
- alert('Reward request sent to parent ⏳');
- if(!G.rewardRequests)G.rewardRequests=[];
- G.rewardRequests.push({
-   kidId:G.kid.id,
-   rewardIndex:ri,
-   status:'requested',
-   time:Date.now()
- });
- saveP();
-};
+window.showRewardChooser=()=>{const ws=wStars(G.kid.id);const ms=mStars(G.kid.id);const cl=G.rewards.filter(r=>{const c=r.period==='month'?ms:ws;return c>=r.stars&&!r.given&&!r.claimed.approved===true;});let h=`<div class="info g">🎉 Choose one reward. Your parent will confirm it.</div>`;cl.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard selectable" onclick="claimR(${ri})"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="font-size:14px;font-weight:600">${r.name}</div><div style="font-size:14px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div style="font-size:12px;color:var(--t2)">${r.period==='month'?'📆 Monthly':'📅 Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div><div style="margin-top:8px;padding:8px;background:var(--g);border-radius:6px;color:#fff;text-align:center;font-size:13px;font-weight:500">Tap to choose →</div></div>`;});document.getElementById('choose-body').innerHTML=h;SS('s-choose');};
+window.claimR=ri=>{G.rewards[ri].claimed=true;G.rewards[ri].claimedBy=G.kid.name;G.rewards[ri].claimedAt=new Date().toISOString();saveP();alert(`🎉 You chose "${G.rewards[ri].name}"!\nYour parent will confirm it soon!`);SS('s-kid');renderKid();};
 window.showKidRewards=()=>{const ws=wStars(G.kid.id);const ms=mStars(G.kid.id);let h=`<div class="sbar"><div><div class="slbl">This week</div><div class="snum">${ws}⭐</div></div><div style="text-align:right"><div class="slbl">This month</div><div style="font-size:18px;font-weight:700">${ms}⭐</div></div></div><div class="sl">🏆 Reward chart</div>`;[...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{const c=r.period==='month'?ms:ws;const ok=c>=r.stars;const pct=Math.min(100,Math.round(c/r.stars*100));h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 Claimed':ok?'🏆 Unlocked!':c+'/'+r.stars} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;});document.getElementById('kr-body').innerHTML=h;SS('s-krewards');};
 
 // ── PARENT TABS ───────────────────────────────────────
@@ -900,150 +865,6 @@ window.saveRemark=function(){
  parentNotes[id]=document.getElementById('remarkBox').value;
  alert('Reminder saved');
 }
-
-</script>
-
-<script>
-window.addEventListener('load',()=>{
-console.log('GrowStars final patch loaded');
-});
-</script>
-<script>
-// ===== GrowStars Approval Fix =====
-
-window.submitDay=function(){
-
- const kid=G.kid;
- if(!kid)return;
-
- const dk=today();
- const lg=getLog(kid.id,dk);
-
- // force pending creation
- G.tasks.forEach(task=>{
-
-   const proof=
-      (lg.ticked && lg.ticked[task.id]) ||
-      (lg.photos && lg.photos[task.id]);
-
-   if(proof){
-
-      lg.tasks[task.id]='pending';
-
-   }
-
- });
-
- saveLog(kid.id,dk);
-
- setTimeout(()=>{
-
-   rebuildP();
-
-   renderKid();
-
- },300);
-
- alert("Tasks sent for parent approval ⏳");
-
-};
-
-
-// ONLY APPROVED TASKS GIVE STARS
-
-window.calcStars=function(kid,dk){
-
- const l=getLog(kid,dk);
-
- let s=0;
-
- prayers().forEach(p=>{
-
-   if(l.prayers[p.n]) s++;
-
- });
-
- G.tasks.forEach(t=>{
-
-   if(l.tasks[t.id]==='approved'){
-
-      s+=t.stars;
-
-   }
-
- });
-
- return s;
-
-};
-
-
-// BLOCK REWARD BYPASS
-
-window.claimR=function(){
-
- alert(
- "Reward request sent to parent ⏳"
- );
-
- return false;
-
-};
-
-
-// force refresh pending queue
-
-const oldRebuild=window.rebuildP;
-
-window.rebuildP=function(){
-
- if(oldRebuild) oldRebuild();
-
- const np=[];
-
- Object.keys(G.logs).forEach(kidId=>{
-
-   const kid=G.kids.find(
-     k=>k.id===kidId
-   );
-
-   if(!kid)return;
-
-   Object.keys(
-     G.logs[kidId]
-   ).forEach(dk=>{
-
-      const log=
-      G.logs[kidId][dk];
-
-      G.tasks.forEach(task=>{
-
-         if(
-            log.tasks &&
-            log.tasks[task.id]==='pending'
-         ){
-
-            np.push({
-
-               kidId:kid.id,
-               kidName:kid.name,
-               task,
-               tid:task.id,
-               date:dk
-
-            });
-
-         }
-
-      });
-
-   });
-
- });
-
- G.pending=np;
-
-};
 
 </script>
 </body>

@@ -669,19 +669,7 @@ window.resubmit=function(id){
   saveLog(kid.id,today());
 };
 window.tapP=function(name){const kid=G.kid;if(!kid)return;const lg=getLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];renderKid();saveLog(kid.id,today());};
-window.submitDay=function(){
- const kid=G.kid;if(!kid)return;
- const lg=getLog(kid.id,today());
- G.tasks.forEach(function(t){
-   const hasProof=(lg.ticked&&lg.ticked[t.id]) || (lg.photos&&lg.photos[t.id]);
-   if(hasProof && (!lg.tasks[t.id] || lg.tasks[t.id]=='none' || lg.tasks[t.id]=='rejected')){
-      lg.tasks[t.id]='pending';
-   }
- });
- saveLog(kid.id,today());
- renderKid();
- alert('Tasks sent for parent approval ⏳');
-}
+window.submitDay=()=>alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');
 window.refreshKid=async()=>{
   if(!G.kid||!G.pUid)return;
   try{
@@ -839,9 +827,45 @@ renderHome();buildCI();setAM('in');renderAuthForm();
 <script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
 
 <script>
-window.addEventListener('load',()=>{
-console.log('GrowStars v13 MVP loaded');
-});
+window.parentNotes={};
+
+window.renderApprovalTabs=function(){
+ if(!document.getElementById('p-body')) return;
+ let html='<div class="tabs" style="margin-bottom:10px">';
+ G.kids.forEach(k=>{
+   let pending=G.pending.filter(p=>p.kidId===k.id).length;
+   html+=`<div class="tab ${G.repKid===k.id?'active':''}"
+   onclick="G.repKid='${k.id}';pTab('appr')">
+   ${k.name}${pending?` 🔴${pending}`:''}
+   </div>`;
+ });
+ html+='</div>';
+ return html;
+}
+
+const oldPtab=window.pTab;
+window.pTab=function(tab){
+ if(oldPtab) oldPtab(tab);
+ if(tab==='appr'){
+   const body=document.getElementById('p-body');
+   if(body){
+      body.innerHTML=renderApprovalTabs()+body.innerHTML+`
+      <div class="card">
+      <div style="font-weight:700;margin-bottom:8px">💬 Parent Remarks</div>
+      <textarea id="remarkBox" class="inp" placeholder="Write reminder or note for child"></textarea>
+      <button class="btn pri" onclick="saveRemark()">Send Reminder</button>
+      </div>`;
+   }
+ }
+}
+
+window.saveRemark=function(){
+ let id=G.repKid||G.kids[0]?.id;
+ if(!id)return;
+ parentNotes[id]=document.getElementById('remarkBox').value;
+ alert('Reminder saved');
+}
+
 </script>
 </body>
 </html>

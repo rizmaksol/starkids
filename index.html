@@ -669,7 +669,20 @@ window.resubmit=function(id){
   saveLog(kid.id,today());
 };
 window.tapP=function(name){const kid=G.kid;if(!kid)return;const lg=getLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];renderKid();saveLog(kid.id,today());};
-window.submitDay=()=>alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');
+window.submitDay=function(){
+const kid=G.kid;if(!kid)return;
+const lg=getLog(kid.id,today());
+G.tasks.forEach(t=>{
+const proof=(lg.ticked&&lg.ticked[t.id])||(lg.photos&&lg.photos[t.id]);
+if(proof&&(!lg.tasks[t.id]||lg.tasks[t.id]=='none'||lg.tasks[t.id]=='rejected')){
+lg.tasks[t.id]='pending';
+}
+});
+saveLog(kid.id,today());
+rebuildP();
+renderKid();
+alert('Tasks sent for parent approval ⏳');
+};
 window.refreshKid=async()=>{
   if(!G.kid||!G.pUid)return;
   try{
@@ -866,6 +879,12 @@ window.saveRemark=function(){
  alert('Reminder saved');
 }
 
+</script>
+
+<script>
+window.addEventListener('load',()=>{
+console.log('GrowStars final patch loaded');
+});
 </script>
 </body>
 </html>

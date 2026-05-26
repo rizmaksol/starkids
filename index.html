@@ -221,7 +221,84 @@ const ico=status==='approved'?'<div class="circ done">✓</div>':status==='pendi
 return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo">${inner}</div>${ico}</div>`;}
 
 // FIX 2: Photo handler using onchange on inline input
-window.hPh=function(inp,id){const file=inp.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{compress(ev.target.result,700,data=>{const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(!lg.photos)lg.photos={};lg.photos[id]=data;if(lg.tasks[id]!=='pending'&&lg.tasks[id]!=='approved'){lg.tasks[id]='pending';const task=G.tasks.find(t=>t.id===id);if(task)addP(kid,task,id,lg);}else{const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===id&&p.date===today());if(ex)ex.photo=data;}rKid();saveLog(kid.id,today());});};reader.readAsDataURL(file);inp.value='';};
+window.hPh=function(inp,id){
+
+const kid=G.kid;
+if(!kid)return;
+
+const file=inp.files && inp.files[0];
+if(!file){
+    console.log("No file selected");
+    return;
+}
+
+const reader=new FileReader();
+
+reader.onload=function(ev){
+
+    compress(ev.target.result,500,function(data){
+
+        const lg=gLog(kid.id,today());
+
+        if(!lg.photos) lg.photos={};
+
+        // save photo
+        lg.photos[id]=data;
+
+        // force task into approval queue
+        lg.tasks[id]='pending';
+
+        const task=G.tasks.find(t=>t.id===id);
+
+        if(task){
+
+            const existing=G.pending.find(
+                p=>p.kidId===kid.id &&
+                p.tid===id &&
+                p.date===today()
+            );
+
+            if(existing){
+
+                existing.photo=data;
+                existing.ticked=true;
+
+            }else{
+
+                G.pending.push({
+                    kidId:kid.id,
+                    kidName:kid.name,
+                    kPh:kid.photo,
+                    kEm:kid.emoji,
+                    kCo:kid.color,
+                    task:task,
+                    tid:id,
+                    date:today(),
+                    time:new Date().toLocaleTimeString(
+                        [],
+                        {hour:'2-digit',minute:'2-digit'}
+                    ),
+                    photo:data,
+                    ticked:true
+                });
+            }
+        }
+
+        saveLog(kid.id,today());
+
+        setTimeout(()=>{
+            rKid();
+        },100);
+
+    });
+
+};
+
+reader.readAsDataURL(file);
+
+inp.value='';
+
+};
 window.tTick=function(id){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(lg.tasks[id]==='approved')return;lg.ticked[id]=!lg.ticked[id];if(lg.ticked[id]){if(lg.tasks[id]!=='pending'){lg.tasks[id]='pending';const task=G.tasks.find(t=>t.id===id);if(task)addP(kid,task,id,lg);}}else{if(!lg.photos?.[id]){lg.tasks[id]='none';G.pending=G.pending.filter(p=>!(p.kidId===kid.id&&p.tid===id&&p.date===today()));}}rKid();saveLog(kid.id,today());};
 function addP(kid,task,tid,lg){const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===tid&&p.date===today());if(!ex)G.pending.push({kidId:kid.id,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:lg.photos?.[tid]||null,ticked:!!lg.ticked?.[tid]});}
 // FIX 5: Resubmit rejected task

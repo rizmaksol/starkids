@@ -827,39 +827,6 @@ renderHome();buildCI();setAM('in');renderAuthForm();
 <script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
 
 <script>
-window.parentNotes={};
-
-window.renderApprovalTabs=function(){
- if(!document.getElementById('p-body')) return;
- let html='<div class="tabs" style="margin-bottom:10px">';
- G.kids.forEach(k=>{
-   let pending=G.pending.filter(p=>p.kidId===k.id).length;
-   html+=`<div class="tab ${G.repKid===k.id?'active':''}"
-   onclick="G.repKid='${k.id}';pTab('appr')">
-   ${k.name}${pending?` 🔴${pending}`:''}
-   </div>`;
- });
- html+='</div>';
- return html;
-}
-
-const oldPtab=window.pTab;
-window.pTab=function(tab){
- if(oldPtab) oldPtab(tab);
- if(tab==='appr'){
-   const body=document.getElementById('p-body');
-   if(body){
-      body.innerHTML=renderApprovalTabs()+body.innerHTML+`
-      <div class="card">
-      <div style="font-weight:700;margin-bottom:8px">💬 Parent Remarks</div>
-      <textarea id="remarkBox" class="inp" placeholder="Write reminder or note for child"></textarea>
-      <button class="btn pri" onclick="saveRemark()">Send Reminder</button>
-      </div>`;
-   }
- }
-}
-
-window.saveRemark=function(){
  let id=G.repKid||G.kids[0]?.id;
  if(!id)return;
  parentNotes[id]=document.getElementById('remarkBox').value;

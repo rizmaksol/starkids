@@ -908,5 +908,143 @@ window.addEventListener('load',()=>{
 console.log('GrowStars final patch loaded');
 });
 </script>
+<script>
+// ===== GrowStars Approval Fix =====
+
+window.submitDay=function(){
+
+ const kid=G.kid;
+ if(!kid)return;
+
+ const dk=today();
+ const lg=getLog(kid.id,dk);
+
+ // force pending creation
+ G.tasks.forEach(task=>{
+
+   const proof=
+      (lg.ticked && lg.ticked[task.id]) ||
+      (lg.photos && lg.photos[task.id]);
+
+   if(proof){
+
+      lg.tasks[task.id]='pending';
+
+   }
+
+ });
+
+ saveLog(kid.id,dk);
+
+ setTimeout(()=>{
+
+   rebuildP();
+
+   renderKid();
+
+ },300);
+
+ alert("Tasks sent for parent approval ⏳");
+
+};
+
+
+// ONLY APPROVED TASKS GIVE STARS
+
+window.calcStars=function(kid,dk){
+
+ const l=getLog(kid,dk);
+
+ let s=0;
+
+ prayers().forEach(p=>{
+
+   if(l.prayers[p.n]) s++;
+
+ });
+
+ G.tasks.forEach(t=>{
+
+   if(l.tasks[t.id]==='approved'){
+
+      s+=t.stars;
+
+   }
+
+ });
+
+ return s;
+
+};
+
+
+// BLOCK REWARD BYPASS
+
+window.claimR=function(){
+
+ alert(
+ "Reward request sent to parent ⏳"
+ );
+
+ return false;
+
+};
+
+
+// force refresh pending queue
+
+const oldRebuild=window.rebuildP;
+
+window.rebuildP=function(){
+
+ if(oldRebuild) oldRebuild();
+
+ const np=[];
+
+ Object.keys(G.logs).forEach(kidId=>{
+
+   const kid=G.kids.find(
+     k=>k.id===kidId
+   );
+
+   if(!kid)return;
+
+   Object.keys(
+     G.logs[kidId]
+   ).forEach(dk=>{
+
+      const log=
+      G.logs[kidId][dk];
+
+      G.tasks.forEach(task=>{
+
+         if(
+            log.tasks &&
+            log.tasks[task.id]==='pending'
+         ){
+
+            np.push({
+
+               kidId:kid.id,
+               kidName:kid.name,
+               task,
+               tid:task.id,
+               date:dk
+
+            });
+
+         }
+
+      });
+
+   });
+
+ });
+
+ G.pending=np;
+
+};
+
+</script>
 </body>
 </html>

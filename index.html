@@ -65,6 +65,9 @@
 .streak-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#FF6B35,#FF9500);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(255,107,53,.35)}
 /* Star animation */
 @keyframes starPop{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes slideDown{0%{opacity:0;transform:translateX(-50%) translateY(-20px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.screen.active .content{animation:fadeIn .25s ease}
 .star-pop{animation:starPop .3s ease}
 /* Bouncy task done */
 @keyframes taskDone{0%{transform:translateX(0)}25%{transform:translateX(4px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
@@ -154,7 +157,14 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 <div class="screen" id="s-kid">
   <div class="topbar"><div style="display:flex;align-items:center;gap:10px"><div id="k-av" onclick="showKP()" style="cursor:pointer"></div><div><div class="tb-t" id="k-tit">My tasks</div><div class="tb-s" id="k-sub"></div></div></div><div style="display:flex;gap:5px"><span id="k-st" style="font-size:13px;font-weight:700;color:var(--g)"></span><button class="btn sm" onclick="SS('s-home');rHome()">Exit</button></div></div>
   <div class="content" id="kb"></div>
-  <div class="bbar"><button class="btn" onclick="showKR()">🏆 Rewards</button><button class="btn pri" onclick="subDay()">Submit day</button></div>
+  <div class="bbar" style="flex-wrap:wrap;gap:6px;padding:8px 10px">
+  <button class="btn sm" onclick="showKidRewards()" style="flex:none;padding:7px 10px;font-size:11px">🏆</button>
+  <button class="btn sm" onclick="showGoalJars(G.kid?.id)" style="flex:none;padding:7px 10px;font-size:11px">🏺</button>
+  <button class="btn sm" onclick="showBadges(G.kid?.id)" style="flex:none;padding:7px 10px;font-size:11px">🏅</button>
+  <button class="btn sm" onclick="showLeaderboard()" style="flex:none;padding:7px 10px;font-size:11px">🥇</button>
+  <button class="btn sm" onclick="showReportCard(G.kid?.id)" style="flex:none;padding:7px 10px;font-size:11px">📊</button>
+  <button class="btn pri" onclick="subDay()" style="flex:1;min-width:100px;font-size:13px">✓ Submit day</button>
+</div>
 </div>
 <div class="screen" id="s-kp"><div class="topbar"><div class="tb-t">My Profile</div><button class="btn sm" onclick="SS('s-kid');rKid()">Back</button></div><div class="content" id="kpb"></div></div>
 <div class="screen" id="s-choose"><div class="topbar"><div class="tb-t">Choose reward 🎉</div><button class="btn sm" onclick="SS('s-kid');rKid()">Back</button></div><div class="content" id="chb"></div></div>
@@ -174,7 +184,11 @@ const SHD=[0,3];const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const DS=
 const KE=['👦','👧','🧒','👶','🦁','🐯','🦊','🐻','🐼','🦄','🐸','🐧','🦋','⭐','🚀','⚽','🎮','🎨','🎵','🌟','🏆','💪','🧠','🌈'];
 const DT=[{id:'t1',ico:'🛏',name:'Make bed',cat:'daily',stars:1},{id:'t2',ico:'🪥',name:'Brush teeth (morning)',cat:'daily',stars:1},{id:'t3',ico:'🪥',name:'Brush teeth (night)',cat:'daily',stars:1},{id:'t4',ico:'📚',name:'Study 30 min',cat:'daily',stars:2},{id:'t5',ico:'🏃',name:'Outdoor play',cat:'daily',stars:1},{id:'t6',ico:'🧹',name:'Clean room',cat:'daily',stars:1},{id:'t7',ico:'❤️',name:'Help parents',cat:'daily',stars:1},{id:'t8',ico:'🤝',name:'Good behavior',cat:'daily',stars:1},{id:'t9',ico:'📺',name:'Limited TV',cat:'daily',stars:1},{id:'t10',ico:'🚿',name:'Shower day',cat:'daily',stars:1,showerOnly:true},{id:'b1',ico:'📿',name:'Memorised dua/verse',cat:'bonus',stars:2},{id:'b2',ico:'🎨',name:'Drew a picture',cat:'bonus',stars:1},{id:'b3',ico:'📖',name:'Read a story book',cat:'bonus',stars:1},{id:'b4',ico:'🍳',name:'Helped cook',cat:'bonus',stars:1},{id:'b5',ico:'🕊️',name:'No fighting all day',cat:'bonus',stars:2}];
 const DR=[{id:'r1',name:'Ice cream',stars:20,period:'week',type:'treat',amount:null,payType:null,given:false},{id:'r2',name:'Family movie',stars:35,period:'week',type:'treat',amount:null,payType:null,given:false},{id:'r3',name:'Small toy',stars:50,period:'month',type:'treat',amount:null,payType:null,given:false},{id:'r4',name:'Cash reward',stars:60,period:'month',type:'money',amount:20,payType:'cash',given:false},{id:'r5',name:'Special outing',stars:80,period:'month',type:'treat',amount:null,payType:null,given:false}];
-let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
+let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},
+  goalJars:{}, // kidId -> [{name,emoji,targetStars,currentStars,achieved}]
+  praiseNotes:{}, // kidId -> [{msg,emoji,from,date}]
+  badges:{}, // kidId -> [badgeId]
+  leaderboardOn:true,pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
 // Plan limits
 const PLANS={
   trial:{kids:3,tasks:999,label:'7-Day Trial',badge:'🎁 Trial'},
@@ -371,10 +385,10 @@ const syncSK=aKids=>{try{const s=gSK();const c=(aKids||[]).map(k=>k.code);localS
 function compress(src,mw,cb){try{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');let w=i.width,h=i.height;if(w>mw){h=Math.round(h*mw/w);w=mw;}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.55));};i.onerror=()=>cb(src);i.src=src;}catch{cb(src);}}
 // Firebase
 let _spt=null;
-async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,emoji:G.pEmoji,photo:G.pPhoto||null,plan:G.plan||'trial',trialStart:G.trialStart||new Date().toISOString(),upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
+async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,emoji:G.pEmoji,photo:G.pPhoto||null,plan:G.plan||'trial',trialStart:G.trialStart||new Date().toISOString(),goalJars:G.goalJars||{},praiseNotes:G.praiseNotes||{},badges:G.badges||{},leaderboardOn:G.leaderboardOn!==false,upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
 let _slt={};
 async function saveLog(kidId,dk){if(!G.pUid)return;const key=kidId+'_'+dk;clearTimeout(_slt[key]);_slt[key]=setTimeout(async()=>{try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:l.photos||{},remarks:l.remarks||{}},upd:new Date().toISOString()});}catch(e){try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:{}},upd:new Date().toISOString()});}catch(e2){console.error('sL',e2);}}},600);}
-async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DT;G.rewards=d.rewards||DR;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;G.plan=d.plan||'trial';G.trialStart=d.trialStart||new Date().toISOString();}}catch(e){console.error('lP',e);}}
+async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DT;G.rewards=d.rewards||DR;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;G.plan=d.plan||'trial';G.trialStart=d.trialStart||new Date().toISOString();G.goalJars=d.goalJars||{};G.praiseNotes=d.praiseNotes||{};G.badges=d.badges||{};G.leaderboardOn=d.leaderboardOn!==false;}}catch(e){console.error('lP',e);}}
 async function loadLogs(kidId){if(!G.pUid)return;try{const q=query(collection(db,'logs'),where('pUid','==',G.pUid),where('kidId','==',kidId));const s=await getDocs(q);s.forEach(d=>{const x=d.data();if(!G.logs[kidId])G.logs[kidId]={};if(x.log){G.logs[kidId][x.date]=x.log;if(!G.logs[kidId][x.date].photos)G.logs[kidId][x.date].photos={};if(!G.logs[kidId][x.date].remarks)G.logs[kidId][x.date].remarks={};}});}catch(e){console.error('lL',e);}}
 // Home
 function rHome(){const sp=gSP();const sk=gSK();let h='';
@@ -443,6 +457,8 @@ h+=`<div style="display:flex;align-items:center;justify-content:space-between;ma
 </div>`;
 if(pr.length){h+=`<div class="sl">🙏 Daily prayers${G.PC?` · 📍${G.PC}`:''}</div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} · +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
 const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));const bonus=G.tasks.filter(t=>t.cat==='bonus');
+// Show praise notes before tasks
+h+=renderPraiseNotes(kid.id);
 h+=`<div class="sl">📋 Daily tasks</div>`;daily.forEach(t=>h+=tHtml(t,log));
 if(bonus.length){h+=`<div class="sl">⭐ Bonus tasks</div>`;bonus.forEach(t=>h+=tHtml(t,log));}
 document.getElementById('kb').innerHTML=h;}
@@ -685,11 +701,14 @@ const byK={};G.pending.forEach((a,idx)=>{if(!byK[a.kidId])byK[a.kidId]={name:a.k
 const kIds=Object.keys(byK);if(!G.apprTab||!byK[G.apprTab])G.apprTab=kIds[0];
 // FIX: Per-kid tabs in approvals
 h+=`<div class="kid-tabs">`;kIds.forEach(kId=>{const kd=byK[kId];const isA=G.apprTab===kId;h+=`<div class="kid-tab${isA?' active':''}" onclick="swApprTab(this,'${kId}')">${avD(kd.ph,kd.em||'👦',kd.co||'#1D9E75',22)}<span>${kd.name}</span><span style="background:${isA?'var(--g)':'var(--bd2)'};color:${isA?'#fff':'var(--t3)'};border-radius:10px;padding:0 7px;font-size:11px">${kd.items.length}</span></div>`;});h+=`</div>`;
-const sel=byK[G.apprTab];if(sel){const ws=wS(G.apprTab);h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(sel.ph,sel.em||'👦',sel.co||'#1D9E75',38)}<div><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ · ${sel.items.length} pending</div></div></div>`;
+const sel=byK[G.apprTab];if(sel){const ws=wS(G.apprTab);h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(sel.ph,sel.em||'👦',sel.co||'#1D9E75',38)}<div style="flex:1"><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ · ${sel.items.length} pending</div></div><button onclick="showPraiseModal('${G.apprTab}')" style="background:linear-gradient(135deg,#FFB3C6,#FF6B8A);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer">👏 Praise</button></div>`;
 sel.items.forEach(a=>{const hp=!!a.photo;const ht=!!a.ticked;const pl=hp&&ht?'📷+✓':hp?'📷 Photo':ht?'✓ Tick':'Submitted';const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:8px 0" onerror="this.style.display='none'"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">${ht?'✓ Tick submitted':'No proof yet'}</div>`;h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="rjA(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px;text-align:center;font-size:12px">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="apA(${a.idx})">✓ Approve</button></div></div>`;});}
 }pc.innerHTML=h;return;}
 if(tab==='tasks'){const daily=G.tasks.filter(t=>t.cat==='daily');const bonus=G.tasks.filter(t=>t.cat==='bonus');let h=`<div class="info g">Kids see ✓ Tick and 📷 Photo on every task.</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="sl" style="margin:0">Daily (${daily.length})</div><button class="btn pri sm" onclick="oTF(null)">+ Add</button></div>`;daily.forEach(t=>h+=pTR(t));h+=`<div class="sl">Bonus (${bonus.length})</div>`;bonus.forEach(t=>h+=pTR(t));h+=`<button class="btn" style="width:100%;margin-top:6px" onclick="oTF(null)">+ Add bonus task</button>`;pc.innerHTML=h;return;}
-if(tab==='kids'){let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Children (${G.kids.length})</div></div>`;G.kids.forEach((k,ki)=>{const ws=wS(k.id);h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',50)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐</div></div><button class="btn sm" onclick="eKAv(${ki})">Edit photo</button></div><div class="codebox"><div class="codedigits">${k.code}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">Login code — share with ${k.name} only</div></div><div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm" onclick="rgnC('${k.id}')">🔄 New code</button><button class="btn dan sm" onclick="rmK('${k.id}')">Remove</button></div></div>`;});h+=`<div class="sl">Add new child</div><div class="ff"><label>Name</label><input id="kin" placeholder="e.g. Hamza" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/></div><div class="ff"><label>Choose emoji</label><div class="emoji-grid" id="nkeg">${KE.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="sNKE(this,'${e}')">${e}</div>`).join('')}</div></div><button class="btn pri" style="width:100%" onclick="addK()">+ Add child</button>`;pc.innerHTML=h;return;}
+if(tab==='kids'){let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Children (${G.kids.length})</div></div>`;G.kids.forEach((k,ki)=>{const ws=wS(k.id);h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',50)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐</div></div><button class="btn sm" onclick="eKAv(${ki})">Edit photo</button></div><div class="codebox"><div class="codedigits">${k.code}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">Login code — share with ${k.name} only</div></div><div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm" onclick="rgnC('${k.id}')">🔄 New code</button><button class="btn dan sm" onclick="rmK('${k.id}')">Remove</button></div></div>`;});// Show leaderboard toggle + praise buttons per kid
+h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px"><div class="sl" style="margin:0">Family Leaderboard</div><button class="tog ${G.leaderboardOn?'on':'off'}" onclick="G.leaderboardOn=!G.leaderboardOn;saveP();pTab('kids')"></button></div>`;
+h+=`<div style="font-size:12px;color:var(--t3);margin-bottom:12px">Kids can see each other's weekly stars. Turn off for private mode.</div>`;
+h+=`<div class="sl">Add new child</div><div class="ff"><label>Name</label><input id="kin" placeholder="e.g. Hamza" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/></div><div class="ff"><label>Choose emoji</label><div class="emoji-grid" id="nkeg">${KE.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="sNKE(this,'${e}')">${e}</div>`).join('')}</div></div><button class="btn pri" style="width:100%" onclick="addK()">+ Add child</button>`;pc.innerHTML=h;return;}
 // FIX 5: Rewards with per-kid tabs
 if(tab==='rewards'){const claimed=G.rewards.filter(r=>r.claimed&&!r.given);let h=`<div class="info g"><strong>Kids choose their reward</strong> when stars are reached.</div>`;
 if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🔔 Action needed</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:6px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="dR(${ri})">Decline</button><button class="btn pri sm" onclick="cnR(${ri})">✓ Give reward</button></div></div>`;});}
@@ -790,7 +809,326 @@ function gRep(kidId,period){const kid=G.kids.find(k=>k.id===kidId);if(!kid)retur
 window.rSet=()=>{const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼'];let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center"><div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div><div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div><label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" name="parent-profile-photo" accept="image/*" capture="environment" style="display:none" onchange="hPPh(this)"/></label><div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="sPE('${e}')">${e}</div>`).join('')}</div><button class="btn dan" style="width:100%;margin-top:10px" onclick="doOut()">Sign out</button></div>`;h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();rSet()"></button></div>`;if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam — 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian — 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div><div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');rSet()">Clear all saved logins</button></div>`;document.getElementById('setb').innerHTML=h;};
 window.hPPh=function(inp){const file=inp.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{compress(ev.target.result,300,data=>{G.pPhoto=data;G.pEmoji=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);});};reader.readAsDataURL(file);inp.value='';};
 window.sPE=e=>{G.pEmoji=e;G.pPhoto=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(null,G.pEmoji,'#1D9E75',36);};
-// ── TAB SWITCHING (safe — no quote escaping issues) ──
+
+// ══════════════════════════════════════════════════════
+// 🏺 GOAL JARS
+// ══════════════════════════════════════════════════════
+function getJars(kidId){return G.goalJars[kidId]||[];}
+
+window.showGoalJars=function(kidId){
+  const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
+  const ws=wS(kid.id);const ms=mS(kid.id);const totalStars=ws;
+  const jars=getJars(kid.id);
+  SS('s-jars');
+  let h=`<div style="background:linear-gradient(135deg,#7B61FF,#00C48C);border-radius:var(--radl);padding:18px;color:#fff;text-align:center;margin-bottom:16px">
+    <div style="font-size:13px;opacity:.8;margin-bottom:4px">Total stars this week</div>
+    <div style="font-size:36px;font-weight:800;color:#FFD700">${totalStars} ⭐</div>
+  </div>`;
+  if(!jars.length){h+=`<div style="text-align:center;padding:32px 20px;color:var(--t3)"><div style="font-size:48px;margin-bottom:12px">🏺</div><div style="font-size:15px;font-weight:600;color:var(--t);margin-bottom:6px">No Goal Jars yet</div><div style="font-size:13px;margin-bottom:16px">Goal jars help you save stars for something big you really want!</div></div>`;}
+  jars.forEach((jar,ji)=>{
+    const pct=Math.min(100,Math.round((totalStars/jar.targetStars)*100));
+    const done=totalStars>=jar.targetStars;
+    h+=`<div style="border:${done?'2px solid var(--g)':'0.5px solid var(--bd)'};border-radius:var(--radl);padding:16px;margin-bottom:10px;background:${done?'var(--gl)':'var(--bg)'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:32px">${jar.emoji}</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--t)">${jar.name}</div>
+            <div style="font-size:12px;color:var(--t3)">${done?'🎉 Goal reached!':totalStars+' / '+jar.targetStars+' stars'}</div>
+          </div>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:${done?'var(--g)':'var(--p)'}">${pct}%</div>
+      </div>
+      <div style="height:14px;background:var(--bg2);border-radius:7px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${pct}%;border-radius:7px;background:${done?'linear-gradient(90deg,var(--g),#00E6A8)':'linear-gradient(90deg,var(--p),var(--g))'}; transition:width .5s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--t3);text-align:center">${done?'🌟 Claim your reward from your parent!':jar.targetStars-totalStars+' more stars to go!'}</div>
+    </div>`;
+  });
+  document.getElementById('jars-body').innerHTML=h;
+};
+
+window.showAddJar=function(){
+  SS('s-add-jar');
+  const emojis=['🚲','🎮','📱','👟','🎨','🏀','📚','✈️','🎸','🎭','🍕','🎬','🧸','⌚','💻','🎯','🏆','🌟'];
+  let h=`<div style="font-size:15px;font-weight:700;margin-bottom:14px">Create a Goal Jar</div>`;
+  h+=`<div class="ff"><label>What do you want to earn?</label><input id="jar-name" class="inp" placeholder="e.g. New Bicycle" style="margin:0"/></div>`;
+  h+=`<div class="ff" style="margin-top:10px"><label>Stars needed</label><input id="jar-stars" type="number" class="inp" placeholder="e.g. 100" min="10" max="1000" style="margin:0"/></div>`;
+  h+=`<div style="font-size:12px;color:var(--t2);font-weight:600;margin-bottom:8px;margin-top:10px">Choose an emoji</div>`;
+  h+=`<div class="emoji-grid" id="jar-emojis">${emojis.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="selJarEmoji(this,'${e}')" style="font-size:28px">${e}</div>`).join('')}</div>`;
+  h+=`<button class="btn pri" style="width:100%;margin-top:16px" onclick="saveJar()">🏺 Create Goal Jar</button>`;
+  document.getElementById('jar-form').innerHTML=h;
+};
+let _jarEmoji='🚲';
+window.selJarEmoji=function(el,e){document.querySelectorAll('#jar-emojis .emoji-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');_jarEmoji=e;};
+window.saveJar=function(){
+  const name=document.getElementById('jar-name')?.value.trim();
+  const stars=parseInt(document.getElementById('jar-stars')?.value)||0;
+  if(!name||stars<10){alert('Enter a name and at least 10 stars target.');return;}
+  const kidId=G.kid?.id||G._jarKidId;
+  if(!G.goalJars[kidId])G.goalJars[kidId]=[];
+  G.goalJars[kidId].push({name,emoji:_jarEmoji,targetStars:stars,createdAt:new Date().toISOString()});
+  saveP();
+  if(G.kid)showGoalJars(kidId);
+  else{pTab('report');SS('s-parent');}
+};
+
+// ══════════════════════════════════════════════════════
+// 🏅 ACHIEVEMENT BADGES
+// ══════════════════════════════════════════════════════
+const ALL_BADGES=[
+  {id:'first10',emoji:'🌟',name:'First Stars',desc:'Earned your first 10 stars'},
+  {id:'first50',emoji:'⭐',name:'Star Collector',desc:'Earned 50 stars total'},
+  {id:'first100',emoji:'🏆',name:'Century Star',desc:'Earned 100 stars total'},
+  {id:'streak3',emoji:'🔥',name:'On Fire',desc:'3-day streak'},
+  {id:'streak7',emoji:'🚀',name:'Unstoppable',desc:'7-day streak'},
+  {id:'streak14',emoji:'💎',name:'Diamond Habit',desc:'14-day streak'},
+  {id:'prayer5',emoji:'🕌',name:'Faithful',desc:'Prayed all 5 prayers in a day'},
+  {id:'allday',emoji:'🌈',name:'Perfect Day',desc:'Completed all tasks in one day'},
+  {id:'helper',emoji:'❤️',name:'Helping Hands',desc:'Help parents approved 5 times'},
+  {id:'reader',emoji:'📚',name:'Bookworm',desc:'Study task approved 10 times'},
+  {id:'earlybird',emoji:'🌅',name:'Early Bird',desc:'Fajr prayer done 7 days in a row'},
+  {id:'roomchamp',emoji:'🧹',name:'Room Champion',desc:'Clean room approved 10 times'},
+];
+
+function checkAndAwardBadges(kidId){
+  if(!G.badges[kidId])G.badges[kidId]=[];
+  const owned=G.badges[kidId];
+  const ws=wS(kidId);const streak=calcStreak(kidId);
+  // Total stars across all time
+  let totalStars=0;
+  Object.keys(G.logs[kidId]||{}).forEach(dk=>totalStars+=cS(kidId,dk));
+  // Task counts
+  let helperCount=0,readerCount=0,roomCount=0,fajrCount=0,prayerAllCount=0;
+  let allDayCount=0;
+  Object.keys(G.logs[kidId]||{}).forEach(dk=>{
+    const l=gLog(kidId,dk);
+    if(l.tasks?.t7==='approved')helperCount++;
+    if(l.tasks?.t4==='approved')readerCount++;
+    if(l.tasks?.t6==='approved')roomCount++;
+    if(l.prayers?.Fajr)fajrCount++;
+    const prs=Pr();
+    if(prs.length&&prs.every(p=>l.prayers?.[p.n]))prayerAllCount++;
+    const allTasks=G.tasks.filter(t=>t.cat==='daily'&&!t.showerOnly);
+    if(allTasks.length&&allTasks.every(t=>l.tasks?.[t.id]==='approved'))allDayCount++;
+  });
+  const award=(id)=>{if(!owned.includes(id)){owned.push(id);return true;}return false;};
+  let newBadges=[];
+  if(totalStars>=10&&award('first10'))newBadges.push('first10');
+  if(totalStars>=50&&award('first50'))newBadges.push('first50');
+  if(totalStars>=100&&award('first100'))newBadges.push('first100');
+  if(streak>=3&&award('streak3'))newBadges.push('streak3');
+  if(streak>=7&&award('streak7'))newBadges.push('streak7');
+  if(streak>=14&&award('streak14'))newBadges.push('streak14');
+  if(prayerAllCount>=1&&award('prayer5'))newBadges.push('prayer5');
+  if(allDayCount>=1&&award('allday'))newBadges.push('allday');
+  if(helperCount>=5&&award('helper'))newBadges.push('helper');
+  if(readerCount>=10&&award('reader'))newBadges.push('reader');
+  if(fajrCount>=7&&award('earlybird'))newBadges.push('earlybird');
+  if(roomCount>=10&&award('roomchamp'))newBadges.push('roomchamp');
+  if(newBadges.length){
+    saveP();
+    // Show badge notification
+    showBadgeToast(newBadges);
+  }
+}
+
+function showBadgeToast(badgeIds){
+  badgeIds.forEach((bid,i)=>{
+    const badge=ALL_BADGES.find(b=>b.id===bid);if(!badge)return;
+    setTimeout(()=>{
+      const toast=document.createElement('div');
+      toast.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7B61FF,#00C48C);color:#fff;border-radius:16px;padding:14px 20px;z-index:2000;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25);animation:slideDown .4s ease';
+      toast.innerHTML=`<div style="font-size:28px">${badge.emoji}</div><div style="font-size:13px;font-weight:700;margin-top:4px">New Badge: ${badge.name}!</div><div style="font-size:11px;opacity:.85">${badge.desc}</div>`;
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(),3500);
+    },i*4000);
+  });
+}
+
+window.showBadges=function(kidId){
+  const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
+  checkAndAwardBadges(kid.id);
+  const owned=G.badges[kid.id]||[];
+  SS('s-badges');
+  let h=`<div style="text-align:center;margin-bottom:16px"><div style="font-size:32px;font-weight:800;color:var(--p)">${owned.length}</div><div style="font-size:13px;color:var(--t3)">badges earned</div></div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">`;
+  ALL_BADGES.forEach(b=>{
+    const have=owned.includes(b.id);
+    h+=`<div style="border:${have?'2px solid var(--p)':'0.5px solid var(--bd)'};border-radius:14px;padding:14px 12px;text-align:center;background:${have?'var(--pl)':'var(--bg2)'};opacity:${have?1:.45}">
+      <div style="font-size:32px;margin-bottom:6px">${b.emoji}</div>
+      <div style="font-size:12px;font-weight:700;color:${have?'var(--p)':'var(--t3)'}">${b.name}</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:2px">${b.desc}</div>
+      ${have?'<div style="font-size:10px;color:var(--p);font-weight:600;margin-top:4px">✓ Earned!</div>':''}
+    </div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('badges-body').innerHTML=h;
+};
+
+// ══════════════════════════════════════════════════════
+// 👏 PARENT PRAISE NOTES
+// ══════════════════════════════════════════════════════
+const PRAISE_PRESETS=[
+  {e:'👏',msg:'Great job today!'},
+  {e:'🌟',msg:'I am so proud of you!'},
+  {e:'❤️',msg:'Thank you for helping!'},
+  {e:'💪',msg:'Keep up the amazing work!'},
+  {e:'🎉',msg:'You are doing brilliantly!'},
+  {e:'🚀',msg:'You are a superstar!'},
+  {e:'📚',msg:'Love seeing you study hard!'},
+  {e:'🙏',msg:'Thank you for praying today!'},
+];
+
+window.showPraiseModal=function(kidId){
+  const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
+  document.getElementById('sk-praise-modal')?.remove();
+  const overlay=document.createElement('div');
+  overlay.id='sk-praise-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1001;display:flex;align-items:flex-end;justify-content:center';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:430px">
+    <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">Send Praise to ${kid.name} 👏</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:16px">Choose a message or write your own</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      ${PRAISE_PRESETS.map((p,i)=>`<div onclick="selectPraise(this,'${p.e}','${p.msg}')" style="border:1.5px solid var(--bd);border-radius:12px;padding:10px;cursor:pointer;text-align:center${i===0?';border-color:var(--g);background:var(--gl)':''}">
+        <div style="font-size:22px">${p.e}</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:4px">${p.msg}</div>
+      </div>`).join('')}
+    </div>
+    <div class="ff" style="margin:0 0 14px"><label>Or write your own</label><input id="praise-custom" class="inp" placeholder="Your personal message..." style="margin:0"/></div>
+    <button class="btn pri" style="width:100%;padding:13px" onclick="sendPraise('${kidId}')">Send Praise ❤️</button>
+    <button style="width:100%;padding:10px;border:none;background:none;font-size:13px;color:var(--t3);cursor:pointer;margin-top:6px" onclick="document.getElementById('sk-praise-modal').remove()">Cancel</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  window._praiseSelected={e:'👏',msg:'Great job today!'};
+};
+
+let _praiseSelected={e:'👏',msg:'Great job today!'};
+window.selectPraise=function(el,e,msg){
+  document.querySelectorAll('#sk-praise-modal [onclick^="selectPraise"]').forEach(x=>{x.style.borderColor='var(--bd)';x.style.background='#fff';});
+  el.style.borderColor='var(--g)';el.style.background='var(--gl)';
+  _praiseSelected={e,msg};
+};
+
+window.sendPraise=function(kidId){
+  const custom=document.getElementById('praise-custom')?.value.trim();
+  const msg=custom||_praiseSelected.msg;
+  const e=_praiseSelected.e;
+  if(!G.praiseNotes[kidId])G.praiseNotes[kidId]=[];
+  G.praiseNotes[kidId].unshift({e,msg,from:G.pData?.name||'Parent',date:new Date().toISOString()});
+  if(G.praiseNotes[kidId].length>10)G.praiseNotes[kidId].pop(); // keep last 10
+  saveP();
+  document.getElementById('sk-praise-modal')?.remove();
+  alert('Praise sent to '+G.kids.find(k=>k.id===kidId)?.name+'! ❤️');
+};
+
+// Show praise notes on kid dashboard
+function renderPraiseNotes(kidId){
+  const notes=G.praiseNotes[kidId]||[];
+  if(!notes.length)return'';
+  const latest=notes.slice(0,3);
+  let h=`<div class="sl">💌 Messages from parent</div>`;
+  latest.forEach(n=>{
+    const d=new Date(n.date);const ds=d.toLocaleDateString('en',{weekday:'short',day:'numeric',month:'short'});
+    h+=`<div style="background:linear-gradient(135deg,#FFF4F7,#FFE9EF);border:1px solid #FFB3C6;border-radius:var(--radl);padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:28px;flex-shrink:0">${n.e}</div>
+      <div><div style="font-size:14px;color:var(--t);font-weight:500;line-height:1.4">${n.msg}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">From ${n.from} · ${ds}</div></div>
+    </div>`;
+  });
+  return h;
+}
+
+// ══════════════════════════════════════════════════════
+// 🏆 FAMILY LEADERBOARD
+// ══════════════════════════════════════════════════════
+window.showLeaderboard=function(){
+  if(!G.leaderboardOn){alert('Leaderboard is turned off in Settings.');return;}
+  SS('s-lb');
+  const sorted=[...G.kids].map(k=>({...k,ws:wS(k.id),streak:calcStreak(k.id)})).sort((a,b)=>b.ws-a.ws);
+  const medals=['🥇','🥈','🥉'];
+  let h=`<div style="background:linear-gradient(135deg,#7B61FF,#00C48C);border-radius:var(--radl);padding:20px;color:#fff;text-align:center;margin-bottom:16px">
+    <div style="font-size:28px;font-weight:800">Family Leaderboard</div>
+    <div style="font-size:13px;opacity:.8;margin-top:4px">This week's stars ⭐</div>
+  </div>`;
+  sorted.forEach((k,i)=>{
+    const isMe=G.kid&&G.kid.id===k.id;
+    h+=`<div style="display:flex;align-items:center;gap:14px;padding:14px;border:${isMe?'2px solid var(--g)':'0.5px solid var(--bd)'};border-radius:var(--radl);margin-bottom:8px;background:${isMe?'var(--gl)':'var(--bg)'}">
+      <div style="font-size:28px;width:36px;text-align:center">${medals[i]||'#'+(i+1)}</div>
+      ${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',44)}
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:var(--t)">${k.name}${isMe?' (you)':''}</div>
+        <div style="font-size:12px;color:var(--t3)">🔥 ${k.streak} day streak</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:22px;font-weight:800;color:var(--g)">${k.ws}</div>
+        <div style="font-size:10px;color:var(--t3)">stars</div>
+      </div>
+    </div>`;
+  });
+  if(sorted.length<2)h+=`<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">Add more children to see the leaderboard!</div>`;
+  document.getElementById('lb-body').innerHTML=h;
+};
+
+// ══════════════════════════════════════════════════════
+// 📊 VISUAL WEEKLY REPORT CARD
+// ══════════════════════════════════════════════════════
+window.showReportCard=function(kidId){
+  const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
+  const ws=wS(kid.id);const streak=calcStreak(kid.id);
+  const keys=wk();const pr=Pr();
+  let td2=0,tt=0,pd=0,bd=0;
+  keys.forEach(dk=>{const log=gLog(kid.id,dk);let ap=pr.length>0;pr.forEach(p=>{if(!log.prayers?.[p.n])ap=false;});if(ap&&pr.length)pd++;G.tasks.filter(t=>t.cat==='daily').forEach(t=>{tt++;if(log.tasks?.[t.id]==='approved')td2++;});G.tasks.filter(t=>t.cat==='bonus').forEach(t=>{if(log.tasks?.[t.id]==='approved')bd++;});});
+  const taskPct=tt?Math.round(td2/tt*100):0;const prayPct=pr.length?Math.round(pd/7*100):null;
+  const grade=taskPct>=90?{l:'A+',e:'🥇',c:'#00C48C'}:taskPct>=75?{l:'A',e:'🥈',c:'#00C48C'}:taskPct>=60?{l:'B',e:'🥉',c:'#7B61FF'}:taskPct>=40?{l:'C',e:'💪',c:'#FF9500'}:{l:'D',e:'📈',c:'#FF3B5C'};
+  // Check badges
+  checkAndAwardBadges(kid.id);
+  const badges=(G.badges[kid.id]||[]).slice(-3).map(id=>ALL_BADGES.find(b=>b.id===id)?.emoji||'').join(' ');
+  SS('s-rc');
+  document.getElementById('rc-body').innerHTML=`
+    <div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:24px;color:#fff;text-align:center;margin-bottom:16px">
+      <div style="font-size:56px;margin-bottom:8px">${grade.e}</div>
+      <div style="font-size:28px;font-weight:800;color:#FFD700">${kid.name}</div>
+      <div style="font-size:48px;font-weight:900;color:${grade.c};margin:8px 0">${grade.l}</div>
+      <div style="font-size:13px;opacity:.7">Week of ${wk()[0]} — ${wk()[6]}</div>
+      ${badges?`<div style="font-size:24px;margin-top:8px">${badges}</div>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:linear-gradient(135deg,#7B61FF22,#7B61FF11);border:1px solid var(--p);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:32px;font-weight:800;color:var(--p)">${ws}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">⭐ Stars earned</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#FF6B3522,#FF6B3511);border:1px solid var(--streak);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:32px;font-weight:800;color:var(--streak)">${streak}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">🔥 Day streak</div>
+      </div>
+    </div>
+    <div style="background:var(--bg);border:0.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px">
+      ${[
+        {l:'Daily Tasks',v:taskPct,icon:'📋',c:'var(--g)'},
+        ...(prayPct!==null?[{l:'Prayers',v:prayPct,icon:'🙏',c:'var(--p)'}]:[]),
+        {l:'Bonus Tasks',v:bd,icon:'⭐',c:'var(--a)',raw:true},
+      ].map(s=>`<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--t);margin-bottom:6px">
+          <span>${s.icon} ${s.l}</span>
+          <span style="color:${s.c}">${s.raw?s.v+' tasks':s.v+'%'}</span>
+        </div>
+        ${s.raw?'':`<div style="height:10px;background:var(--bg2);border-radius:5px;overflow:hidden"><div style="height:100%;width:${s.v}%;background:${s.c};border-radius:5px;transition:width .6s"></div></div>`}
+      </div>`).join('')}
+    </div>
+    ${(G.goalJars[kid.id]||[]).length?`<div style="background:var(--bg);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">🏺 Goal Jars Progress</div>
+      ${(G.goalJars[kid.id]||[]).map(j=>{const pct=Math.min(100,Math.round(ws/j.targetStars*100));return`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);margin-bottom:4px"><span>${j.emoji} ${j.name}</span><span>${ws}/${j.targetStars}⭐</span></div><div style="height:8px;background:var(--bg2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--p),var(--g));border-radius:4px"></div></div></div>`;}).join('')}
+    </div>`:''}
+    <div style="background:linear-gradient(135deg,var(--gl),#D0F7EC);border-radius:14px;padding:16px;text-align:center">
+      <div style="font-size:18px;margin-bottom:4px">${grade.e}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--gd)">${taskPct>=90?'Outstanding week! You are a superstar!':taskPct>=75?'Excellent effort! Keep it up!':taskPct>=60?'Good progress! Aim higher next week!':'Every day is a new chance to shine!'}</div>
+    </div>`;
+};
+
+// ══════════════════════════════════════════════════════
+// TAB SWITCHING (safe)
+// ══════════════════════════════════════════════════════
 window.swApprTab=function(el,kidId){
   G.apprTab=kidId;
   // Update tab styles immediately

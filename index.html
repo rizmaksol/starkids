@@ -73,24 +73,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </head>
 <body>
 <div class="app">
-<div class="screen active" id="s-home"><div class="lwrap"><div style="font-size:46px;margin-bottom:8px">⭐</div><div style="font-size:22px;font-weight:700;margin-bottom:3px">StarKids</div><div style="font-size:13px;color:var(--t3);margin-bottom:22px;text-align:center">Discipline · Habits · Rewards</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.1 Fixed</div></div></div>
+<div class="screen active" id="s-home"><div class="lwrap"><div style="font-size:46px;margin-bottom:8px">⭐</div><div style="font-size:22px;font-weight:700;margin-bottom:3px">StarKids</div><div style="font-size:13px;color:var(--t3);margin-bottom:22px;text-align:center">Discipline · Habits · Rewards</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.0</div></div></div>
 <div class="screen" id="s-auth"><div class="topbar"><div class="tb-t">Parent account</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content"><div class="seg" id="aseg"><div class="segb active" onclick="setAM('in')">Sign in</div><div class="segb" onclick="setAM('up')">Create account</div></div><div id="aform"></div></div></div>
-<div class="screen" id="s-code"><div class="topbar"><div class="tb-t">I am a Kid 👦</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:24px"><div style="font-size:52px;margin-bottom:14px">🔑</div><div style="font-size:18px;font-weight:700;margin-bottom:6px">Enter Your Secret Code</div><div style="font-size:13px;color:var(--t3);margin-bottom:4px">Ask your parent for your 6-digit code</div><div class="cw" id="ci"></div><div id="cerr" style="font-size:12px;color:var(--r);min-height:16px;margin-bottom:16px"></div><input
-id="kidCode"
-type="text"
-placeholder="Enter code"
-onkeypress="
-if(event.key==='Enter'){
-kidLogin();
-}"
->
-
-<button
-class="btn pri sm"
-onclick="kidLogin()"
->
-Enter
-</button></div></div>
+<div class="screen" id="s-code"><div class="topbar"><div class="tb-t">I am a Kid 👦</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:24px"><div style="font-size:52px;margin-bottom:14px">🔑</div><div style="font-size:18px;font-weight:700;margin-bottom:6px">Enter Your Secret Code</div><div style="font-size:13px;color:var(--t3);margin-bottom:4px">Ask your parent for your 6-digit code</div><div class="cw" id="ci"></div><div id="cerr" style="font-size:12px;color:var(--r);min-height:16px;margin-bottom:16px"></div><button class="btn pri" style="width:100%;max-width:280px;padding:15px;font-size:16px;font-weight:700;border-radius:14px" onclick="kidLogin()">🚀 Enter StarKids</button></div></div>
 <div class="screen" id="s-load"><div class="loading"><div class="spinner"></div><div id="lmsg">Loading...</div></div></div>
 <div class="screen" id="s-parent">
   <div class="topbar"><div style="display:flex;align-items:center;gap:10px"><div id="p-av" onclick="SS('s-set');rSet()" style="cursor:pointer"></div><div><div class="tb-t" id="p-tit">Dashboard</div><div class="tb-s" id="p-sub"></div></div></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="SS('s-set');rSet()">⚙️</button><button class="btn sm" onclick="doOut()">Exit</button></div></div>
@@ -178,25 +163,7 @@ onAuthStateChanged(auth,async user=>{if(user){SS('s-load');document.getElementBy
 function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);stPL(user.uid);stLL(user.uid);SS('s-parent');pTab('appr');}
 // Kid login
 window.bCI=()=>{const w=document.getElementById('ci');if(!w)return;w.innerHTML='';for(let i=0;i<6;i++){const x=document.createElement('input');x.type='text';x.maxLength=1;x.inputMode='numeric';x.id='ci'+i;x.oninput=e=>{const v=e.target.value.replace(/\D/,'');e.target.value=v;if(v&&i<5)document.getElementById('ci'+(i+1)).focus();};x.onkeydown=e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)document.getElementById('ci'+(i-1)).focus();};w.appendChild(x);}};
-
-
-const gCode=()=>{
-
-const manual=document.getElementById('kidCode');
-
-if(manual && manual.value.trim()){
-   return manual.value.trim();
-}
-
-let c='';
-
-for(let i=0;i<6;i++){
-   c += (document.getElementById('ci'+i)||{}).value || '';
-}
-
-return c;
-};
-
+const gCode=()=>{let c='';for(let i=0;i<6;i++)c+=(document.getElementById('ci'+i)||{}).value||'';return c;};
 window.kidLogin=async()=>{const code=gCode();if(code.length<6){document.getElementById('cerr').textContent='Enter all 6 digits.';return;}document.getElementById('cerr').textContent='Looking up...';SS('s-load');await doKL(code);};
 window.qKL=async code=>{SS('s-load');document.getElementById('lmsg').textContent='Loading tasks...';await doKL(code);};
 async function doKL(code){try{const snap=await getDocs(collection(db,'parents'));let fk=null,fpd=null;snap.forEach(ps=>{const d=ps.data();if(d.kids){const k=d.kids.find(k=>k.code===code);if(k){fk=k;fpd={...d,uid:ps.id};}}});
@@ -254,7 +221,6 @@ const ico=status==='approved'?'<div class="circ done">✓</div>':status==='pendi
 return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo">${inner}</div>${ico}</div>`;}
 
 // FIX 2: Photo handler using onchange on inline input
-
 window.hPh=function(inp,id){
 
 const kid=G.kid;
@@ -267,15 +233,56 @@ const reader=new FileReader();
 
 reader.onload=function(ev){
 
+    // reduce size aggressively
     compress(ev.target.result,300,function(data){
 
         const lg=gLog(kid.id,today());
 
         if(!lg.photos) lg.photos={};
 
+        // save smaller photo
         lg.photos[id]=data;
-        lg.tasks[id]='draft';
+
+        // always mark pending
+        lg.tasks[id]='pending';
         lg.ticked[id]=true;
+
+        const task=G.tasks.find(t=>t.id===id);
+
+        if(task){
+
+            const ex=G.pending.find(
+                p=>p.kidId===kid.id &&
+                p.tid===id &&
+                p.date===today()
+            );
+
+            if(ex){
+
+                ex.photo=data;
+                ex.ticked=true;
+
+            }else{
+
+                G.pending.push({
+                    kidId:kid.id,
+                    kidName:kid.name,
+                    kPh:kid.photo,
+                    kEm:kid.emoji,
+                    kCo:kid.color,
+                    task:task,
+                    tid:id,
+                    date:today(),
+                    time:new Date().toLocaleTimeString(
+                        [],
+                        {hour:'2-digit',minute:'2-digit'}
+                    ),
+                    photo:data,
+                    ticked:true
+                });
+
+            }
+        }
 
         rKid();
 
@@ -291,71 +298,12 @@ inp.value='';
 
 };
 
-window.tTick=function(id){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(lg.tasks[id]==='approved')return;lg.ticked[id]=!lg.ticked[id];if(lg.ticked[id]){
-    lg.tasks[id]='draft';
-}else{if(!lg.photos?.[id]){lg.tasks[id]='none';G.pending=G.pending.filter(p=>!(p.kidId===kid.id&&p.tid===id&&p.date===today()));}}rKid();saveLog(kid.id,today());};
+window.tTick=function(id){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(lg.tasks[id]==='approved')return;lg.ticked[id]=!lg.ticked[id];if(lg.ticked[id]){if(lg.tasks[id]!=='pending'){lg.tasks[id]='pending';const task=G.tasks.find(t=>t.id===id);if(task)addP(kid,task,id,lg);}}else{if(!lg.photos?.[id]){lg.tasks[id]='none';G.pending=G.pending.filter(p=>!(p.kidId===kid.id&&p.tid===id&&p.date===today()));}}rKid();saveLog(kid.id,today());};
 function addP(kid,task,tid,lg){const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===tid&&p.date===today());if(!ex)G.pending.push({kidId:kid.id,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:lg.photos?.[tid]||null,ticked:!!lg.ticked?.[tid]});}
 // FIX 5: Resubmit rejected task
-
-window.reSub=function(id){
-
-const kid=G.kid;
-
-if(!kid)return;
-
-const lg=gLog(kid.id,today());
-
-lg.tasks[id]='draft';
-
-rKid();
-
-saveLog(
-    kid.id,
-    today()
-);
-
-};
-
+window.reSub=function(id){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(lg.tasks[id]!=='rejected'&&lg.tasks[id]!=='rej')return;lg.tasks[id]='pending';const task=G.tasks.find(t=>t.id===id);if(!task)return;addP(kid,task,id,lg);rKid();saveLog(kid.id,today());};
 window.tPr=function(name){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];rKid();saveLog(kid.id,today());};
-window.subDay=function(){
-
-const kid=G.kid;
-if(!kid)return;
-
-const lg=gLog(kid.id,today());
-
-Object.keys(lg.tasks).forEach(id=>{
-
-    if(lg.tasks[id]==='draft'){
-
-        lg.tasks[id]='pending';
-
-        const task=G.tasks.find(
-            t=>t.id===id
-        );
-
-        if(task){
-
-            addP(
-                kid,
-                task,
-                id,
-                lg
-            );
-
-        }
-    }
-});
-
-saveLog(kid.id,today());
-
-alert(
-'Day submitted successfully ⭐'
-);
-
-rKid();
-
-};
+window.subDay=()=>alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');
 window.rfKid=async()=>{if(!G.kid||!G.pUid)return;try{const snap=await getDoc(doc(db,'parents',G.pUid));if(snap.exists()){const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(!G.kids.find(k=>k.id===G.kid.id)){syncSK([]);G.kid=null;SS('s-home');rHome();return;}}await loadLogs(G.kid.id);}catch(e){console.error('rf',e);}rKid();};
 // Kid profile
 window.showKP=function(){const kid=G.kid;if(!kid)return;let h=`<div style="text-align:center;margin-bottom:16px"><div style="width:90px;height:90px;border-radius:50%;overflow:hidden;border:3px solid ${kid.color||'var(--g)'};margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:38px;background:${kid.color||'#1D9E75'}22" id="kap">${kid.photo?`<img src="${kid.photo}" style="width:100%;height:100%;object-fit:cover"/>`:kid.emoji||'👦'}</div><div style="font-size:16px;font-weight:600;margin-bottom:4px">${kid.name}</div><div style="font-size:13px;color:var(--t3);margin-bottom:14px">${wS(kid.id)}⭐ this week</div>`;
@@ -382,43 +330,7 @@ if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 
 if(!G.pending.length&&!claimed.length){pc.innerHTML=h+'<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';return;}
 if(G.pending.length){
 const byK={};G.pending.forEach((a,idx)=>{if(!byK[a.kidId])byK[a.kidId]={name:a.kidName,ph:a.kPh,em:a.kEm,co:a.kCo,items:[]};byK[a.kidId].items.push({...a,idx});});
-const kIds=Object.keys(byK);if(!G.apprTab){G.apprTab=kIds[0];}// preserve selected child if(!byK[G.apprTab]){G.apprTab=kIds[0];
-<textarea
-id="remark_${a.idx}"
-placeholder="Write remarks/instructions..."
-style="
-width:100%;
-margin-top:8px;
-padding:8px;
-border-radius:8px;
-border:1px solid #ccc;
-"></textarea>} const remark=document.getElementById(
-`remark_${a.idx}`
-)?.value || '';
-
-log.remarks ??= {};
-
-log.remarks[a.task.id]=remark;const remark=document.getElementById(
-`remark_${a.idx}`
-)?.value || '';
-
-log.remarks ??= {};
-
-log.remarks[a.task.id]=remark;if(log.remarks?.[t.id]){
-
-inner+=`
-<div class="info">
-📝 ${log.remarks[t.id]}
-</div>
-`;
-
-}
-
-window.openKidDash=function(kidId)
-{
-    G.apprTab=kidId;
-    pTab('appr');
-}
+const kIds=Object.keys(byK);if(!G.apprTab||!byK[G.apprTab])G.apprTab=kIds[0];
 // FIX: Per-kid tabs in approvals
 h+=`<div class="kid-tabs">`;kIds.forEach(kId=>{const kd=byK[kId];const isA=G.apprTab===kId;h+=`<div class="kid-tab${isA?' active':''}" onclick="G.apprTab='${kId}';pTab('appr')">${avD(kd.ph,kd.em||'👦',kd.co||'#1D9E75',22)}<span>${kd.name}</span><span style="background:${isA?'var(--g)':'var(--bd2)'};color:${isA?'#fff':'var(--t3)'};border-radius:10px;padding:0 7px;font-size:11px">${kd.items.length}</span></div>`;});h+=`</div>`;
 const sel=byK[G.apprTab];if(sel){const ws=wS(G.apprTab);h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(sel.ph,sel.em||'👦',sel.co||'#1D9E75',38)}<div><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ · ${sel.items.length} pending</div></div></div>`;

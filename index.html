@@ -66,7 +66,20 @@
 /* Star animation */
 @keyframes starPop{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
 @keyframes slideDown{0%{opacity:0;transform:translateX(-50%) translateY(-20px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
-@keyframes badgePop{0%{opacity:0;transform:scale(.4)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+@keyframes badgePop{
+  0%{opacity:0;transform:scale(.2) rotate(-10deg)}
+  50%{transform:scale(1.12) rotate(3deg)}
+  70%{transform:scale(.96) rotate(-1deg)}
+  100%{opacity:1;transform:scale(1) rotate(0deg)}
+}
+@keyframes badgeShine{
+  0%{background-position:200% center}
+  100%{background-position:-200% center}
+}
+@keyframes starFloat{
+  0%{transform:translateY(0) scale(1);opacity:1}
+  100%{transform:translateY(-40px) scale(0);opacity:0}
+}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .screen.active .content{animation:fadeIn .25s ease}
 .star-pop{animation:starPop .3s ease}
@@ -490,7 +503,27 @@ const rj=G.tasks.filter(t=>log.tasks[t.id]==='rejected');
 let h='';
 if(cl.length)h+=`<div class="unlock-banner" style="flex-direction:column;text-align:center;padding:16px;gap:10px"><div style="font-size:20px">🎉</div><div style="font-size:15px;font-weight:700">You unlocked ${cl.length} reward${cl.length>1?'s':''}!</div><div style="font-size:12px;opacity:.85">Tap below to claim your reward</div><button style="background:#fff;color:var(--a);border:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)" onclick="shCh()">🎁 Choose My Reward</button></div>`;
 if(rj.length)h+=`<div style="background:var(--rl);border:1px solid var(--r);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">💪</span><div><div style="font-size:13px;font-weight:600;color:var(--r)">Almost there!</div><div style="font-size:12px;color:#7A1535">${rj.length} task${rj.length>1?'s need':' needs'} a second try. Read the message and resubmit!</div></div></div>`;
-h+=`<div class="sbar"><div><div class="slbl">Today's stars</div><div class="snum">${ts} ⭐</div></div><div style="text-align:right"><div class="slbl">This week</div><div style="font-size:18px;font-weight:700;color:var(--t)">${ws} ⭐</div></div></div>`;
+// Calculate claimed stars (rewards that have been claimed/given)
+  const claimedStars=G.rewards.filter(r=>(r.claimed||r.given)&&r.claimedBy===kid.name).reduce((a,r)=>a+r.stars,0);
+  const wallet=getWallet(kid.id);
+  const currency=G.currency||'SAR';
+  h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:16px 14px;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 6px">
+        <div style="font-size:22px;font-weight:800;color:#FFD700">${ws}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">⭐ Earned</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 6px">
+        <div style="font-size:22px;font-weight:800;color:#FF9500">${claimedStars}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">🎯 Claimed</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 6px;cursor:pointer" onclick="showKidWallet(G.kid.id)">
+        <div style="font-size:16px;font-weight:800;color:#00C48C">${wallet.balance>0?currency+' '+wallet.balance.toFixed(2):'—'}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">💰 Wallet</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.4)">Today: ${ts}⭐ · Tap 💰 to see wallet</div>
+  </div>`;
 h+=`<div style="text-align:right;margin-bottom:8px"><button onclick="rfKid()" style="background:none;border:0.5px solid var(--bd);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--t3);cursor:pointer">🔄 Refresh</button></div>`;
 if(pr.length){h+=`<div class="sl">🙏 Daily prayers${G.PC?` · 📍${G.PC}`:''}</div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} · +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
 const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));const bonus=G.tasks.filter(t=>t.cat==='bonus');
@@ -957,24 +990,33 @@ window.confirmReject=function(idx,taId,errId,mid){
   G.pending.splice(idx,1);
   pTab('appr');
 };
-window.cnR=ri=>{
+window.cnR=async ri=>{
   const r=G.rewards[ri];if(!r)return;
   const kid=G.kids.find(k=>k.name===r.claimedBy);
   r.given=true;r.claimed=false;
-  // If kid chose cash → add to wallet
+  let msg='✅ Reward confirmed!';
   if(r.choiceType==='cash'&&r.cashAmount&&kid){
-    addToWallet(kid.id,r.cashAmount,r.name+' (cash reward)');
-    saveP();
-    alert('✅ Confirmed!\n💰 '+r.currency+' '+r.cashAmount+' added to '+kid.name+"'s wallet!");
+    addToWallet(kid.id,r.cashAmount,r.name+' — cash reward');
+    msg='✅ Confirmed!\n💰 '+(r.currency||G.currency||'SAR')+' '+r.cashAmount.toFixed(2)+" added to "+kid.name+"'s wallet!";
   } else if(r.type==='money'&&r.amount&&kid){
-    // Legacy money reward type
-    addToWallet(kid.id,r.amount,r.name);
-    saveP();
-    alert('✅ Confirmed!\n💰 '+(G.currency||'SAR')+' '+r.amount+' added to '+kid.name+"'s wallet!");
+    addToWallet(kid.id,parseFloat(r.amount),r.name);
+    msg='✅ Confirmed!\n💰 '+(G.currency||'SAR')+' '+r.amount+" added to "+kid.name+"'s wallet!";
   } else {
-    saveP();
-    alert('✅ Reward given to '+( r.claimedBy||'child')+'!');
+    msg='✅ "'+r.name+'" given to '+(r.claimedBy||'child')+'!';
   }
+  // Save to Firebase — parent IS authenticated so this works
+  await saveP();
+  // Also write wallet update directly so kid sees it on refresh
+  if(kid&&G.pUid){
+    try{
+      await setDoc(doc(db,'parents',G.pUid),{
+        wallets:G.wallets,
+        rewards:G.rewards,
+        upd:new Date().toISOString()
+      },{merge:true});
+    }catch(e){console.error('wallet save',e);}
+  }
+  alert(msg);
   pTab('appr');
 };
 window.dR=ri=>{G.rewards[ri].claimed=false;delete G.rewards[ri].claimedBy;saveP();pTab('appr');};
@@ -1399,50 +1441,74 @@ const TASK_PRAISE=[
 
 // Badge when kid SUBMITS a task (immediate feedback)
 function showSubmitBadge(taskName, stars){
-  const msgs=['Great effort! 💪','Keep it up! 🌟','Well done! ⭐','Brilliant! 🎯','You did it! 🚀'];
+  const msgs=['Sent to parent! 📨','Awaiting approval ⏳','Nice work! 💪','Brilliant! 🎯','Keep going! 🚀'];
   const msg=msgs[Math.floor(Math.random()*msgs.length)];
   const el=document.createElement('div');
-  el.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:2000;animation:slideDown .35s cubic-bezier(.34,1.56,.64,1);pointer-events:none';
-  el.innerHTML=`<div style="background:linear-gradient(135deg,#7B61FF,#5A3FD6);color:#fff;border-radius:18px;padding:14px 22px;text-align:center;box-shadow:0 8px 28px rgba(123,97,255,.45);white-space:nowrap">
-    <div style="font-size:26px;margin-bottom:4px">⏳</div>
+  el.style.cssText='position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-80px);z-index:2000;transition:transform .4s cubic-bezier(.34,1.56,.64,1)';
+  el.innerHTML=`<div style="background:linear-gradient(135deg,#7B61FF,#5A3FD6);color:#fff;border-radius:20px;padding:12px 22px;text-align:center;box-shadow:0 10px 32px rgba(123,97,255,.5);white-space:nowrap;min-width:200px">
+    <div style="font-size:28px;margin-bottom:4px">⏳</div>
     <div style="font-size:13px;font-weight:700">${msg}</div>
-    <div style="font-size:11px;opacity:.8;margin-top:2px">${taskName} · sent to parent</div>
+    <div style="font-size:11px;opacity:.8;margin-top:3px">${taskName}</div>
   </div>`;
   document.body.appendChild(el);
-  setTimeout(()=>{el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(()=>el.remove(),400);},2200);
+  // Slide in
+  setTimeout(()=>{el.style.transform='translateX(-50%) translateY(0)';},20);
+  // Slide out
+  setTimeout(()=>{el.style.transform='translateX(-50%) translateY(-90px)';setTimeout(()=>el.remove(),400);},2500);
 }
 
 // Show golden badge popup (for parent approvals & bonuses)
 function showGoldenBadge({title, subtitle, stars, emoji}){
+  // Floating stars
+  for(let i=0;i<8;i++){
+    const s=document.createElement('div');
+    s.style.cssText=`position:fixed;left:${10+Math.random()*80}%;top:${30+Math.random()*40}%;font-size:${14+Math.random()*20}px;z-index:1999;animation:starFloat ${.7+Math.random()*.8}s ease forwards;animation-delay:${i*.1}s`;
+    s.textContent='⭐';document.body.appendChild(s);
+    setTimeout(()=>s.remove(),1500);
+  }
   const el=document.createElement('div');
-  el.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;pointer-events:none';
-  el.innerHTML=`<div style="background:linear-gradient(135deg,#FFD700,#FF9500);border-radius:24px;padding:28px 32px;text-align:center;box-shadow:0 16px 48px rgba(255,149,0,.5);animation:badgePop .5s cubic-bezier(.34,1.56,.64,1);max-width:280px;pointer-events:all">
-    <div style="font-size:56px;margin-bottom:10px">${emoji}</div>
-    <div style="font-size:20px;font-weight:800;color:#7A4500;margin-bottom:4px">${title}</div>
-    <div style="font-size:14px;color:#A05A00;margin-bottom:${stars?'12px':'0'}">${subtitle}</div>
-    ${stars?`<div style="background:rgba(255,255,255,.4);border-radius:14px;padding:10px 20px;display:inline-block"><div style="font-size:28px;font-weight:900;color:#7A4500">+${stars} ⭐</div><div style="font-size:11px;color:#A05A00;margin-top:2px">Bonus stars added!</div></div>`:''}
+  el.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;background:rgba(0,0,0,.5)';
+  el.innerHTML=`<div style="background:linear-gradient(145deg,#FFD700,#FF9500,#FF6B35);border-radius:28px;padding:36px 32px;text-align:center;box-shadow:0 24px 80px rgba(255,149,0,.7);animation:badgePop .6s cubic-bezier(.34,1.56,.64,1);max-width:290px;width:90%;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.3) 50%,transparent 70%);background-size:200% 100%;animation:badgeShine 1.5s linear infinite"></div>
+    <div style="font-size:68px;margin-bottom:10px;animation:badgePop .5s .15s both">${emoji}</div>
+    <div style="font-size:22px;font-weight:900;color:#7A2500;margin-bottom:6px">${title}</div>
+    <div style="font-size:14px;color:#8B3A00;margin-bottom:${stars?'16px':'0'}">${subtitle}</div>
+    ${stars?`<div style="background:rgba(255,255,255,.5);border-radius:16px;padding:12px 24px;display:inline-block"><div style="font-size:32px;font-weight:900;color:#7A2500">+${stars} ⭐</div><div style="font-size:12px;color:#8B3A00;margin-top:2px">Bonus stars!</div></div>`:''}
+    <div style="margin-top:16px;font-size:12px;color:rgba(122,37,0,.7)">Tap anywhere to continue</div>
   </div>`;
+  el.onclick=()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);};
   document.body.appendChild(el);
-  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .4s';setTimeout(()=>el.remove(),400);},3000);
+  setTimeout(()=>{if(el.parentNode){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(()=>el.remove(),400);}},5000);
 }
 
 // Show simple task appreciation on kid screen when task becomes approved
 function showTaskPraise(taskName){
   const msg=TASK_PRAISE[Math.floor(Math.random()*TASK_PRAISE.length)];
+  // Spawn floating stars first
+  for(let i=0;i<6;i++){
+    const star=document.createElement('div');
+    const x=20+Math.random()*60;
+    star.style.cssText=`position:fixed;left:${x}%;top:60%;font-size:${18+Math.random()*16}px;z-index:1999;animation:starFloat ${.6+Math.random()*.6}s ease forwards;animation-delay:${i*.08}s`;
+    star.textContent='⭐';
+    document.body.appendChild(star);
+    setTimeout(()=>star.remove(),1200);
+  }
   const el=document.createElement('div');
-  el.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;background:rgba(0,0,0,.15);animation:fadeIn .3s ease';
-  el.innerHTML=`<div style="background:linear-gradient(135deg,#FFD700,#FF9500);border-radius:24px;padding:32px 36px;text-align:center;box-shadow:0 20px 60px rgba(255,149,0,.5);animation:badgePop .5s cubic-bezier(.34,1.56,.64,1);max-width:280px">
-    <div style="font-size:64px;margin-bottom:10px">🏅</div>
-    <div style="font-size:22px;font-weight:800;color:#7A4500;margin-bottom:6px">Approved!</div>
-    <div style="font-size:16px;font-weight:600;color:#A05A00;margin-bottom:8px">${msg}</div>
-    <div style="background:rgba(255,255,255,.4);border-radius:12px;padding:8px 16px">
-      <div style="font-size:13px;color:#7A4500;font-weight:600">✓ ${taskName}</div>
+  el.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;background:rgba(0,0,0,.45)';
+  el.innerHTML=`<div style="background:linear-gradient(145deg,#FFD700 0%,#FF9500 60%,#FF6B35 100%);border-radius:28px;padding:36px 32px;text-align:center;box-shadow:0 24px 80px rgba(255,149,0,.6);animation:badgePop .55s cubic-bezier(.34,1.56,.64,1);max-width:290px;width:90%;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.25) 50%,transparent 70%);background-size:200% 100%;animation:badgeShine 2s linear infinite"></div>
+    <div style="font-size:72px;margin-bottom:8px;animation:badgePop .5s .1s both">🏅</div>
+    <div style="font-size:24px;font-weight:900;color:#7A2500;margin-bottom:6px;text-shadow:0 2px 4px rgba(0,0,0,.15)">⭐ Approved! ⭐</div>
+    <div style="font-size:15px;font-weight:600;color:#8B3A00;margin-bottom:14px;line-height:1.4">${msg}</div>
+    <div style="background:rgba(255,255,255,.5);border-radius:14px;padding:10px 18px;margin-bottom:14px">
+      <div style="font-size:14px;color:#7A2500;font-weight:700">✓ ${taskName}</div>
     </div>
-    <div style="font-size:12px;color:#A05A00;margin-top:10px;opacity:.8">Tap anywhere to continue</div>
+    <div style="display:inline-block;background:rgba(0,0,0,.15);border-radius:20px;padding:6px 20px;font-size:12px;color:rgba(255,255,255,.9)">Tap to continue →</div>
   </div>`;
-  el.onclick=()=>el.remove();
+  el.onclick=()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);};
   document.body.appendChild(el);
-  setTimeout(()=>{if(el.parentNode){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(()=>el.remove(),400);}},4000);
+  // Auto dismiss after 5 seconds
+  setTimeout(()=>{if(el.parentNode){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(()=>el.remove(),400);}},5000);
 }
 
 // Check and award prayer bonus + weekly bonus
@@ -1464,6 +1530,26 @@ async function checkBonuses(kidId, dk){
       subtitle:'Amazing — all prayers done today!',
       stars:5
     });
+  }
+
+  // Daily 100% badge: ALL daily tasks approved today
+  const dayKey='dayComplete_'+dk;
+  if(!anyDayLog.bonuses)anyDayLog.bonuses={};
+  if(!anyDayLog.bonuses[dayKey]){
+    const dayTasks=G.tasks.filter(t=>t.cat==='daily'&&!t.showerOnly);
+    const allDone=dayTasks.length>0&&dayTasks.every(t=>log.tasks?.[t.id]==='approved');
+    if(allDone){
+      anyDayLog.bonuses[dayKey]=true;
+      saveLog(kidId,dk);
+      setTimeout(()=>{
+        showGoldenBadge({
+          emoji:'🌟',
+          title:'Perfect Day!',
+          subtitle:'All tasks completed today!',
+          stars:null
+        });
+      },1000);
+    }
   }
 
   // Weekly 90% bonus: check if current week has 90%+ completion
@@ -1503,8 +1589,11 @@ function getWallet(kidId){
   return G.wallets[kidId];
 }
 function addToWallet(kidId,amount,description){
-  const w=getWallet(kidId);
-  w.balance=Math.round((w.balance+amount)*100)/100;
+  if(!G.wallets)G.wallets={};
+  if(!G.wallets[kidId])G.wallets[kidId]={balance:0,transactions:[]};
+  const w=G.wallets[kidId];
+  w.balance=Math.round(((w.balance||0)+amount)*100)/100;
+  w.transactions=w.transactions||[];
   w.transactions.unshift({
     type:'credit',amount,description,
     date:new Date().toISOString(),
@@ -1512,25 +1601,39 @@ function addToWallet(kidId,amount,description){
   });
   if(w.transactions.length>50)w.transactions=w.transactions.slice(0,50);
   G.wallets[kidId]=w;
-  saveP();
+  // Don't call saveP here — caller will do it after all changes
 }
-window.parentClearWallet=function(kidId,amount){
+window.parentClearWallet=async function(kidId,amount){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
   const w=getWallet(kidId);
   const cleared=amount?Math.min(parseFloat(amount),w.balance):w.balance;
   if(cleared<=0){alert('Nothing to clear.');return;}
   w.balance=Math.round((w.balance-cleared)*100)/100;
+  if(!w.transactions)w.transactions=[];
   w.transactions.unshift({
     type:'debit',amount:-cleared,
     description:'Paid by parent ('+(G.pData?.name||'Parent')+')',
     date:new Date().toISOString(),id:'tx'+Date.now()
   });
   G.wallets[kidId]=w;
-  saveP();
-  alert('✅ Cleared '+(G.currency||'SAR')+' '+cleared.toFixed(2)+' from '+kid.name+"'s wallet!");
+  try{
+    await setDoc(doc(db,'parents',G.pUid),{wallets:G.wallets,upd:new Date().toISOString()},{merge:true});
+  }catch(e){await saveP();}
+  alert('✅ Cleared '+(G.currency||'SAR')+' '+cleared.toFixed(2)+' from '+kid.name+"'s wallet! Remaining: "+(G.currency||'SAR')+' '+w.balance.toFixed(2));
   showKidWallet(kidId);
 };
-window.showKidWallet=function(kidId){
+window.showKidWallet=async function(kidId){
+  // Reload parent doc to get latest wallet data
+  if(G.pUid){
+    try{
+      const snap=await getDoc(doc(db,'parents',G.pUid));
+      if(snap.exists()){
+        const d=snap.data();
+        G.wallets=d.wallets||G.wallets||{};
+        G.rewards=d.rewards||G.rewards;
+      }
+    }catch(e){console.error('wallet reload',e);}
+  }
   const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
   const w=getWallet(kid.id);
   SS('s-wallet');

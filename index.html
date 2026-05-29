@@ -66,6 +66,7 @@
 /* Star animation */
 @keyframes starPop{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
 @keyframes slideDown{0%{opacity:0;transform:translateX(-50%) translateY(-20px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes badgePop{0%{opacity:0;transform:scale(.4)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .screen.active .content{animation:fadeIn .25s ease}
 .star-pop{animation:starPop .3s ease}
@@ -139,7 +140,7 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 <div class="app">
 <div class="screen active" id="s-home"><div class="lwrap"><div style="width:80px;height:80px;border-radius:24px;background:linear-gradient(135deg,#7B61FF,#00C48C);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:14px;box-shadow:0 8px 24px rgba(123,97,255,.3)">⭐</div>
 <div style="font-size:26px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,#7B61FF,#00C48C);-webkit-background-clip:text;-webkit-text-fill-color:transparent">StarKids</div>
-<div style="font-size:13px;color:var(--t3);margin-bottom:24px;text-align:center">Build habits · Earn rewards · Shine 🌟</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.4A+B</div></div></div>
+<div style="font-size:13px;color:var(--t3);margin-bottom:24px;text-align:center">Build habits · Earn rewards · Shine 🌟</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.0</div></div></div>
 <div class="screen" id="s-auth"><div class="topbar"><div class="tb-t">Parent account</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content"><div class="seg" id="aseg"><div class="segb active" onclick="setAM('in')">Sign in</div><div class="segb" onclick="setAM('up')">Create account</div></div><div id="aform"></div></div></div>
 <div class="screen" id="s-code"><div class="topbar"><div class="tb-t">I am a Kid 👦</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:24px"><div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#FFD700,#FF9500);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:14px;box-shadow:0 6px 20px rgba(255,149,0,.3)">🌟</div>
 <div style="font-size:22px;font-weight:800;margin-bottom:4px;color:var(--t)">Hey Superstar! 👋</div>
@@ -157,13 +158,9 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 <div class="screen" id="s-kid">
   <div class="topbar"><div style="display:flex;align-items:center;gap:10px"><div id="k-av" onclick="showKP()" style="cursor:pointer"></div><div><div class="tb-t" id="k-tit">My tasks</div><div class="tb-s" id="k-sub"></div></div></div><div style="display:flex;gap:5px"><span id="k-st" style="font-size:13px;font-weight:700;color:var(--g)"></span><button class="btn sm" onclick="SS('s-home');rHome()">Exit</button></div></div>
   <div class="content" id="kb"></div>
-  <div class="bbar" style="flex-wrap:wrap;gap:6px;padding:8px 10px">
-  <button class="btn sm" onclick="showKidRewards()" style="flex:none;padding:7px 10px;font-size:11px">🏆</button>
-  <button class="btn sm" onclick="showGoalJars(G.kid?.id)" style="flex:none;padding:7px 10px;font-size:11px">🏺</button>
-  <button class="btn sm" onclick="showBadges(G.kid?.id)" style="flex:none;padding:7px 10px;font-size:11px">🏅</button>
-  <button class="btn sm" onclick="showLeaderboard()" style="flex:none;padding:7px 10px;font-size:11px">🥇</button>
-  <button class="btn sm" onclick="showReportCard(G.kid?.id)" style="flex:none;padding:7px 10px;font-size:11px">📊</button>
-  <button class="btn pri" onclick="subDay()" style="flex:1;min-width:100px;font-size:13px">✓ Submit day</button>
+  <div class="bbar">
+  <button class="btn" onclick="showKR()">🏆 Rewards</button>
+  <button class="btn pri" onclick="subDay()">✓ Submit day</button>
 </div>
 </div>
 <div class="screen" id="s-kp"><div class="topbar"><div class="tb-t">My Profile</div><button class="btn sm" onclick="SS('s-kid');rKid()">Back</button></div><div class="content" id="kpb"></div></div>
@@ -188,7 +185,7 @@ let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},
   goalJars:{}, // kidId -> [{name,emoji,targetStars,currentStars,achieved}]
   praiseNotes:{}, // kidId -> [{msg,emoji,from,date}]
   badges:{}, // kidId -> [badgeId]
-  leaderboardOn:true,familyGoal:{name:'Family Goal',target:500,current:0,reward:'🌴 Family Trip'},pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
+  leaderboardOn:true,pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
 // Plan limits
 const PLANS={
   trial:{kids:3,tasks:999,label:'7-Day Trial',badge:'🎁 Trial'},
@@ -411,7 +408,7 @@ window.doSU=async()=>{const n=document.getElementById('sn').value.trim(),e=docum
 window.qPL=async(ee,ep)=>{SS('s-load');document.getElementById('lmsg').textContent='Signing you in...';try{await signInWithEmailAndPassword(auth,decodeURIComponent(ee),decodeURIComponent(ep));}catch(e){SS('s-home');cSP();rHome();alert('Session expired. Please sign in again.');}};
 window.doOut=async()=>{stopL();await signOut(auth);G.pUid=null;G.pData=null;G.kids=[];G.logs={};G.pending=[];G.kid=null;document.title='StarKids';SS('s-home');rHome();};
 onAuthStateChanged(auth,async user=>{if(user){SS('s-load');document.getElementById('lmsg').textContent='Loading...';await loadP(user.uid);oPar(user);}else{rHome();}});
-function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();
+function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();
   // Show trial/plan banner if trial
   if(G.plan==='trial'&&isTrialActive()){
     const days=G.trialStart?Math.max(0,7-Math.floor((Date.now()-new Date(G.trialStart).getTime())/(1000*60*60*24))):7;
@@ -439,11 +436,7 @@ function stLL(uid){if(_uL)_uL();_uL=onSnapshot(query(collection(db,'logs'),where
 function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}}
 function rbP(){const np=[];Object.keys(G.logs).forEach(kidId=>{const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;Object.keys(G.logs[kidId]).forEach(dk=>{const log=G.logs[kidId][dk];if(!log||!log.tasks)return;G.tasks.forEach(task=>{if(log.tasks[task.id]==='pending'){if(!np.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk))np.push({kidId,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid:task.id,date:dk,time:'',photo:log.photos?.[task.id]||null,ticked:!!log.ticked?.[task.id]});}});});});G.pending=np;}
 // Kid dashboard
-function rKid(){const kid=G.kid;if(!kid)return;const dk=today();const log=gLog(kid.id,dk);const ts=cS(kid.id,dk);const ws=wS(kid.id);document.getElementById('k-st').textContent='⭐ '+ws;
-  // Calculate streak
-  const streak=calcStreak(kid.id);
-  const stEl=document.getElementById('k-streak');
-  if(stEl)stEl.innerHTML=streak>0?`<span class="streak-badge">🔥 ${streak} day streak</span>`:'';const dow=new Date().getDay();const pr=Pr();
+function rKid(){const kid=G.kid;if(!kid)return;const dk=today();const log=gLog(kid.id,dk);const ts=cS(kid.id,dk);const ws=wS(kid.id);document.getElementById('k-st').textContent='⭐ '+ws;const dow=new Date().getDay();const pr=Pr();
 // FIX 1: claimable only when stars genuinely earned (approved tasks + prayers)
 const cl=G.rewards.filter(r=>{const c=r.period==='month'?mS(kid.id):ws;return c>=r.stars&&!r.given&&!r.claimed;});
 const rj=G.tasks.filter(t=>log.tasks[t.id]==='rejected');
@@ -451,10 +444,7 @@ let h='';
 if(cl.length)h+=`<div class="unlock-banner" style="flex-direction:column;text-align:center;padding:16px;gap:10px"><div style="font-size:20px">🎉</div><div style="font-size:15px;font-weight:700">You unlocked ${cl.length} reward${cl.length>1?'s':''}!</div><div style="font-size:12px;opacity:.85">Tap below to claim your reward</div><button style="background:#fff;color:var(--a);border:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)" onclick="shCh()">🎁 Choose My Reward</button></div>`;
 if(rj.length)h+=`<div style="background:var(--rl);border:1px solid var(--r);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">💪</span><div><div style="font-size:13px;font-weight:600;color:var(--r)">Almost there!</div><div style="font-size:12px;color:#7A1535">${rj.length} task${rj.length>1?'s need':' needs'} a second try. Read the message and resubmit!</div></div></div>`;
 h+=`<div class="sbar"><div><div class="slbl">Today's stars</div><div class="snum">${ts} ⭐</div></div><div style="text-align:right"><div class="slbl">This week</div><div style="font-size:18px;font-weight:700;color:var(--t)">${ws} ⭐</div></div></div>`;
-h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-  <div id="k-streak"></div>
-  <button onclick="rfKid()" style="background:none;border:0.5px solid var(--bd);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--t3);cursor:pointer">🔄 Refresh</button>
-</div>`;
+h+=`<div style="text-align:right;margin-bottom:8px"><button onclick="rfKid()" style="background:none;border:0.5px solid var(--bd);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--t3);cursor:pointer">🔄 Refresh</button></div>`;
 if(pr.length){h+=`<div class="sl">🙏 Daily prayers${G.PC?` · 📍${G.PC}`:''}</div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} · +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
 const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));const bonus=G.tasks.filter(t=>t.cat==='bonus');
 // Show praise notes before tasks
@@ -472,7 +462,7 @@ const ticked=!isRej&&!!log.ticked?.[t.id]; // no tick on rejected
 let cls='tr';if(status==='approved')cls+=' done';else if(status==='pending')cls+=' pend';else if(isRej)cls+=' rej';
 const sub=status==='approved'?`✅ Approved — you earned ${t.stars}⭐!`:status==='pending'?'⏳ Parent reviewing...':isRej?'❌ Rejected — see message below':`Complete to earn ${t.stars >= 2 ? '⭐'.repeat(t.stars) : '⭐'} ${t.stars} star${t.stars>1?'s':''}`;
 const sc=isRej?'tsub red':'tsub';
-let inner=`<div class="tname">${t.name}</div><div class="${sc}">${sub}</div>`;
+const qtyLabel=t.qty&&t.qty>1?` (×${t.qty})`:'';let inner=`<div class="tname">${t.name}${qtyLabel}</div><div class="${sc}">${sub}</div>`;
 // Show parent remark if rejected
 if(isRej&&log.remarks?.[t.id]){
   inner+=`<div style="background:#fff0f0;border:0.5px solid var(--r);border-radius:var(--rad);padding:8px 10px;margin-top:6px;font-size:12px;color:#791F1F;line-height:1.5">
@@ -593,7 +583,24 @@ alert('Day submitted successfully ⭐');
 rKid();
 
 };
-window.rfKid=async()=>{if(!G.kid||!G.pUid)return;try{const snap=await getDoc(doc(db,'parents',G.pUid));if(snap.exists()){const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(!G.kids.find(k=>k.id===G.kid.id)){syncSK([]);G.kid=null;SS('s-home');rHome();return;}}await loadLogs(G.kid.id);}catch(e){console.error('rf',e);}rKid();};
+window.rfKid=async()=>{
+  if(!G.kid||!G.pUid)return;
+  const prevApproved={};
+  // Snapshot what was approved before refresh
+  const dk=today();const prevLog=gLog(G.kid.id,dk);
+  G.tasks.forEach(t=>{if(prevLog.tasks?.[t.id]==='approved')prevApproved[t.id]=true;});
+  try{const snap=await getDoc(doc(db,'parents',G.pUid));if(snap.exists()){const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(!G.kids.find(k=>k.id===G.kid.id)){syncSK([]);G.kid=null;SS('s-home');rHome();return;}}await loadLogs(G.kid.id);}catch(e){console.error('rf',e);}
+  // Check for newly approved tasks — show praise badge
+  const newLog=gLog(G.kid.id,dk);
+  let newlyApproved=[];
+  G.tasks.forEach(t=>{if(newLog.tasks?.[t.id]==='approved'&&!prevApproved[t.id])newlyApproved.push(t);});
+  if(newlyApproved.length>0){
+    newlyApproved.forEach((t,i)=>setTimeout(()=>showTaskPraise(t.name),i*2800));
+    // Check bonuses after showing task praise
+    setTimeout(()=>checkBonuses(G.kid.id,dk),newlyApproved.length*2800+500);
+  }
+  rKid();
+};
 // Kid profile
 window.showKP=function(){const kid=G.kid;if(!kid)return;let h=`<div style="text-align:center;margin-bottom:16px"><div style="width:90px;height:90px;border-radius:50%;overflow:hidden;border:3px solid ${kid.color||'var(--g)'};margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:38px;background:${kid.color||'#1D9E75'}22" id="kap">${kid.photo?`<img src="${kid.photo}" style="width:100%;height:100%;object-fit:cover"/>`:kid.emoji||'👦'}</div><div style="font-size:16px;font-weight:600;margin-bottom:4px">${kid.name}</div><div style="font-size:13px;color:var(--t3);margin-bottom:14px">${wS(kid.id)}⭐ this week</div>`;
 // FIX 2: label wrapping input for kid profile photo
@@ -725,9 +732,9 @@ window.apA=idx=>{
   lg.tasks[a.tid]='approved';
   saveLog(a.kidId,a.date);
   G.pending.splice(idx,1);
-  // Flash star animation on approve
-  const card=document.querySelector('.card .btn.pri.sm:last-child');
   pTab('appr');
+  // Check for daily prayer bonus & weekly bonus after approval
+  setTimeout(()=>checkBonuses(a.kidId,a.date),800);
 };
 window.rjA=function(idx){
   const a=G.pending[idx];if(!a)return;
@@ -774,9 +781,64 @@ window.confirmReject=function(idx,taId,errId,mid){
 };
 window.cnR=ri=>{G.rewards[ri].given=true;G.rewards[ri].claimed=false;saveP();pTab('appr');alert('Reward given! ✅');};
 window.dR=ri=>{G.rewards[ri].claimed=false;delete G.rewards[ri].claimedBy;saveP();pTab('appr');};
-function pTR(t){return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="dlT('${t.id}')">🗑️</button></div></div>`;}
-window.oTF=id=>{const t=id?G.tasks.find(x=>x.id===id):null;G.editTask=id||null;let h=`<div class="sl">${t?'Edit':'New'} task</div><div class="ff"><label>Icon</label><input id="tfi" maxlength="4" value="${t?t.ico:''}" placeholder="📚"/></div><div class="ff"><label>Name</label><input id="tfn" value="${t?t.name:''}" placeholder="e.g. Read 20 min"/></div><div class="ff"><label>Category</label><select id="tfc"><option value="daily"${!t||t.cat==='daily'?' selected':''}>Daily</option><option value="bonus"${t&&t.cat==='bonus'?' selected':''}>Bonus</option></select></div><div class="ff"><label>Stars</label><select id="tfs"><option value="1"${!t||t.stars==1?' selected':''}>1</option><option value="2"${t&&t.stars==2?' selected':''}>2</option><option value="3"${t&&t.stars==3?' selected':''}>3</option></select></div><div style="display:flex;gap:8px;margin-top:10px">${t?`<button class="btn dan" onclick="dlT('${t.id}');pTab('tasks')">Delete</button>`:''}<button class="btn pri" onclick="svT()">Save</button></div>`;document.getElementById('pb').innerHTML=h;};
-window.svT=()=>{const i=document.getElementById('tfi').value.trim()||'📌';const n=document.getElementById('tfn').value.trim();if(!n){alert('Enter name.');return;}const c=document.getElementById('tfc').value;const s=parseInt(document.getElementById('tfs').value);if(G.editTask){const t=G.tasks.find(x=>x.id===G.editTask);if(t){t.ico=i;t.name=n;t.cat=c;t.stars=s;}}else G.tasks.push({id:uid(),ico:i,name:n,cat:c,stars:s});G.editTask=null;saveP();pTab('tasks');};
+function pTR(t){const freq=t.freq||'daily';const qty=t.qty||1;const freqLabel=freq==='weekly'?'Weekly':freq==='monthly'?'Monthly':'Daily';return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${qty>1?qty+'x ':''}${freqLabel} · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="dlT('${t.id}')">🗑️</button></div></div>`;}
+window.oTF=id=>{
+  const t=id?G.tasks.find(x=>x.id===id):null;
+  G.editTask=id||null;
+  const qty=t?.qty||1;
+  const freq=t?.freq||'daily';
+  let h=`<div class="sl">${t?'Edit':'New'} task</div>
+  <div class="ff"><label>Icon (emoji)</label><input id="tfi" maxlength="4" value="${t?t.ico:''}" placeholder="📚" style="font-size:22px;text-align:center"/></div>
+  <div class="ff"><label>Task name</label><input id="tfn" value="${t?t.name:''}" placeholder="e.g. Read a book"/></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
+    <div class="ff" style="margin:0">
+      <label>How many times?</label>
+      <input id="tfq" type="number" min="1" max="20" value="${qty}" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/>
+    </div>
+    <div class="ff" style="margin:0">
+      <label>Frequency</label>
+      <select id="tff" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px">
+        <option value="daily"${freq==='daily'?' selected':''}>Daily</option>
+        <option value="weekly"${freq==='weekly'?' selected':''}>Weekly</option>
+        <option value="monthly"${freq==='monthly'?' selected':''}>Monthly</option>
+      </select>
+    </div>
+  </div>
+  <div class="ff"><label>Category</label>
+    <select id="tfc" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px">
+      <option value="daily"${!t||t.cat==='daily'?' selected':''}>Daily habit</option>
+      <option value="bonus"${t&&t.cat==='bonus'?' selected':''}>Bonus task</option>
+    </select>
+  </div>
+  <div class="ff"><label>Stars per completion</label>
+    <select id="tfs" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px">
+      <option value="1"${!t||t.stars==1?' selected':''}>⭐ 1 star</option>
+      <option value="2"${t&&t.stars==2?' selected':''}>⭐⭐ 2 stars</option>
+      <option value="3"${t&&t.stars==3?' selected':''}>⭐⭐⭐ 3 stars</option>
+    </select>
+  </div>
+  <div style="background:var(--bg2);border-radius:var(--rad);padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--t2)">
+    💡 Example: "Read 20 min" — 1 time, Daily, 2 stars
+  </div>
+  <div style="display:flex;gap:8px">${t?`<button class="btn dan" onclick="dlT('${t.id}');pTab('tasks')">Delete</button>`:''}<button class="btn pri" onclick="svT()">Save task</button></div>`;
+  document.getElementById('pb').innerHTML=h;
+};
+window.svT=()=>{
+  const i=document.getElementById('tfi').value.trim()||'📌';
+  const n=document.getElementById('tfn').value.trim();
+  if(!n){alert('Enter task name.');return;}
+  const c=document.getElementById('tfc').value;
+  const s=parseInt(document.getElementById('tfs').value);
+  const q=parseInt(document.getElementById('tfq')?.value)||1;
+  const f=document.getElementById('tff')?.value||'daily';
+  if(G.editTask){
+    const t=G.tasks.find(x=>x.id===G.editTask);
+    if(t){t.ico=i;t.name=n;t.cat=c;t.stars=s;t.qty=q;t.freq=f;}
+  } else {
+    G.tasks.push({id:uid(),ico:i,name:n,cat:c,stars:s,qty:q,freq:f});
+  }
+  G.editTask=null;saveP();pTab('tasks');
+};
 window.dlT=id=>{if(!confirm('Delete task?'))return;G.tasks=G.tasks.filter(t=>t.id!==id);saveP();pTab('tasks');};
 let _nke='👦';
 window.sNKE=(el,e)=>{document.querySelectorAll('#nkeg .emoji-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');_nke=e;};
@@ -1125,6 +1187,96 @@ window.showReportCard=function(kidId){
       <div style="font-size:14px;font-weight:700;color:var(--gd)">${taskPct>=90?'Outstanding week! You are a superstar!':taskPct>=75?'Excellent effort! Keep it up!':taskPct>=60?'Good progress! Aim higher next week!':'Every day is a new chance to shine!'}</div>
     </div>`;
 };
+
+// ══════════════════════════════════════════════════════
+// 🏅 BONUS STARS & GOLDEN BADGES
+// ══════════════════════════════════════════════════════
+
+// Appreciation messages for task completion
+const TASK_PRAISE=[
+  'Amazing work! ⭐','You are a superstar! 🌟','Keep shining! ✨',
+  'So proud of you! 💪','Excellent! You earned it! 🏆',
+  'Brilliant effort! 🎯','You are unstoppable! 🚀','Well done! ❤️',
+  'Champion! 🥇','Wonderful job! 🌈'
+];
+
+// Show golden badge popup (for parent approvals & bonuses)
+function showGoldenBadge({title, subtitle, stars, emoji}){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;pointer-events:none';
+  el.innerHTML=`<div style="background:linear-gradient(135deg,#FFD700,#FF9500);border-radius:24px;padding:28px 32px;text-align:center;box-shadow:0 16px 48px rgba(255,149,0,.5);animation:badgePop .5s cubic-bezier(.34,1.56,.64,1);max-width:280px;pointer-events:all">
+    <div style="font-size:56px;margin-bottom:10px">${emoji}</div>
+    <div style="font-size:20px;font-weight:800;color:#7A4500;margin-bottom:4px">${title}</div>
+    <div style="font-size:14px;color:#A05A00;margin-bottom:${stars?'12px':'0'}">${subtitle}</div>
+    ${stars?`<div style="background:rgba(255,255,255,.4);border-radius:14px;padding:10px 20px;display:inline-block"><div style="font-size:28px;font-weight:900;color:#7A4500">+${stars} ⭐</div><div style="font-size:11px;color:#A05A00;margin-top:2px">Bonus stars added!</div></div>`:''}
+  </div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .4s';setTimeout(()=>el.remove(),400);},3000);
+}
+
+// Show simple task appreciation on kid screen when task becomes approved
+function showTaskPraise(taskName){
+  const msg=TASK_PRAISE[Math.floor(Math.random()*TASK_PRAISE.length)];
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:2000;animation:slideDown .4s ease;white-space:nowrap';
+  el.innerHTML=`<div style="background:linear-gradient(135deg,#FFD700,#FF9500);border-radius:20px;padding:12px 20px;text-align:center;box-shadow:0 8px 24px rgba(255,149,0,.4)">
+    <div style="font-size:22px">🏅</div>
+    <div style="font-size:13px;font-weight:700;color:#7A4500">${msg}</div>
+    <div style="font-size:11px;color:#A05A00;margin-top:2px">${taskName} ✓</div>
+  </div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .4s';setTimeout(()=>el.remove(),400);},2500);
+}
+
+// Check and award prayer bonus + weekly bonus
+async function checkBonuses(kidId, dk){
+  if(!G.pUid)return;
+  const log=gLog(kidId,dk);
+  const pr=[];// get prayers for this family
+  if(G.prayOn){if(G.religion==='islam')pr.push(...['Fajr','Dhuhr','Asr','Maghrib','Isha']);else if(G.religion==='christian')pr.push(...['Morning prayer','Midday prayer','Evening prayer']);}
+
+  // Prayer bonus: all prayers done today = +5 stars
+  const prayerKey='prayerBonus_'+dk;
+  if(pr.length>0&&pr.every(p=>log.prayers?.[p])&&!log.bonuses?.[prayerKey]){
+    if(!log.bonuses)log.bonuses={};
+    log.bonuses[prayerKey]=5;
+    saveLog(kidId,dk);
+    showGoldenBadge({
+      emoji:'🕌',
+      title:'All Prayers Complete!',
+      subtitle:'Amazing — all prayers done today!',
+      stars:5
+    });
+  }
+
+  // Weekly 90% bonus: check if current week has 90%+ completion
+  const weekKey='weekBonus_'+wk()[0];
+  const keys=wk();let td2=0,tt=0;
+  keys.forEach(d=>{const l=gLog(kidId,d);G.tasks.filter(t=>t.cat==='daily').forEach(t=>{tt++;if(l.tasks?.[t.id]==='approved')td2++;});});
+  const pct=tt?Math.round(td2/tt*100):0;
+  // Check if bonus not already given this week
+  const anyDayLog=gLog(kidId,dk);
+  if(!anyDayLog.bonuses)anyDayLog.bonuses={};
+  if(pct>=90&&!anyDayLog.bonuses[weekKey]){
+    anyDayLog.bonuses[weekKey]=10;
+    saveLog(kidId,dk);
+    setTimeout(()=>{
+      showGoldenBadge({
+        emoji:'🏆',
+        title:'90% Weekly Champion!',
+        subtitle:'Outstanding week — '+pct+'% tasks completed!',
+        stars:10
+      });
+    },3500); // delay so it doesn't overlap prayer badge
+  }
+}
+
+// Show task praise on kid side when task ticked/photoed (optimistic)
+// This fires immediately when kid submits, not waiting for approval
+// The real golden badge fires when parent approves (checkBonuses)
+
+// Kid-side immediate feedback when submitting
+const _origAddP=typeof addP==='function'?addP:null;
 
 // ══════════════════════════════════════════════════════
 // TAB SWITCHING (safe)

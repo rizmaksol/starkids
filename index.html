@@ -183,6 +183,17 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 <div class="screen" id="s-set"><div class="topbar"><div class="tb-t">Settings</div><button class="btn sm" onclick="SS('s-parent')">Back</button></div><div class="content" id="setb"></div></div>
 <div class="screen" id="s-re"><div class="topbar"><div class="tb-t" id="re-t">Add reward</div><button class="btn sm" onclick="pTab('rewards');SS('s-parent')">Cancel</button></div><div class="content" id="reb"></div></div>
 </div>
+<!-- WALLET SCREEN -->
+<div class="screen" id="s-wallet">
+  <div class="topbar">
+    <div class="tb-t">💰 My Wallet</div>
+    <button class="btn sm" onclick="SS(G.kid?'s-kid':'s-parent');if(G.kid)rKid();">Back</button>
+  </div>
+  <div class="content" id="wallet-body">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+</div>
+
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut,updateProfile,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -441,7 +452,7 @@ function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs)
     const days=G.trialStart?Math.max(0,7-Math.floor((Date.now()-new Date(G.trialStart).getTime())/(1000*60*60*24))):7;
     const banner=document.getElementById('trial-banner');
     if(banner){banner.style.display='flex';banner.innerHTML=`<span style="font-size:12px">🎁 Trial: <strong>${days} day${days!==1?'s':''}</strong> left</span><button onclick="showUpgradePrompt()" style="background:var(--g);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:600">Upgrade</button>`;}
-  }const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);stPL(user.uid);stLL(user.uid);stClaimsL(user.uid);SS('s-parent');pTab('appr');}
+  }const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);stPL(user.uid);stLL(user.uid);SS('s-parent');pTab('appr');}
 // Kid login
 window.bCI=()=>{const w=document.getElementById('ci');if(!w)return;w.innerHTML='';for(let i=0;i<6;i++){const x=document.createElement('input');x.type='text';x.maxLength=1;x.inputMode='numeric';x.id='ci'+i;x.oninput=e=>{const v=e.target.value.replace(/\D/,'');e.target.value=v;if(v&&i<5)document.getElementById('ci'+(i+1)).focus();};x.onkeydown=e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)document.getElementById('ci'+(i-1)).focus();};w.appendChild(x);}};
 const gCode=()=>{let c='';for(let i=0;i<6;i++)c+=(document.getElementById('ci'+i)||{}).value||'';return c;};
@@ -458,42 +469,11 @@ stKPL(fpd.uid);SS('s-kid');rKid();initPT();}catch(e){console.error('doKL',e);SS(
 // Listeners
 function stPL(uid){if(_uP)_uP();_uP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at)pTab(at.id.replace('t-',''));}},e=>console.error('PL',e));}
 // FIX 3: Kid deletion listener
-// Listen for reward claims from kids
-let _uClaims=null;
-function stClaimsL(uid){
-  if(_uClaims)_uClaims();
-  _uClaims=onSnapshot(query(collection(db,'claims'),where('pUid','==',uid)),snap=>{
-    snap.docChanges().forEach(ch=>{
-      if(ch.type==='added'){
-        const d=ch.doc.data();
-        // Apply claim to local rewards
-        const r=G.rewards.find(x=>x.id===d.rewardId);
-        if(r&&!r.claimed&&!r.given){
-          r.claimed=true;
-          r.claimedBy=d.kidName;
-          r.claimedAt=d.claimedAt;
-          r.choiceType=d.choiceType;
-          r.cashAmount=d.cashAmount;
-          r.currency=d.currency;
-          // Delete the claim doc
-          import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({deleteDoc})=>{
-            deleteDoc(ch.doc.ref).catch(()=>{});
-          });
-        }
-      }
-    });
-    // Refresh approvals/rewards tabs
-    document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';
-    if(document.getElementById('s-parent').classList.contains('active')){
-      const at=document.querySelector('.tab.active');
-      if(at)pTab(at.id.replace('t-',''));
-    }
-  },e=>console.error('CL',e));
-}
+// Claims handled via parent doc merge
 function stKPL(uid){if(_uKP)_uKP();_uKP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(G.kid&&(!d.kids||!d.kids.find(k=>k.id===G.kid.id))){stopL();syncSK([]);G.kid=null;SS('s-home');rHome();alert('Your account has been removed by the parent.');}},e=>console.error('KPL',e));}
 function stLL(uid){
   if(_uL)_uL();_uL=onSnapshot(query(collection(db,'logs'),where('pUid','==',uid)),snap=>{snap.docChanges().forEach(ch=>{if(ch.type==='added'||ch.type==='modified'){const d=ch.doc.data();if(!G.logs[d.kidId])G.logs[d.kidId]={};if(d.log){G.logs[d.kidId][d.date]=d.log;if(!G.logs[d.kidId][d.date].photos)G.logs[d.kidId][d.date].photos={}; }}});rbP();document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';document.title=G.pending.length?`(${G.pending.length}) StarKids`:'StarKids';if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at&&at.id==='t-appr')pTab('appr');}},e=>console.error('LL',e));}
-function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}if(_uClaims){_uClaims();_uClaims=null;}}
+function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}}
 function rbP(){const np=[];Object.keys(G.logs).forEach(kidId=>{const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;Object.keys(G.logs[kidId]).forEach(dk=>{const log=G.logs[kidId][dk];if(!log||!log.tasks)return;G.tasks.forEach(task=>{if(log.tasks[task.id]==='pending'){if(!np.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk))np.push({kidId,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid:task.id,date:dk,time:'',photo:log.photos?.[task.id]||null,ticked:!!log.ticked?.[task.id]});}});});});G.pending=np;}
 // Kid dashboard
 function rKid(){const kid=G.kid;if(!kid)return;const dk=today();const log=gLog(kid.id,dk);const ts=cS(kid.id,dk);const ws=wS(kid.id);document.getElementById('k-st').textContent='⭐ '+ws;const dow=new Date().getDay();const pr=Pr();
@@ -640,7 +620,17 @@ window.reSub=function(id){
   const task=G.tasks.find(t=>t.id===id);if(!task)return;
   addP(kid,task,id,lg);rKid();saveLog(kid.id,today());
 };
-window.tPr=function(name){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];rKid();saveLog(kid.id,today());};
+window.tPr=function(name){
+  const kid=G.kid;if(!kid)return;
+  const lg=gLog(kid.id,today());
+  lg.prayers[name]=!lg.prayers[name];
+  rKid();
+  saveLog(kid.id,today());
+  // Check if all prayers done — show bonus badge
+  if(lg.prayers[name]){
+    setTimeout(()=>checkBonuses(kid.id,today()),400);
+  }
+};
 window.subDay=function(){
 
 const kid=G.kid;
@@ -780,24 +770,13 @@ window.clmR=async function(ri,choiceType){
     r.cashAmount=parseFloat((r.stars*rate).toFixed(2));
     r.currency=G.currency||'SAR';
   }
-  // Kid has no Firebase Auth session
-  // Write to a separate 'claims' collection (allow write:true in rules)
-  // Parent's onSnapshot listener will pick this up
+  // Write directly to parent doc with merge — Firestore rules allow write:true on parents
+  // Parent's onSnapshot listener picks it up automatically
   try{
-    await setDoc(doc(db,'claims',G.pUid+'_'+ri+'_'+Date.now()),{
-      pUid:G.pUid,
-      rewardIndex:ri,
-      rewardId:r.id,
-      rewardName:r.name,
-      kidName:r.claimedBy,
-      choiceType:r.choiceType,
-      cashAmount:r.cashAmount||null,
-      currency:r.currency||G.currency||'SAR',
-      stars:r.stars,
-      claimedAt:r.claimedAt
-    });
-    // Also update parent doc rewards directly (may fail if no auth — that's OK)
-    try{await setDoc(doc(db,'parents',G.pUid),{rewards:G.rewards,upd:new Date().toISOString()},{merge:true});}catch{}
+    await setDoc(doc(db,'parents',G.pUid),{
+      rewards:G.rewards,
+      upd:new Date().toISOString()
+    },{merge:true});
     const msg=choiceType==='cash'
       ?`💰 Cash reward sent to parent!\n${G.currency||'SAR'} ${r.cashAmount} will be added to your wallet once confirmed.`
       :`🎁 "${r.name}" sent to parent!\nThey will confirm it soon!`;
@@ -1515,12 +1494,12 @@ function showTaskPraise(taskName){
 async function checkBonuses(kidId, dk){
   if(!G.pUid)return;
   const log=gLog(kidId,dk);
-  const pr=[];// get prayers for this family
-  if(G.prayOn){if(G.religion==='islam')pr.push(...['Fajr','Dhuhr','Asr','Maghrib','Isha']);else if(G.religion==='christian')pr.push(...['Morning prayer','Midday prayer','Evening prayer']);}
+  // Use the same Pr() function as the rest of the app
+  const pr=Pr().map(p=>p.n);
 
   // Prayer bonus: all prayers done today = +5 stars
   const prayerKey='prayerBonus_'+dk;
-  if(pr.length>0&&pr.every(p=>log.prayers?.[p])&&!log.bonuses?.[prayerKey]){
+  if(pr.length>0&&pr.every(p=>log.prayers?.[p])&&!(log.bonuses?.[prayerKey])){
     if(!log.bonuses)log.bonuses={};
     log.bonuses[prayerKey]=5;
     saveLog(kidId,dk);
@@ -1623,16 +1602,21 @@ window.parentClearWallet=async function(kidId,amount){
   showKidWallet(kidId);
 };
 window.showKidWallet=async function(kidId){
-  // Reload parent doc to get latest wallet data
+  // Reload from Firebase to get fresh wallet data
   if(G.pUid){
     try{
       const snap=await getDoc(doc(db,'parents',G.pUid));
       if(snap.exists()){
         const d=snap.data();
-        G.wallets=d.wallets||G.wallets||{};
-        G.rewards=d.rewards||G.rewards;
+        if(d.wallets)G.wallets=d.wallets;
+        if(d.rewards)G.rewards=d.rewards;
+        if(d.starRate)G.starRate=d.starRate;
       }
     }catch(e){console.error('wallet reload',e);}
+  }
+  // Ensure wallet screen exists
+  if(!document.getElementById('s-wallet')){
+    console.error('s-wallet screen missing');return;
   }
   const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
   const w=getWallet(kid.id);
@@ -1645,16 +1629,14 @@ window.showKidWallet=async function(kidId){
       <div style="font-size:12px;opacity:.5;margin-top:8px">Earned from rewards · Future: linked to real account</div>
     </div>
     <div style="background:var(--gl);border:1px solid var(--gb);border-radius:14px;padding:14px;margin-bottom:16px;font-size:13px;color:#085041;line-height:1.6">
-      🔮 <strong>Coming soon:</strong> Link to Al Rajhi / STC Pay / your bank account. Your child's earnings will transfer automatically.
+      🔮 <strong>Coming soon:</strong> Link to Al Rajhi / STC Pay / your bank. Earnings transfer automatically.
     </div>
-    ${G.pUid&&!G.kid?`<div style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px">💳 Clear wallet (paid in real life)</div>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Amount (leave empty to clear all)" style="flex:1;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/>
-      </div>
+    ${auth.currentUser?`<div style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">💳 Clear wallet — parent paid in real life</div>
+      <input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Partial amount (empty = clear all)" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px"/>
       <div style="display:flex;gap:8px">
-        <button class="btn pri sm" style="flex:1" onclick="parentClearWallet('${kidId}',document.getElementById('clear-amt')?.value)">✅ Mark as paid (partial)</button>
-        <button class="btn sm" style="flex:1" onclick="parentClearWallet('${kidId}',null)">Clear all</button>
+        <button class="btn pri" style="flex:1" onclick="parentClearWallet('${kid.id}',document.getElementById('clear-amt')?.value)">✅ Mark as paid</button>
+        <button class="btn" onclick="parentClearWallet('${kid.id}',null)">Clear all</button>
       </div>
     </div>`:''}` ;
   if(!w.transactions.length){
@@ -1664,12 +1646,13 @@ window.showKidWallet=async function(kidId){
     w.transactions.forEach(tx=>{
       const d=new Date(tx.date);
       const ds=d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'});
+      const isDebit=tx.type==='debit'||tx.amount<0;
       h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--bd)">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:18px">💰</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:${isDebit?'var(--rl)':'var(--gl)'};display:flex;align-items:center;justify-content:center;font-size:18px">${isDebit?'💸':'💰'}</div>
           <div><div style="font-size:13px;font-weight:600;color:var(--t)">${tx.description}</div><div style="font-size:11px;color:var(--t3)">${ds}</div></div>
         </div>
-        <div style="font-size:16px;font-weight:700;color:var(--g)">+${currency} ${tx.amount.toFixed(2)}</div>
+        <div style="font-size:16px;font-weight:700;color:${isDebit?'var(--r)':'var(--g)'}">${isDebit?'-':'+'}${currency} ${Math.abs(tx.amount).toFixed(2)}</div>
       </div>`;
     });
   }

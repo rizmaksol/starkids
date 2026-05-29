@@ -211,7 +211,7 @@ if(status==='none'||status==='rejected'||status==='rej'){
 inner+=`<div class="proof-area"><div class="proof-row">
 <div class="ptick${ticked?' on':''}" onclick="tTick('${t.id}')">${ticked?'✅ Ticked':'☐ Mark done'}</div>
 <label class="pcam-label${photo?' on':''}" for="ph_${t.id}">${photo?'📷 Change photo':'📷 Take photo'}</label>
-<input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" capture="environment" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" onchange="hPh(this,'${t.id}')"/>
+<input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" capture="environment" style="display:none" onchange="hPh(this,'${t.id}')"/>
 </div>`;
 if(photo)inner+=`<img class="proof-img" src="${photo}"/>`;
 if(status==='rejected'||status==='rej')inner+=`<button class="resub-btn" onclick="reSub('${t.id}')">↩ Resubmit to parent</button>`;
@@ -233,77 +233,88 @@ const reader=new FileReader();
 
 reader.onload=function(ev){
 
-    // reduce size aggressively
-    compress(ev.target.result,300,function(data){
+compress(ev.target.result,300,function(data){
 
-        const lg=gLog(kid.id,today());
+const lg=gLog(kid.id,today());
 
-        if(!lg.photos) lg.photos={};
+if(!lg.photos) lg.photos={};
 
-        // save smaller photo
-        lg.photos[id]=data;
+lg.photos[id]=data;
+lg.tasks[id]='draft';
+lg.ticked[id]=true;
 
-        // always mark pending
-        lg.tasks[id]='pending';
-        lg.ticked[id]=true;
+rKid();
+saveLog(kid.id,today());
 
-        const task=G.tasks.find(t=>t.id===id);
-
-        if(task){
-
-            const ex=G.pending.find(
-                p=>p.kidId===kid.id &&
-                p.tid===id &&
-                p.date===today()
-            );
-
-            if(ex){
-
-                ex.photo=data;
-                ex.ticked=true;
-
-            }else{
-
-                G.pending.push({
-                    kidId:kid.id,
-                    kidName:kid.name,
-                    kPh:kid.photo,
-                    kEm:kid.emoji,
-                    kCo:kid.color,
-                    task:task,
-                    tid:id,
-                    date:today(),
-                    time:new Date().toLocaleTimeString(
-                        [],
-                        {hour:'2-digit',minute:'2-digit'}
-                    ),
-                    photo:data,
-                    ticked:true
-                });
-
-            }
-        }
-
-        rKid();
-
-        saveLog(kid.id,today());
-
-    });
+});
 
 };
 
 reader.readAsDataURL(file);
-
 inp.value='';
 
 };
 
-window.tTick=function(id){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(lg.tasks[id]==='approved')return;lg.ticked[id]=!lg.ticked[id];if(lg.ticked[id]){if(lg.tasks[id]!=='pending'){lg.tasks[id]='pending';const task=G.tasks.find(t=>t.id===id);if(task)addP(kid,task,id,lg);}}else{if(!lg.photos?.[id]){lg.tasks[id]='none';G.pending=G.pending.filter(p=>!(p.kidId===kid.id&&p.tid===id&&p.date===today()));}}rKid();saveLog(kid.id,today());};
+window.tTick=function(id){
+const kid=G.kid;
+if(!kid)return;
+
+const lg=gLog(kid.id,today());
+
+if(lg.tasks[id]==='approved')return;
+
+lg.ticked[id]=!lg.ticked[id];
+
+if(lg.ticked[id]){
+    lg.tasks[id]='draft';
+}else{
+    if(!lg.photos?.[id]) lg.tasks[id]='none';
+}
+
+rKid();
+saveLog(kid.id,today());
+};
+
 function addP(kid,task,tid,lg){const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===tid&&p.date===today());if(!ex)G.pending.push({kidId:kid.id,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:lg.photos?.[tid]||null,ticked:!!lg.ticked?.[tid]});}
 // FIX 5: Resubmit rejected task
-window.reSub=function(id){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());if(lg.tasks[id]!=='rejected'&&lg.tasks[id]!=='rej')return;lg.tasks[id]='pending';const task=G.tasks.find(t=>t.id===id);if(!task)return;addP(kid,task,id,lg);rKid();saveLog(kid.id,today());};
+window.reSub=function(id){
+const kid=G.kid;
+if(!kid)return;
+
+const lg=gLog(kid.id,today());
+lg.tasks[id]='draft';
+
+rKid();
+saveLog(kid.id,today());
+};
 window.tPr=function(name){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];rKid();saveLog(kid.id,today());};
-window.subDay=()=>alert('Day submitted! ⭐\nYour parent will review and approve your tasks.');
+window.subDay=function(){
+
+const kid=G.kid;
+if(!kid)return;
+
+const lg=gLog(kid.id,today());
+
+Object.keys(lg.tasks).forEach(id=>{
+
+if(lg.tasks[id]==='draft'){
+
+lg.tasks[id]='pending';
+
+const task=G.tasks.find(t=>t.id===id);
+
+if(task) addP(kid,task,id,lg);
+
+}
+
+});
+
+saveLog(kid.id,today());
+
+alert('Day submitted successfully ⭐');
+rKid();
+
+};
 window.rfKid=async()=>{if(!G.kid||!G.pUid)return;try{const snap=await getDoc(doc(db,'parents',G.pUid));if(snap.exists()){const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(!G.kids.find(k=>k.id===G.kid.id)){syncSK([]);G.kid=null;SS('s-home');rHome();return;}}await loadLogs(G.kid.id);}catch(e){console.error('rf',e);}rKid();};
 // Kid profile
 window.showKP=function(){const kid=G.kid;if(!kid)return;let h=`<div style="text-align:center;margin-bottom:16px"><div style="width:90px;height:90px;border-radius:50%;overflow:hidden;border:3px solid ${kid.color||'var(--g)'};margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:38px;background:${kid.color||'#1D9E75'}22" id="kap">${kid.photo?`<img src="${kid.photo}" style="width:100%;height:100%;object-fit:cover"/>`:kid.emoji||'👦'}</div><div style="font-size:16px;font-weight:600;margin-bottom:4px">${kid.name}</div><div style="font-size:13px;color:var(--t3);margin-bottom:14px">${wS(kid.id)}⭐ this week</div>`;

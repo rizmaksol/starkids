@@ -61,6 +61,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .check-row{display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer;font-size:13px;color:var(--t2)}.check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--g)}
 .kid-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
 .kid-tab{padding:6px 12px;border-radius:20px;border:1.5px solid var(--bd);font-size:13px;font-weight:500;cursor:pointer;background:var(--bg);color:var(--t);display:flex;align-items:center;gap:6px}.kid-tab.active{border-color:var(--g);background:var(--gl);color:#085041}
+/* Reject remark modal textarea focus */
+textarea:focus{border-color:var(--r)!important;outline:none}
 /* Proof area - inline label+input per task (most reliable on Android) */
 .proof-area{margin-top:8px;background:var(--bg2);border-radius:var(--rad);padding:8px}
 .proof-row{display:flex;gap:8px}
@@ -73,13 +75,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </head>
 <body>
 <div class="app">
-<div class="screen active" id="s-home"><div class="lwrap"><div style="font-size:46px;margin-bottom:8px">⭐</div><div style="font-size:22px;font-weight:700;margin-bottom:3px">StarKids</div><div style="font-size:13px;color:var(--t3);margin-bottom:22px;text-align:center">Discipline · Habits · Rewards</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">GrowStars v9.3.1</div></div></div>
+<div class="screen active" id="s-home"><div class="lwrap"><div style="font-size:46px;margin-bottom:8px">⭐</div><div style="font-size:22px;font-weight:700;margin-bottom:3px">StarKids</div><div style="font-size:13px;color:var(--t3);margin-bottom:22px;text-align:center">Discipline · Habits · Rewards</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.0</div></div></div>
 <div class="screen" id="s-auth"><div class="topbar"><div class="tb-t">Parent account</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content"><div class="seg" id="aseg"><div class="segb active" onclick="setAM('in')">Sign in</div><div class="segb" onclick="setAM('up')">Create account</div></div><div id="aform"></div></div></div>
-<div class="screen" id="s-code"><div class="topbar"><div class="tb-t">I am a Kid 👦</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:24px"><div style="font-size:52px;margin-bottom:14px">🔑</div><div style="font-size:18px;font-weight:700;margin-bottom:6px">Enter Your Secret Code</div><div style="font-size:13px;color:var(--t3);margin-bottom:4px">Ask your parent for your 6-digit code</div><div class="cw" id="ci"></div><div id="cerr" style="font-size:12px;color:var(--r);min-height:16px;margin-bottom:16px"></div><button class="btn pri" style="width:100%;max-width:280px;padding:15px;font-size:16px;font-weight:700;border-radius:14px" onclick="kidLogin()">🌟 Start My Day</button></div></div>
+<div class="screen" id="s-code"><div class="topbar"><div class="tb-t">I am a Kid 👦</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:24px"><div style="font-size:52px;margin-bottom:10px">🌟</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:4px;color:var(--t)">Welcome, Superstar!</div>
+<div style="font-size:13px;color:var(--t3);margin-bottom:2px">Enter your secret code to start earning</div>
+<div style="font-size:12px;color:var(--t3);margin-bottom:2px">Ask your parent for your 6-digit code</div><div class="cw" id="ci"></div><div id="cerr" style="font-size:12px;color:var(--r);min-height:16px;margin-bottom:16px"></div><button onclick="kidLogin()" style="width:100%;max-width:300px;padding:16px 24px;font-size:16px;font-weight:700;border-radius:16px;border:none;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(29,158,117,.35);letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:10px">
+  <span style="font-size:22px">🌟</span> Start My Day
+</button></div></div>
 <div class="screen" id="s-load"><div class="loading"><div class="spinner"></div><div id="lmsg">Loading...</div></div></div>
 <div class="screen" id="s-parent">
   <div class="topbar"><div style="display:flex;align-items:center;gap:10px"><div id="p-av" onclick="SS('s-set');rSet()" style="cursor:pointer"></div><div><div class="tb-t" id="p-tit">Dashboard</div><div class="tb-s" id="p-sub"></div></div></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="SS('s-set');rSet()">⚙️</button><button class="btn sm" onclick="doOut()">Exit</button></div></div>
-  <div class="tabs"><div class="tab active" id="t-appr" onclick="pTab('appr')">Approvals<span id="adot"></span></div><div class="tab" id="t-tasks" onclick="pTab('tasks')">Tasks</div><div class="tab" id="t-kids" onclick="pTab('kids')">Kids</div><div class="tab" id="t-rewards" onclick="pTab('rewards')">Rewards</div><div class="tab" id="t-report" onclick="pTab('report')">Report</div></div>
+  <div id="trial-banner" style="display:none;align-items:center;justify-content:space-between;padding:6px 14px;background:var(--al);border-bottom:0.5px solid var(--ab);font-size:12px;color:#633806;flex-shrink:0"></div>
+<div class="tabs"><div class="tab active" id="t-appr" onclick="pTab('appr')">Approvals<span id="adot"></span></div><div class="tab" id="t-tasks" onclick="pTab('tasks')">Tasks</div><div class="tab" id="t-kids" onclick="pTab('kids')">Kids</div><div class="tab" id="t-rewards" onclick="pTab('rewards')">Rewards</div><div class="tab" id="t-report" onclick="pTab('report')">Report</div></div>
   <div class="content" id="pb"></div>
 </div>
 <div class="screen" id="s-kid">
@@ -105,7 +113,40 @@ const SHD=[0,3];const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const DS=
 const KE=['👦','👧','🧒','👶','🦁','🐯','🦊','🐻','🐼','🦄','🐸','🐧','🦋','⭐','🚀','⚽','🎮','🎨','🎵','🌟','🏆','💪','🧠','🌈'];
 const DT=[{id:'t1',ico:'🛏',name:'Make bed',cat:'daily',stars:1},{id:'t2',ico:'🪥',name:'Brush teeth (morning)',cat:'daily',stars:1},{id:'t3',ico:'🪥',name:'Brush teeth (night)',cat:'daily',stars:1},{id:'t4',ico:'📚',name:'Study 30 min',cat:'daily',stars:2},{id:'t5',ico:'🏃',name:'Outdoor play',cat:'daily',stars:1},{id:'t6',ico:'🧹',name:'Clean room',cat:'daily',stars:1},{id:'t7',ico:'❤️',name:'Help parents',cat:'daily',stars:1},{id:'t8',ico:'🤝',name:'Good behavior',cat:'daily',stars:1},{id:'t9',ico:'📺',name:'Limited TV',cat:'daily',stars:1},{id:'t10',ico:'🚿',name:'Shower day',cat:'daily',stars:1,showerOnly:true},{id:'b1',ico:'📿',name:'Memorised dua/verse',cat:'bonus',stars:2},{id:'b2',ico:'🎨',name:'Drew a picture',cat:'bonus',stars:1},{id:'b3',ico:'📖',name:'Read a story book',cat:'bonus',stars:1},{id:'b4',ico:'🍳',name:'Helped cook',cat:'bonus',stars:1},{id:'b5',ico:'🕊️',name:'No fighting all day',cat:'bonus',stars:2}];
 const DR=[{id:'r1',name:'Ice cream',stars:20,period:'week',type:'treat',amount:null,payType:null,given:false},{id:'r2',name:'Family movie',stars:35,period:'week',type:'treat',amount:null,payType:null,given:false},{id:'r3',name:'Small toy',stars:50,period:'month',type:'treat',amount:null,payType:null,given:false},{id:'r4',name:'Cash reward',stars:60,period:'month',type:'money',amount:20,payType:'cash',given:false},{id:'r5',name:'Special outing',stars:80,period:'month',type:'treat',amount:null,payType:null,given:false}];
-let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:''};
+let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
+// Plan limits
+const PLANS={
+  trial:{kids:3,tasks:999,label:'7-Day Trial',badge:'🎁 Trial'},
+  free:{kids:1,tasks:5,label:'Free Plan',badge:'Free'},
+  premium:{kids:999,tasks:999,label:'Premium',badge:'⭐ Premium'}
+};
+function getPlan(){return PLANS[G.plan]||PLANS.trial;}
+function isTrialActive(){
+  if(G.plan!=='trial')return false;
+  if(!G.trialStart)return true;
+  const days=(Date.now()-new Date(G.trialStart).getTime())/(1000*60*60*24);
+  return days<=7;
+}
+function canAddKid(){const p=getPlan();if(G.plan==='trial'&&isTrialActive())return G.kids.length<p.kids;if(G.plan==='premium')return true;return G.kids.length<1;}
+function showUpgradePrompt(){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:360px;text-align:center">
+    <div style="font-size:36px;margin-bottom:10px">⭐</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:6px">Upgrade to Premium</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6">Unlock unlimited children, tasks, rewards, and all future features.</div>
+    <div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="font-size:22px;font-weight:700;color:var(--g)">$4.99/month</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:2px">or $39.99/year (save 33%)</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:16px;text-align:left">
+      ${['✅ Unlimited children','✅ Unlimited tasks','✅ Prayer reminders','✅ Full reports','✅ Priority support'].map(f=>`<div style="font-size:13px;color:var(--t)">${f}</div>`).join('')}
+    </div>
+    <button style="width:100%;padding:13px;border-radius:12px;background:var(--g);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px" onclick="this.closest('div[style*=fixed]').remove();alert('Coming soon! Payment integration will be added in the next update.')">Upgrade Now →</button>
+    <button style="width:100%;padding:10px;border-radius:12px;background:none;border:0.5px solid var(--bd);font-size:13px;cursor:pointer;color:var(--t3)" onclick="this.closest('div[style*=fixed]').remove()">Maybe later</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
 let _uP=null,_uL=null,_uKP=null;
 const LP='sk_p9',LK='sk_k9';
 // Utils
@@ -134,11 +175,11 @@ const syncSK=aKids=>{try{const s=gSK();const c=(aKids||[]).map(k=>k.code);localS
 function compress(src,mw,cb){try{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');let w=i.width,h=i.height;if(w>mw){h=Math.round(h*mw/w);w=mw;}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.55));};i.onerror=()=>cb(src);i.src=src;}catch{cb(src);}}
 // Firebase
 let _spt=null;
-async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,emoji:G.pEmoji,photo:G.pPhoto||null,upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
+async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,emoji:G.pEmoji,photo:G.pPhoto||null,plan:G.plan||'trial',trialStart:G.trialStart||new Date().toISOString(),upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
 let _slt={};
-async function saveLog(kidId,dk){if(!G.pUid)return;const key=kidId+'_'+dk;clearTimeout(_slt[key]);_slt[key]=setTimeout(async()=>{try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:l.photos||{}},upd:new Date().toISOString()});}catch(e){try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:{}},upd:new Date().toISOString()});}catch(e2){console.error('sL',e2);}}},600);}
-async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DT;G.rewards=d.rewards||DR;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;}}catch(e){console.error('lP',e);}}
-async function loadLogs(kidId){if(!G.pUid)return;try{const q=query(collection(db,'logs'),where('pUid','==',G.pUid),where('kidId','==',kidId));const s=await getDocs(q);s.forEach(d=>{const x=d.data();if(!G.logs[kidId])G.logs[kidId]={};if(x.log){G.logs[kidId][x.date]=x.log;if(!G.logs[kidId][x.date].photos)G.logs[kidId][x.date].photos={};}});}catch(e){console.error('lL',e);}}
+async function saveLog(kidId,dk){if(!G.pUid)return;const key=kidId+'_'+dk;clearTimeout(_slt[key]);_slt[key]=setTimeout(async()=>{try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:l.photos||{},remarks:l.remarks||{}},upd:new Date().toISOString()});}catch(e){try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:{}},upd:new Date().toISOString()});}catch(e2){console.error('sL',e2);}}},600);}
+async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DT;G.rewards=d.rewards||DR;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;G.plan=d.plan||'trial';G.trialStart=d.trialStart||new Date().toISOString();}}catch(e){console.error('lP',e);}}
+async function loadLogs(kidId){if(!G.pUid)return;try{const q=query(collection(db,'logs'),where('pUid','==',G.pUid),where('kidId','==',kidId));const s=await getDocs(q);s.forEach(d=>{const x=d.data();if(!G.logs[kidId])G.logs[kidId]={};if(x.log){G.logs[kidId][x.date]=x.log;if(!G.logs[kidId][x.date].photos)G.logs[kidId][x.date].photos={};if(!G.logs[kidId][x.date].remarks)G.logs[kidId][x.date].remarks={};}});}catch(e){console.error('lL',e);}}
 // Home
 function rHome(){const sp=gSP();const sk=gSK();let h='';
 if(sp){h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;margin-bottom:8px">👋 Welcome back</div><div class="saved-card" onclick="qPL('${encodeURIComponent(sp.email)}','${encodeURIComponent(sp.pass)}')">${avD(sp.photo,sp.emoji,'#1D9E75',46)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${sp.name}</div><div style="font-size:12px;color:var(--t3)">Parent · Tap to sign in</div></div><div style="font-size:20px;color:var(--t3)">→</div></div><div style="text-align:center;margin-bottom:12px"><span style="font-size:12px;color:var(--t3);cursor:pointer" onclick="cSP()">Not you? Sign in differently</span></div>`;}
@@ -160,7 +201,13 @@ window.doSU=async()=>{const n=document.getElementById('sn').value.trim(),e=docum
 window.qPL=async(ee,ep)=>{SS('s-load');document.getElementById('lmsg').textContent='Signing you in...';try{await signInWithEmailAndPassword(auth,decodeURIComponent(ee),decodeURIComponent(ep));}catch(e){SS('s-home');cSP();rHome();alert('Session expired. Please sign in again.');}};
 window.doOut=async()=>{stopL();await signOut(auth);G.pUid=null;G.pData=null;G.kids=[];G.logs={};G.pending=[];G.kid=null;document.title='StarKids';SS('s-home');rHome();};
 onAuthStateChanged(auth,async user=>{if(user){SS('s-load');document.getElementById('lmsg').textContent='Loading...';await loadP(user.uid);oPar(user);}else{rHome();}});
-function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);stPL(user.uid);stLL(user.uid);SS('s-parent');pTab('appr');}
+function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();
+  // Show trial/plan banner if trial
+  if(G.plan==='trial'&&isTrialActive()){
+    const days=G.trialStart?Math.max(0,7-Math.floor((Date.now()-new Date(G.trialStart).getTime())/(1000*60*60*24))):7;
+    const banner=document.getElementById('trial-banner');
+    if(banner){banner.style.display='flex';banner.innerHTML=`<span style="font-size:12px">🎁 Trial: <strong>${days} day${days!==1?'s':''}</strong> left</span><button onclick="showUpgradePrompt()" style="background:var(--g);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:600">Upgrade</button>`;}
+  }const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);stPL(user.uid);stLL(user.uid);SS('s-parent');pTab('appr');}
 // Kid login
 window.bCI=()=>{const w=document.getElementById('ci');if(!w)return;w.innerHTML='';for(let i=0;i<6;i++){const x=document.createElement('input');x.type='text';x.maxLength=1;x.inputMode='numeric';x.id='ci'+i;x.oninput=e=>{const v=e.target.value.replace(/\D/,'');e.target.value=v;if(v&&i<5)document.getElementById('ci'+(i+1)).focus();};x.onkeydown=e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)document.getElementById('ci'+(i-1)).focus();};w.appendChild(x);}};
 const gCode=()=>{let c='';for(let i=0;i<6;i++)c+=(document.getElementById('ci'+i)||{}).value||'';return c;};
@@ -200,24 +247,37 @@ document.getElementById('kb').innerHTML=h;}
 // FIX 2: Each task gets its own inline label+input - most reliable on Android
 // label element wrapping file input responds to tap without JS .click()
 function tHtml(t,log){
-const status=log.tasks[t.id]||'none';const ticked=!!log.ticked?.[t.id];const photo=log.photos?.[t.id];
-let cls='tr';if(status==='approved')cls+=' done';else if(status==='pending')cls+=' pend';else if(status==='rej'||status==='rejected')cls+=' rej';
-const sub=status==='approved'?`✅ Approved · +${t.stars}⭐`:status==='pending'?'⏳ Waiting for parent':(status==='rejected'||status==='rej')?'❌ Rejected — resubmit below':`Tap to complete · +${t.stars}⭐`;
-const sc=(status==='rejected'||status==='rej')?'tsub red':'tsub';
+const status=log.tasks[t.id]||'none';const photo=log.photos?.[t.id];
+const isRej=status==='rejected'||status==='rej';
+const ticked=!isRej&&!!log.ticked?.[t.id]; // no tick on rejected
+let cls='tr';if(status==='approved')cls+=' done';else if(status==='pending')cls+=' pend';else if(isRej)cls+=' rej';
+const sub=status==='approved'?`✅ Approved · +${t.stars}⭐`:status==='pending'?'⏳ Waiting for parent approval':isRej?'❌ Rejected by parent':`Tap to complete · +${t.stars}⭐`;
+const sc=isRej?'tsub red':'tsub';
 let inner=`<div class="tname">${t.name}</div><div class="${sc}">${sub}</div>`;
-if(status==='none'||status==='rejected'||status==='rej'){
-// CRITICAL FIX 2: label wraps input so tapping label opens camera on Android
-// This is the most reliable approach - no JS .click() needed
-inner+=`<div class="proof-area"><div class="proof-row">
-<div class="ptick${ticked?' on':''}" onclick="tTick('${t.id}')">${ticked?'✅ Ticked':'☐ Mark done'}</div>
-<label class="pcam-label${photo?' on':''}" for="ph_${t.id}">${photo?'📷 Change photo':'📷 Take photo'}</label>
-<input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" capture="environment" style="display:none" onchange="hPh(this,'${t.id}')"/>
-</div>`;
-if(photo)inner+=`<img class="proof-img" src="${photo}"/>`;
-if(status==='rejected'||status==='rej'){inner+=`<div style="font-size:12px;color:var(--r);margin-top:6px">📝 Parent note will appear here</div><button class="resub-btn" onclick="reSub('${t.id}')">↩ Resubmit to parent</button>`;}
-inner+=`</div>`;
+// Show parent remark if rejected
+if(isRej&&log.remarks?.[t.id]){
+  inner+=`<div style="background:#fff0f0;border:0.5px solid var(--r);border-radius:var(--rad);padding:8px 10px;margin-top:6px;font-size:12px;color:#791F1F;line-height:1.5">
+    💬 <strong>Parent says:</strong> ${log.remarks[t.id]}
+  </div>`;
+}
+if(status==='none'||isRej){
+  inner+=`<div class="proof-area">`;
+  // TICK: only show on non-rejected tasks
+  if(!isRej){
+    inner+=`<div class="proof-row" style="margin-bottom:7px">
+      <div class="ptick${ticked?' on':''}" onclick="tTick('${t.id}')">${ticked?'✅ Ticked':'☐ Mark done'}</div>
+    </div>`;
+  }
+  // PHOTO: optional, always available
+  inner+=`<div class="proof-row">
+    <label class="pcam-label${photo?' on':''}" for="ph_${t.id}" style="flex:1">${photo?'📷 Change photo':'📷 Add photo (optional)'}</label>
+    <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="position:fixed;top:0;left:0;width:100%;height:100%;opacity:0;z-index:-1" onchange="hPh(this,'${t.id}')"/>
+  </div>`;
+  if(photo)inner+=`<img class="proof-img" src="${photo}"/>`;
+  if(isRej)inner+=`<button class="resub-btn" onclick="reSub('${t.id}')">↩ Resubmit to parent</button>`;
+  inner+=`</div>`;
 }else if(status==='approved'&&photo){inner+=`<img class="proof-img" src="${photo}" style="margin-top:6px"/>`;}
-const ico=status==='approved'?'<div class="circ done">✓</div>':status==='pending'?'<div class="circ pend">⏳</div>':(status==='rejected'||status==='rej')?'<div class="circ rej">✗</div>':'';
+const ico=status==='approved'?'<div class="circ done">✓</div>':status==='pending'?'<div class="circ pend">⏳</div>':isRej?'<div class="circ rej">✗</div>':'';
 return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo">${inner}</div>${ico}</div>`;}
 
 // FIX 2: Photo handler using onchange on inline input
@@ -278,14 +338,13 @@ saveLog(kid.id,today());
 function addP(kid,task,tid,lg){const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===tid&&p.date===today());if(!ex)G.pending.push({kidId:kid.id,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid,date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),photo:lg.photos?.[tid]||null,ticked:!!lg.ticked?.[tid]});}
 // FIX 5: Resubmit rejected task
 window.reSub=function(id){
-const kid=G.kid;
-if(!kid)return;
-
-const lg=gLog(kid.id,today());
-lg.tasks[id]='draft';
-
-rKid();
-saveLog(kid.id,today());
+  const kid=G.kid;if(!kid)return;
+  const lg=gLog(kid.id,today());
+  if(lg.tasks[id]!=='rejected'&&lg.tasks[id]!=='rej')return;
+  lg.tasks[id]='pending';
+  if(lg.remarks)delete lg.remarks[id];
+  const task=G.tasks.find(t=>t.id===id);if(!task)return;
+  addP(kid,task,id,lg);rKid();saveLog(kid.id,today());
 };
 window.tPr=function(name){const kid=G.kid;if(!kid)return;const lg=gLog(kid.id,today());lg.prayers[name]=!lg.prayers[name];rKid();saveLog(kid.id,today());};
 window.subDay=function(){
@@ -332,7 +391,63 @@ window.clmR=ri=>{G.rewards[ri].claimed=true;G.rewards[ri].claimedBy=G.kid.name;G
 window.showKR=()=>{const ws=wS(G.kid.id);const ms=mS(G.kid.id);let h=`<div class="sbar"><div><div class="slbl">This week</div><div class="snum">${ws}⭐</div></div><div style="text-align:right"><div class="slbl">This month</div><div style="font-size:18px;font-weight:700">${ms}⭐</div></div></div><div class="sl">🏆 Your reward chart</div>`;[...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{const c=r.period==='month'?ms:ws;const ok=c>=r.stars;const pct=Math.min(100,Math.round(c/r.stars*100));h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${r.stars}⭐</div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 Claimed — parent will confirm':ok?'🏆 Unlocked! Choose above':c+'/'+r.stars+' stars needed'} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;});document.getElementById('krb').innerHTML=h;SS('s-kr');};
 // Prayer times
 function isNP(idx,pr,log){if(!G.PT)return false;const now=new Date();const nm=now.getHours()*60+now.getMinutes();for(let i=0;i<pr.length;i++){if(log.prayers[pr[i].n])continue;const t=G.PT[pr[i].n];if(t){const[h,m]=t.split(':').map(Number);if((h*60+m)>=nm)return i===idx;}else return i===idx;break;}return false;}
-async function initPT(){if(!G.prayOn||G.religion!=='islam')return;try{const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));const la=pos.coords.latitude.toFixed(4),lo=pos.coords.longitude.toFixed(4),d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;const r=await fetch(`https://api.aladhan.com/v1/timings/${ds}?latitude=${la}&longitude=${lo}&method=4`);const data=await r.json();if(data.code===200){const t=data.data.timings;G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};G.PC=data.data.meta.timezone?.split('/').pop().replace(/_/g,' ')||'';rKid();}}catch{try{const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;const r=await fetch(`https://api.aladhan.com/v1/timingsByCity/${ds}?city=Riyadh&country=SA&method=4`);const data=await r.json();if(data.code===200){const t=data.data.timings;G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};G.PC='Riyadh';rKid();}}catch{}}}
+async function initPT(){
+  if(!G.prayOn||G.religion!=='islam')return;
+  // Request notification permission for prayer reminders
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+  try{
+    const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
+    const la=pos.coords.latitude.toFixed(4),lo=pos.coords.longitude.toFixed(4);
+    const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+    const r=await fetch(`https://api.aladhan.com/v1/timings/${ds}?latitude=${la}&longitude=${lo}&method=4`);
+    const data=await r.json();
+    if(data.code===200){
+      const t=data.data.timings;
+      G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+      G.PC=data.data.meta.timezone?.split('/').pop().replace(/_/g,' ')||'';
+      schedPrayerReminders();
+      rKid();
+    }
+  }catch{
+    try{
+      const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+      const r=await fetch(`https://api.aladhan.com/v1/timingsByCity/${ds}?city=Riyadh&country=SA&method=4`);
+      const data=await r.json();
+      if(data.code===200){
+        const t=data.data.timings;
+        G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+        G.PC='Riyadh (default)';
+        schedPrayerReminders();
+        rKid();
+      }
+    }catch{}
+  }
+}
+let _prayerTimers=[];
+function schedPrayerReminders(){
+  _prayerTimers.forEach(t=>clearTimeout(t));
+  _prayerTimers=[];
+  if(Notification.permission!=='granted'||!G.PT)return;
+  const now=new Date();
+  const names={Fajr:'Fajr 🌅',Dhuhr:'Dhuhr ☀️',Asr:'Asr 🌤',Maghrib:'Maghrib 🌇',Isha:'Isha 🌙'};
+  Object.entries(G.PT).forEach(([name,timeStr])=>{
+    const[h,m]=timeStr.split(':').map(Number);
+    const pt=new Date();pt.setHours(h,m,0,0);
+    const diff=pt-now;
+    if(diff>0&&diff<86400000){
+      _prayerTimers.push(setTimeout(()=>{
+        const lg=gLog(G.kid?.id||'',today());
+        if(lg.prayers[name])return; // already prayed
+        new Notification('🕌 '+names[name]+' Prayer Time',{
+          body:'Time for '+name+' prayer. Open StarKids to mark it done and earn your star!',
+          icon:'/starkids/icon-192.png',tag:'prayer-'+name,renotify:false
+        });
+      },diff));
+    }
+  });
+}
 // Parent tabs
 window.pTab=function(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));const el=document.getElementById('t-'+tab);if(el)el.classList.add('active');document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';const pc=document.getElementById('pb');
 if(tab==='appr'){
@@ -360,7 +475,38 @@ pc.innerHTML=h;return;}
 if(tab==='report'){rRep(pc);return;}};
 function rKRR(k){const ws=wS(k.id);const ms=mS(k.id);let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',34)}<div><div style="font-size:13px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐ · Month: ${ms}⭐</div></div></div>`;[...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{const ri=G.rewards.indexOf(r);const c=r.period==='month'?ms:ws;const ok=c>=r.stars;const pct=Math.min(100,Math.round(c/r.stars*100));h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oRF(${ri})">✏️</button><button class="btn ib dan" onclick="dlR(${ri})">🗑️</button></div></div><div class="pb" style="margin-bottom:4px"><div class="pbf" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given':r.claimed?'🎯 '+r.claimedBy+' chose this':ok?'Unlocked!':c+'/'+r.stars+' stars needed'} · ${r.period==='month'?'Monthly':'Weekly'}${r.type==='money'?' · 💰 '+G.currency+' '+r.amount:''}</div></div>`;});return h;}
 window.apA=idx=>{const a=G.pending[idx];if(!a)return;const lg=gLog(a.kidId,a.date);lg.tasks[a.tid]='approved';saveLog(a.kidId,a.date);G.pending.splice(idx,1);pTab('appr');};
-window.rjA=idx=>{const a=G.pending[idx];if(!a)return;const lg=gLog(a.kidId,a.date);lg.tasks[a.tid]='rejected';if(lg.photos)delete lg.photos[a.tid];saveLog(a.kidId,a.date);G.pending.splice(idx,1);pTab('appr');};
+window.rjA=function(idx){
+  const a=G.pending[idx];if(!a)return;
+  // Show remark modal
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:14px;padding:20px;width:100%;max-width:360px">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">✗ Reject Task</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:12px">${a.task.ico} ${a.task.name} — ${a.kidName}</div>
+    <textarea id="remark-txt" placeholder="Tell ${a.kidName} why this was rejected and what to do better... (required)" style="width:100%;height:90px;padding:10px;border:1.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+    <div id="remark-err" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px">
+      <button style="flex:1;padding:10px;border-radius:var(--rad);border:0.5px solid var(--bd2);background:#fff;font-size:13px;cursor:pointer" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+      <button style="flex:1;padding:10px;border-radius:var(--rad);border:none;background:var(--r);color:#fff;font-size:13px;font-weight:600;cursor:pointer" onclick="confirmReject(${idx})">Reject & Send</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('remark-txt')?.focus(),100);
+};
+window.confirmReject=function(idx){
+  const a=G.pending[idx];if(!a)return;
+  const txt=document.getElementById('remark-txt')?.value.trim();
+  if(!txt){const e=document.getElementById('remark-err');if(e)e.textContent='Please write a remark for the child.';return;}
+  document.querySelector('div[style*="position:fixed"][style*="z-index:999"]')?.remove();
+  const lg=gLog(a.kidId,a.date);
+  lg.tasks[a.tid]='rejected';
+  if(!lg.remarks)lg.remarks={};
+  lg.remarks[a.tid]=txt;
+  if(lg.photos)delete lg.photos[a.tid];
+  saveLog(a.kidId,a.date);
+  G.pending.splice(idx,1);
+  pTab('appr');
+};
 window.cnR=ri=>{G.rewards[ri].given=true;G.rewards[ri].claimed=false;saveP();pTab('appr');alert('Reward given! ✅');};
 window.dR=ri=>{G.rewards[ri].claimed=false;delete G.rewards[ri].claimedBy;saveP();pTab('appr');};
 function pTR(t){return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="dlT('${t.id}')">🗑️</button></div></div>`;}
@@ -369,7 +515,13 @@ window.svT=()=>{const i=document.getElementById('tfi').value.trim()||'📌';cons
 window.dlT=id=>{if(!confirm('Delete task?'))return;G.tasks=G.tasks.filter(t=>t.id!==id);saveP();pTab('tasks');};
 let _nke='👦';
 window.sNKE=(el,e)=>{document.querySelectorAll('#nkeg .emoji-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');_nke=e;};
-window.addK=()=>{const n=document.getElementById('kin');if(!n||!n.value.trim())return;const cols=['#1D9E75','#7F77DD','#D85A30','#378ADD','#D4537E'];G.kids.push({id:'k'+Date.now(),name:n.value.trim(),color:cols[G.kids.length%cols.length],code:rCode(),emoji:_nke,photo:null});n.value='';_nke='👦';saveP();pTab('kids');};
+window.addK=()=>{
+  const n=document.getElementById('kin');if(!n||!n.value.trim())return;
+  if(!canAddKid()){showUpgradePrompt();return;}
+  const cols=['#1D9E75','#7F77DD','#D85A30','#378ADD','#D4537E'];
+  G.kids.push({id:'k'+Date.now(),name:n.value.trim(),color:cols[G.kids.length%cols.length],code:rCode(),emoji:_nke,photo:null});
+  n.value='';_nke='👦';saveP();pTab('kids');
+};
 window.rgnC=id=>{const k=G.kids.find(x=>x.id===id);if(k){k.code=rCode();saveP();pTab('kids');}};
 window.rmK=id=>{if(!confirm('Remove child? They will be logged out immediately.'))return;G.kids=G.kids.filter(k=>k.id!==id);saveP();pTab('kids');};
 let _eki=null;

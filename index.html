@@ -139,7 +139,7 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 <div class="app">
 <div class="screen active" id="s-home"><div class="lwrap"><div style="width:80px;height:80px;border-radius:24px;background:linear-gradient(135deg,#7B61FF,#00C48C);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:14px;box-shadow:0 8px 24px rgba(123,97,255,.3)">⭐</div>
 <div style="font-size:26px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,#7B61FF,#00C48C);-webkit-background-clip:text;-webkit-text-fill-color:transparent">StarKids</div>
-<div style="font-size:13px;color:var(--t3);margin-bottom:24px;text-align:center">Build habits · Earn rewards · Shine 🌟</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.0</div></div></div>
+<div style="font-size:13px;color:var(--t3);margin-bottom:24px;text-align:center">Build habits · Earn rewards · Shine 🌟</div><div style="width:100%" id="home-c"></div><div style="margin-top:16px;font-size:11px;color:var(--t3)">StarKids v9.4A+B</div></div></div>
 <div class="screen" id="s-auth"><div class="topbar"><div class="tb-t">Parent account</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content"><div class="seg" id="aseg"><div class="segb active" onclick="setAM('in')">Sign in</div><div class="segb" onclick="setAM('up')">Create account</div></div><div id="aform"></div></div></div>
 <div class="screen" id="s-code"><div class="topbar"><div class="tb-t">I am a Kid 👦</div><button class="btn sm" onclick="SS('s-home');rHome()">Back</button></div><div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:24px"><div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#FFD700,#FF9500);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:14px;box-shadow:0 6px 20px rgba(255,149,0,.3)">🌟</div>
 <div style="font-size:22px;font-weight:800;margin-bottom:4px;color:var(--t)">Hey Superstar! 👋</div>
@@ -188,7 +188,7 @@ let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},
   goalJars:{}, // kidId -> [{name,emoji,targetStars,currentStars,achieved}]
   praiseNotes:{}, // kidId -> [{msg,emoji,from,date}]
   badges:{}, // kidId -> [badgeId]
-  leaderboardOn:true,pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
+  leaderboardOn:true,familyGoal:{name:'Family Goal',target:500,current:0,reward:'🌴 Family Trip'},pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
 // Plan limits
 const PLANS={
   trial:{kids:3,tasks:999,label:'7-Day Trial',badge:'🎁 Trial'},
@@ -411,7 +411,7 @@ window.doSU=async()=>{const n=document.getElementById('sn').value.trim(),e=docum
 window.qPL=async(ee,ep)=>{SS('s-load');document.getElementById('lmsg').textContent='Signing you in...';try{await signInWithEmailAndPassword(auth,decodeURIComponent(ee),decodeURIComponent(ep));}catch(e){SS('s-home');cSP();rHome();alert('Session expired. Please sign in again.');}};
 window.doOut=async()=>{stopL();await signOut(auth);G.pUid=null;G.pData=null;G.kids=[];G.logs={};G.pending=[];G.kid=null;document.title='StarKids';SS('s-home');rHome();};
 onAuthStateChanged(auth,async user=>{if(user){SS('s-load');document.getElementById('lmsg').textContent='Loading...';await loadP(user.uid);oPar(user);}else{rHome();}});
-function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();
+function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();
   // Show trial/plan banner if trial
   if(G.plan==='trial'&&isTrialActive()){
     const days=G.trialStart?Math.max(0,7-Math.floor((Date.now()-new Date(G.trialStart).getTime())/(1000*60*60*24))):7;

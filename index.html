@@ -128,25 +128,160 @@ function isTrialActive(){
   return days<=7;
 }
 function canAddKid(){const p=getPlan();if(G.plan==='trial'&&isTrialActive())return G.kids.length<p.kids;if(G.plan==='premium')return true;return G.kids.length<1;}
+// ── UPGRADE FLOW ─────────────────────────────────────
+let _selectedPlan=null;
+
 function showUpgradePrompt(){
+  _selectedPlan=null;
   const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:360px;text-align:center">
-    <div style="font-size:36px;margin-bottom:10px">⭐</div>
-    <div style="font-size:18px;font-weight:700;margin-bottom:6px">Upgrade to Premium</div>
-    <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6">Unlock unlimited children, tasks, rewards, and all future features.</div>
-    <div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:14px">
-      <div style="font-size:22px;font-weight:700;color:var(--g)">$4.99/month</div>
-      <div style="font-size:12px;color:var(--t3);margin-top:2px">or $39.99/year (save 33%)</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:16px;text-align:left">
-      ${['✅ Unlimited children','✅ Unlimited tasks','✅ Prayer reminders','✅ Full reports','✅ Priority support'].map(f=>`<div style="font-size:13px;color:var(--t)">${f}</div>`).join('')}
-    </div>
-    <button style="width:100%;padding:13px;border-radius:12px;background:var(--g);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px" onclick="this.closest('div[style*=fixed]').remove();alert('Coming soon! Payment integration will be added in the next update.')">Upgrade Now →</button>
-    <button style="width:100%;padding:10px;border-radius:12px;background:none;border:0.5px solid var(--bd);font-size:13px;cursor:pointer;color:var(--t3)" onclick="this.closest('div[style*=fixed]').remove()">Maybe later</button>
-  </div>`;
+  overlay.id='upgrade-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:0';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:430px;max-height:90vh;overflow-y:auto">
+      <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:4px;text-align:center">⭐ StarKids Premium</div>
+      <div style="font-size:13px;color:var(--t2);text-align:center;margin-bottom:20px">Everything your family needs to build great habits</div>
+
+      <!-- Features list -->
+      <div style="background:var(--gl);border-radius:12px;padding:14px;margin-bottom:20px">
+        ${['Unlimited children','Unlimited tasks & rewards','Prayer times & reminders','Weekly & monthly reports','Photo proof system','Priority support'].map(f=>'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px"><span style="color:var(--g);font-weight:700">✓</span> '+f+'</div>').join('')}
+      </div>
+
+      <!-- Plan cards -->
+      <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Choose your plan</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <!-- Monthly -->
+        <div id="plan-monthly" onclick="selectPlan('monthly')" style="border:2px solid var(--bd);border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s">
+          <div style="font-size:11px;color:var(--t3);margin-bottom:4px">MONTHLY</div>
+          <div style="font-size:24px;font-weight:700;color:var(--t)">$4.99</div>
+          <div style="font-size:11px;color:var(--t3)">per month</div>
+        </div>
+        <!-- Yearly — highlighted -->
+        <div id="plan-yearly" onclick="selectPlan('yearly')" style="border:2px solid var(--g);border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;background:var(--gl);position:relative">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--g);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;white-space:nowrap">BEST VALUE</div>
+          <div style="font-size:11px;color:var(--gd);margin-bottom:4px">YEARLY</div>
+          <div style="font-size:24px;font-weight:700;color:var(--g)">$39.99</div>
+          <div style="font-size:11px;color:var(--gd)">per year <span style="text-decoration:line-through;color:var(--t3)">$59.88</span></div>
+        </div>
+      </div>
+
+      <!-- Selected plan summary -->
+      <div id="plan-summary" style="background:var(--bg2);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:13px;color:var(--t2);text-align:center">
+        👆 Select a plan above to continue
+      </div>
+
+      <!-- Pay button -->
+      <button id="pay-btn" onclick="proceedToPayment()" style="width:100%;padding:15px;border-radius:14px;background:#ccc;color:#fff;border:none;font-size:15px;font-weight:700;cursor:not-allowed;margin-bottom:10px;transition:background .2s">
+        Continue to Payment →
+      </button>
+      <button onclick="document.getElementById('upgrade-overlay').remove()" style="width:100%;padding:11px;border-radius:12px;background:none;border:0.5px solid var(--bd);font-size:13px;cursor:pointer;color:var(--t3)">
+        Maybe later
+      </button>
+      <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--t3)">
+        Cancel anytime · Secure payment · Family-friendly
+      </div>
+    </div>`;
   document.body.appendChild(overlay);
+  // Pre-select yearly
+  setTimeout(()=>selectPlan('yearly'),100);
 }
+
+window.selectPlan=function(plan){
+  _selectedPlan=plan;
+  const mCard=document.getElementById('plan-monthly');
+  const yCard=document.getElementById('plan-yearly');
+  const summary=document.getElementById('plan-summary');
+  const btn=document.getElementById('pay-btn');
+  if(!mCard||!yCard)return;
+  if(plan==='monthly'){
+    mCard.style.border='2px solid var(--g)';mCard.style.background='var(--gl)';
+    yCard.style.border='2px solid var(--bd)';yCard.style.background='#fff';
+    if(summary)summary.innerHTML='<strong>Monthly Plan</strong> — $4.99/month · Billed monthly · Cancel anytime';
+  } else {
+    yCard.style.border='2px solid var(--g)';yCard.style.background='var(--gl)';
+    mCard.style.border='2px solid var(--bd)';mCard.style.background='#fff';
+    if(summary)summary.innerHTML='<strong>Yearly Plan</strong> — $39.99/year · Save $19.89 · Cancel anytime';
+  }
+  if(btn){btn.style.background='var(--g)';btn.style.cursor='pointer';}
+};
+
+window.proceedToPayment=function(){
+  if(!_selectedPlan)return;
+  const price=_selectedPlan==='monthly'?'$4.99/month':'$39.99/year';
+  const overlay=document.getElementById('upgrade-overlay');
+  if(overlay)overlay.innerHTML=`
+    <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:430px">
+      <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">💳 Payment Details</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:20px">StarKids Premium · ${price}</div>
+
+      <div class="ff"><label>Cardholder name</label><input id="pay-name" class="inp" placeholder="Muhammad Rizwan" style="margin:0"/></div>
+      <div class="ff" style="margin-top:10px"><label>Card number</label><input id="pay-card" class="inp" placeholder="1234 5678 9012 3456" maxlength="19" style="margin:0" oninput="fmtCard(this)"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
+        <div class="ff" style="margin:0"><label>Expiry</label><input id="pay-exp" class="inp" placeholder="MM/YY" maxlength="5" style="margin:0" oninput="fmtExp(this)"/></div>
+        <div class="ff" style="margin:0"><label>CVV</label><input id="pay-cvv" class="inp" placeholder="123" maxlength="4" type="password" style="margin:0"/></div>
+      </div>
+
+      <div style="background:var(--gl);border-radius:10px;padding:10px 13px;margin-bottom:16px;font-size:12px;color:#085041;display:flex;align-items:center;gap:8px">
+        🔒 Your payment is secured and encrypted. We never store card details.
+      </div>
+
+      <div id="pay-err" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+
+      <button onclick="submitPayment('${_selectedPlan}','${price}')" style="width:100%;padding:15px;border-radius:14px;background:var(--g);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">
+        🔒 Pay ${price}
+      </button>
+      <button onclick="showUpgradePrompt()" style="width:100%;padding:11px;border-radius:12px;background:none;border:0.5px solid var(--bd);font-size:13px;cursor:pointer;color:var(--t3)">
+        ← Back to plans
+      </button>
+    </div>`;
+};
+
+window.fmtCard=function(inp){let v=inp.value.replace(/\D/g,'').substring(0,16);inp.value=v.replace(/(.{4})/g,'$1 ').trim();};
+window.fmtExp=function(inp){let v=inp.value.replace(/\D/g,'').substring(0,4);if(v.length>=2)v=v.substring(0,2)+'/'+v.substring(2);inp.value=v;};
+
+window.submitPayment=function(plan,price){
+  const name=document.getElementById('pay-name')?.value.trim();
+  const card=document.getElementById('pay-card')?.value.replace(/\s/g,'');
+  const exp=document.getElementById('pay-exp')?.value;
+  const cvv=document.getElementById('pay-cvv')?.value;
+  const err=document.getElementById('pay-err');
+  if(!name){if(err)err.textContent='Enter cardholder name.';return;}
+  if(!card||card.length<16){if(err)err.textContent='Enter a valid 16-digit card number.';return;}
+  if(!exp||exp.length<5){if(err)err.textContent='Enter expiry date (MM/YY).';return;}
+  if(!cvv||cvv.length<3){if(err)err.textContent='Enter CVV.';return;}
+  if(err)err.textContent='';
+  // Show processing
+  const btn=document.querySelector('#upgrade-overlay button');
+  if(btn){btn.textContent='Processing...';btn.disabled=true;}
+  setTimeout(()=>{
+    // Simulate payment success — in production connect to Stripe/PayPal
+    G.plan='premium';
+    G.trialStart=null;
+    saveP();
+    document.getElementById('upgrade-overlay')?.remove();
+    // Show success screen
+    const succ=document.createElement('div');
+    succ.style.cssText='position:fixed;inset:0;background:var(--g);z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:32px';
+    succ.innerHTML=`
+      <div style="font-size:64px;margin-bottom:16px">🎉</div>
+      <div style="font-size:24px;font-weight:700;margin-bottom:8px">Welcome to Premium!</div>
+      <div style="font-size:15px;opacity:.9;margin-bottom:6px">Your family is all set.</div>
+      <div style="font-size:13px;opacity:.75;margin-bottom:32px">${price} · Thank you for supporting StarKids</div>
+      <div style="background:rgba(255,255,255,.2);border-radius:14px;padding:16px 24px;margin-bottom:32px;font-size:13px;line-height:1.8">
+        ✓ Unlimited children unlocked<br>
+        ✓ All features activated<br>
+        ✓ Receipt sent to your email
+      </div>
+      <button onclick="this.parentElement.remove();pTab('kids');" style="padding:14px 32px;border-radius:14px;background:#fff;color:var(--g);border:none;font-size:15px;font-weight:700;cursor:pointer">
+        🚀 Let's Go!
+      </button>`;
+    document.body.appendChild(succ);
+    // Update trial banner
+    const banner=document.getElementById('trial-banner');
+    if(banner)banner.style.display='none';
+  },2000);
+};
 let _uP=null,_uL=null,_uKP=null;
 const LP='sk_p9',LK='sk_k9';
 // Utils
@@ -458,7 +593,7 @@ if(G.pending.length){
 const byK={};G.pending.forEach((a,idx)=>{if(!byK[a.kidId])byK[a.kidId]={name:a.kidName,ph:a.kPh,em:a.kEm,co:a.kCo,items:[]};byK[a.kidId].items.push({...a,idx});});
 const kIds=Object.keys(byK);if(!G.apprTab||!byK[G.apprTab])G.apprTab=kIds[0];
 // FIX: Per-kid tabs in approvals
-h+=`<div class="kid-tabs">`;kIds.forEach(kId=>{const kd=byK[kId];const isA=G.apprTab===kId;h+=`<div class="kid-tab${isA?' active':''}" onclick="G.apprTab='${kId}';pTab('appr')">${avD(kd.ph,kd.em||'👦',kd.co||'#1D9E75',22)}<span>${kd.name}</span><span style="background:${isA?'var(--g)':'var(--bd2)'};color:${isA?'#fff':'var(--t3)'};border-radius:10px;padding:0 7px;font-size:11px">${kd.items.length}</span></div>`;});h+=`</div>`;
+h+=`<div class="kid-tabs">`;kIds.forEach(kId=>{const kd=byK[kId];const isA=G.apprTab===kId;h+=`<div class="kid-tab${isA?' active':''}" onclick="swApprTab(this,'${kId}')">${avD(kd.ph,kd.em||'👦',kd.co||'#1D9E75',22)}<span>${kd.name}</span><span style="background:${isA?'var(--g)':'var(--bd2)'};color:${isA?'#fff':'var(--t3)'};border-radius:10px;padding:0 7px;font-size:11px">${kd.items.length}</span></div>`;});h+=`</div>`;
 const sel=byK[G.apprTab];if(sel){const ws=wS(G.apprTab);h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(sel.ph,sel.em||'👦',sel.co||'#1D9E75',38)}<div><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ · ${sel.items.length} pending</div></div></div>`;
 sel.items.forEach(a=>{const hp=!!a.photo;const ht=!!a.ticked;const pl=hp&&ht?'📷+✓':hp?'📷 Photo':ht?'✓ Tick':'Submitted';const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:8px 0" onerror="this.style.display='none'"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">${ht?'✓ Tick submitted':'No proof yet'}</div>`;h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="rjA(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px;text-align:center;font-size:12px">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="apA(${a.idx})">✓ Approve</button></div></div>`;});}
 }pc.innerHTML=h;return;}
@@ -469,7 +604,7 @@ if(tab==='rewards'){const claimed=G.rewards.filter(r=>r.claimed&&!r.given);let h
 if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🔔 Action needed</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:6px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="dR(${ri})">Decline</button><button class="btn pri sm" onclick="cnR(${ri})">✓ Give reward</button></div></div>`;});}
 h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Rewards</div><button class="btn pri sm" onclick="oRF(null)">+ Add</button></div>`;
 if(G.kids.length>0){if(!G.rwdTab||!G.kids.find(k=>k.id===G.rwdTab))G.rwdTab=G.kids[0].id;
-if(G.kids.length>1){h+=`<div class="kid-tabs">`;G.kids.forEach(k=>{const isA=G.rwdTab===k.id;h+=`<div class="kid-tab${isA?' active':''}" onclick="G.rwdTab='${k.id}';pTab('rewards')">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',22)}<span>${k.name}</span><span style="font-size:11px;color:${isA?'#085041':'var(--t3)'}">⭐${wS(k.id)}</span></div>`;});h+=`</div>`;}
+if(G.kids.length>1){h+=`<div class="kid-tabs">`;G.kids.forEach(k=>{const isA=G.rwdTab===k.id;h+=`<div class="kid-tab${isA?' active':''}" onclick="swRwdTab(this,'${k.id}')">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',22)}<span>${k.name}</span><span style="font-size:11px;color:${isA?'#085041':'var(--t3)'}">⭐${wS(k.id)}</span></div>`;});h+=`</div>`;}
 const sk=G.kids.find(k=>k.id===G.rwdTab)||G.kids[0];h+=rKRR(sk);}
 pc.innerHTML=h;return;}
 if(tab==='report'){rRep(pc);return;}};
@@ -544,7 +679,23 @@ function gRep(kidId,period){const kid=G.kids.find(k=>k.id===kidId);if(!kid)retur
 window.rSet=()=>{const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼'];let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center"><div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div><div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div><label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" name="parent-profile-photo" accept="image/*" capture="environment" style="display:none" onchange="hPPh(this)"/></label><div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="sPE('${e}')">${e}</div>`).join('')}</div><button class="btn dan" style="width:100%;margin-top:10px" onclick="doOut()">Sign out</button></div>`;h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();rSet()"></button></div>`;if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam — 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian — 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div><div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');rSet()">Clear all saved logins</button></div>`;document.getElementById('setb').innerHTML=h;};
 window.hPPh=function(inp){const file=inp.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{compress(ev.target.result,300,data=>{G.pPhoto=data;G.pEmoji=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);});};reader.readAsDataURL(file);inp.value='';};
 window.sPE=e=>{G.pEmoji=e;G.pPhoto=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(null,G.pEmoji,'#1D9E75',36);};
-// Init
+// ── TAB SWITCHING (safe — no quote escaping issues) ──
+window.swApprTab=function(el,kidId){
+  G.apprTab=kidId;
+  // Update tab styles immediately
+  document.querySelectorAll('#pb .kid-tabs .kid-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  // Re-render just the content below tabs
+  pTab('appr');
+};
+window.swRwdTab=function(el,kidId){
+  G.rwdTab=kidId;
+  document.querySelectorAll('#pb .kid-tabs .kid-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  pTab('rewards');
+};
+
+// ── INIT ──────────────────────────────────────────────
 rHome();bCI();setAM('in');rAuth();
 </script>
 <script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>

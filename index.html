@@ -1305,8 +1305,146 @@ window.dlR=idx=>{if(!confirm('Delete?'))return;G.rewards.splice(idx,1);saveP();p
 function rRep(pc){let h=`<div class="kid-tabs" id="rks">`;G.kids.forEach((k,i)=>{h+=`<div class="kid-tab${i===0?' active':''}" onclick="sRK('${k.id}',this)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',22)} ${k.name}</div>`;});h+=`</div><div id="rb"></div>`;pc.innerHTML=h;if(G.kids.length)sRK(G.kids[0].id,document.querySelector('#rks .kid-tab'));}
 window.sRK=(id,el)=>{G.repKid=id;document.querySelectorAll('#rks .kid-tab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');const rb=document.getElementById('rb');if(!rb)return;rb.innerHTML=`<div class="seg" id="rps"><div class="segb active" onclick="sRP('week')">📅 Weekly</div><div class="segb" onclick="sRP('month')">📆 Monthly</div></div><div id="rc"></div>`;sRP('week');};
 window.sRP=p=>{document.querySelectorAll('#rps .segb').forEach((b,i)=>b.classList.toggle('active',(p==='week'&&i===0)||(p==='month'&&i===1)));gRep(G.repKid,p);};
-function gRep(kidId,period){const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;const keys=period==='week'?wk():mk();const pr=Pr();const td=today();let ts=0,pd=0,td2=0,tt=0,bd=0;keys.forEach(dk=>{ts+=cS(kidId,dk);const log=gLog(kidId,dk);let ap=pr.length>0;pr.forEach(p=>{if(!log.prayers[p.n])ap=false;});if(ap&&pr.length)pd++;G.tasks.filter(t=>t.cat==='daily').forEach(t=>{tt++;if(log.tasks[t.id]==='approved')td2++;});G.tasks.filter(t=>t.cat==='bonus').forEach(t=>{if(log.tasks[t.id]==='approved')bd++;});});const tp=tt?Math.round(td2/tt*100):0;const pp=pr.length?Math.round(pd/keys.length*100):null;const now=new Date();const dl=period==='week'?`${wk()[0]} → ${wk()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;const grade=tp>=90?'🥇 Excellent':tp>=70?'🥈 Very good':tp>=50?'🥉 Good':'💪 Keep going';const msg=tp>=90?'Outstanding!':tp>=70?'Great effort!':tp>=50?'Good progress!':"Let's encourage more.";let h=`<div class="rphdr"><div style="font-size:32px;margin-bottom:8px">${grade.split(' ')[0]}</div><div style="font-size:18px;font-weight:800">${kid.name}'s Report</div><div style="font-size:12px;opacity:.8;margin-top:4px">${period==='week'?'📅 Weekly':'📆 Monthly'} · ${dl}</div></div><div class="sgrid"><div class="scard"><div class="sgnum">${ts}</div><div class="sglbl">⭐ Stars</div></div><div class="scard"><div class="sgnum">${tp}%</div><div class="sglbl">📋 Tasks</div></div>`;if(pp!==null)h+=`<div class="scard"><div class="sgnum">${pp}%</div><div class="sglbl">🙏 Prayers</div></div>`;h+=`<div class="scard"><div class="sgnum">${bd}</div><div class="sglbl">⭐ Bonus</div></div></div>`;[{l:'Daily tasks',v:tp,max:100,u:'%'},{l:'Stars earned',v:ts,max:Math.max(ts,50),u:'⭐'}].forEach(b=>{const pct=b.max?Math.min(100,Math.round(b.v/b.max*100)):0;h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500"><span>${b.l}</span><span>${b.v}${b.u}</span></div><div class="pb"><div class="pbf" style="width:${pct}%"></div></div></div>`;});h+=`<div class="sl">Day by day</div><div class="dgrid">`;(period==='week'?keys:wk()).forEach((dk,i)=>{const s=cS(kidId,dk);h+=`<div class="dcell${dk===td?' today':''}"><div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div></div>`;});h+=`</div><div class="info g" style="text-align:center"><div style="font-size:20px;margin-bottom:4px">${grade}</div><div style="font-size:13px">${msg}</div></div>`;document.getElementById('rc').innerHTML=h;}
-// Settings
+function gRep(kidId,period){
+  const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
+  const keys=period==='week'?wk():mk();
+  const pr=Pr();const td=today();
+  let ts=0,pd=0,td2=0,tt=0,bd=0;
+  keys.forEach(dk=>{
+    ts+=cS(kidId,dk);
+    const log=gLog(kidId,dk);
+    let ap=pr.length>0;
+    pr.forEach(p=>{if(!log.prayers[p.n])ap=false;});
+    if(ap&&pr.length)pd++;
+    G.tasks.filter(t=>t.cat==='daily').forEach(t=>{tt++;if(log.tasks[t.id]==='approved')td2++;});
+    G.tasks.filter(t=>t.cat==='bonus').forEach(t=>{if(log.tasks[t.id]==='approved')bd++;});
+  });
+  const tp=tt?Math.round(td2/tt*100):0;
+  const pp=pr.length?Math.round(pd/keys.length*100):null;
+  const now=new Date();
+  const dl=period==='week'?`${wk()[0]} → ${wk()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;
+  const grade=tp>=90?{e:'🥇',l:'A+',c:'#FFD700',t:'Excellent'}:tp>=70?{e:'🥈',l:'A',c:'#C0C0C0',t:'Very good'}:tp>=50?{e:'🥉',l:'B',c:'#CD7F32',t:'Good progress'}:{e:'💪',l:'C',t:'Keep going',c:'var(--g)'};
+
+  // ── Wallet & rewards summary ─────────────────────────
+  const currency=G.currency||'SAR';
+  const rate=G.starRate||0.25;
+  const w=getWallet(kidId);
+  const kidClaims=(G.rewardClaims||{})[kidId]||{};
+
+  // Total cash earned (all confirmed cash rewards ever)
+  const totalEarned=w.transactions
+    .filter(tx=>tx.type==='credit'||tx.amount>0)
+    .reduce((a,tx)=>a+Math.abs(tx.amount),0);
+  // Total paid out (debit transactions)
+  const totalPaid=w.transactions
+    .filter(tx=>tx.type==='debit'||tx.amount<0)
+    .reduce((a,tx)=>a+Math.abs(tx.amount),0);
+  // Current balance
+  const balance=w.balance||0;
+  // Treat rewards claimed (not cash)
+  const treatsClaimed=Object.values(kidClaims).filter(kc=>kc.given&&kc.choiceType!=='cash').length;
+  // Stars in cash form (pending cash claims not yet confirmed)
+  const pendingCash=Object.values(kidClaims)
+    .filter(kc=>kc.claimed&&!kc.given&&kc.choiceType==='cash')
+    .reduce((a,kc)=>a+(kc.cashAmount||0),0);
+
+  const badges=(G.badges||{})[kidId]||[];
+  const badgeStr=badges.slice(0,5).map(b=>{const bd2=BADGES.find(x=>x.id===b);return bd2?bd2.emoji:'';}).join('');
+
+  let h=`
+  <div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:24px;color:#fff;text-align:center;margin-bottom:14px">
+    <div style="font-size:56px;margin-bottom:8px">${grade.e}</div>
+    <div style="font-size:28px;font-weight:800;color:#FFD700">${kid.name}</div>
+    <div style="font-size:48px;font-weight:900;color:${grade.c};margin:8px 0">${grade.l}</div>
+    <div style="font-size:13px;opacity:.7">Week of ${wk()[0]} — ${wk()[6]}</div>
+    ${badgeStr?`<div style="font-size:24px;margin-top:8px">${badgeStr}</div>`:''}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="background:linear-gradient(135deg,#7B61FF22,#7B61FF11);border:1px solid var(--p);border-radius:14px;padding:14px;text-align:center">
+      <div style="font-size:32px;font-weight:800;color:var(--p)">${ts}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">⭐ Stars earned</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#FF6B3522,#FF6B3511);border:1px solid #FF6B35;border-radius:14px;padding:14px;text-align:center">
+      <div style="font-size:32px;font-weight:800;color:#FF6B35">${tp}%</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">📋 Tasks done</div>
+    </div>
+    ${pp!==null?`<div style="background:linear-gradient(135deg,var(--gl),#D0F7EC);border:1px solid var(--g);border-radius:14px;padding:14px;text-align:center">
+      <div style="font-size:32px;font-weight:800;color:var(--gd)">${pp}%</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">🙏 Prayers</div>
+    </div>`:''}
+    <div style="background:linear-gradient(135deg,#FAC77522,#FAC77511);border:1px solid var(--ab);border-radius:14px;padding:14px;text-align:center">
+      <div style="font-size:32px;font-weight:800;color:var(--a)">${bd}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">⭐ Bonus tasks</div>
+    </div>
+  </div>`;
+
+  // ── Progress bars ─────────────────────────────────────
+  h+=`<div style="background:var(--bg);border:0.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px">`;
+  [{l:'Daily Tasks',v:tp,max:100,u:'%',c:'var(--g)'},
+   {l:'Stars earned',v:ts,max:Math.max(ts,50),u:'⭐',c:'var(--p)'},
+   ...(pp!==null?[{l:'Prayers',v:pp,max:100,u:'%',c:'var(--g)'}]:[]),
+   {l:'Bonus Tasks',v:bd,u:'',c:'var(--a)',raw:true},
+  ].forEach(b=>{
+    const pct=b.raw?0:b.max?Math.min(100,Math.round(b.v/b.max*100)):0;
+    h+=`<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight:600">
+        <span>${b.l}</span><span style="color:${b.c}">${b.v}${b.u}</span>
+      </div>
+      ${b.raw?'':`<div style="height:10px;background:var(--bg2);border-radius:5px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${b.c};border-radius:5px;transition:width .4s"></div></div>`}
+    </div>`;
+  });
+  h+=`</div>`;
+
+  // ── Wallet & Rewards Financial Summary ────────────────
+  h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:14px;padding:18px;margin-bottom:14px;color:#fff">
+    <div style="font-size:13px;font-weight:700;color:#FFD700;margin-bottom:14px;letter-spacing:.05em">💰 EARNINGS SUMMARY</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px 8px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#00C48C">${currency} ${totalEarned.toFixed(2)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:3px;text-transform:uppercase">Total Earned</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px 8px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#FF6B35">${currency} ${totalPaid.toFixed(2)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:3px;text-transform:uppercase">Received</div>
+      </div>
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px 8px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#FFD700">${currency} ${balance.toFixed(2)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:3px;text-transform:uppercase">Balance Due</div>
+      </div>
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="text-align:center">
+        <div style="font-size:16px;font-weight:700;color:#FF9500">${treatsClaimed}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">🎁 Treats Claimed</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:16px;font-weight:700;color:#FFD700">${currency} ${pendingCash.toFixed(2)}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">⏳ Pending Cash</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Day by day ─────────────────────────────────────────
+  h+=`<div class="sl">Day by day</div><div class="dgrid">`;
+  (period==='week'?keys:wk()).forEach((dk,i)=>{
+    const s=cS(kidId,dk);
+    h+=`<div class="dcell${dk===td?' today':''}">
+      <div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div>
+    </div>`;
+  });
+  h+=`</div>`;
+
+  // ── Encouragement message ──────────────────────────────
+  h+=`<div style="background:linear-gradient(135deg,var(--gl),#D0F7EC);border-radius:14px;padding:16px;text-align:center">
+    <div style="font-size:18px;margin-bottom:4px">${grade.e}</div>
+    <div style="font-size:14px;font-weight:700;color:var(--gd)">${tp>=90?'Outstanding week! You are a superstar!':tp>=70?'Great effort this week!':tp>=50?'Good progress — keep it up!':'Every star counts — let\'s do more tomorrow!'}</div>
+  </div>`;
+
+  document.getElementById('rc').innerHTML=h;
+}
+
 window.rSet=()=>{const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼'];let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center"><div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div><div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div><label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" name="parent-profile-photo" accept="image/*" capture="environment" style="display:none" onchange="hPPh(this)"/></label><div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="sPE('${e}')">${e}</div>`).join('')}</div><button class="btn dan" style="width:100%;margin-top:10px" onclick="doOut()">Sign out</button></div>`;h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();rSet()"></button></div>`;if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam — 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian — 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div><div class="sl">Star value (reward rate)</div><div class="card"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">Set how much 1 star is worth in cash. Kids can choose cash instead of a treat reward.</div><div style="display:flex;align-items:center;gap:10px"><div style="font-size:22px">⭐ =</div><input type="number" id="star-rate-inp" min="0.05" max="10" step="0.05" value="${G.starRate||0.25}" style="width:90px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:16px;font-weight:700;text-align:center"/><div style="font-size:15px;font-weight:600">${G.currency||'SAR'}</div></div><button class="btn pri sm" style="margin-top:10px" onclick="G.starRate=parseFloat(document.getElementById('star-rate-inp').value)||0.25;saveP();alert('Star rate saved: 1⭐ = '+G.starRate+' '+G.currency);">Save rate</button></div><div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');rSet()">Clear all saved logins</button></div>`;document.getElementById('setb').innerHTML=h;};
 window.hPPh=function(inp){const file=inp.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{compress(ev.target.result,300,data=>{G.pPhoto=data;G.pEmoji=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);});};reader.readAsDataURL(file);inp.value='';};
 window.sPE=e=>{G.pEmoji=e;G.pPhoto=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(null,G.pEmoji,'#1D9E75',36);};
@@ -1806,101 +1944,116 @@ function addToWallet(kidId,amount,description){
 window.parentClearWallet=async function(kidId,amount){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
   const w=getWallet(kidId);
-  const cleared=amount?Math.min(parseFloat(amount),w.balance):w.balance;
-  if(cleared<=0){alert('Nothing to clear.');return;}
+  if(w.balance<=0){alert('Balance is already zero.');return;}
+  const cleared=amount&&parseFloat(amount)>0?Math.min(parseFloat(amount),w.balance):w.balance;
+  if(cleared<=0){alert('Enter a valid amount.');return;}
+  if(!confirm('Record payment of '+G.currency+' '+cleared.toFixed(2)+' to '+kid.name+'?'))return;
   w.balance=Math.round((w.balance-cleared)*100)/100;
   if(!w.transactions)w.transactions=[];
   w.transactions.unshift({
-    type:'debit',amount:-cleared,
-    description:'Paid by parent ('+(G.pData?.name||'Parent')+')',
-    date:new Date().toISOString(),id:'tx'+Date.now()
+    type:'debit',
+    amount:-cleared,
+    description:'Paid by parent — '+(new Date().toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'})),
+    date:new Date().toISOString()
   });
   G.wallets[kidId]=w;
   try{
     await setDoc(doc(db,'parents',G.pUid),{wallets:G.wallets,upd:new Date().toISOString()},{merge:true});
   }catch(e){await saveP();}
-  alert('✅ Cleared '+(G.currency||'SAR')+' '+cleared.toFixed(2)+' from '+kid.name+"'s wallet! Remaining: "+(G.currency||'SAR')+' '+w.balance.toFixed(2));
+  alert('✅ Payment recorded!\n'+kid.name+' received '+G.currency+' '+cleared.toFixed(2)+'\nRemaining balance: '+G.currency+' '+w.balance.toFixed(2));
   showKidWallet(kidId);
 };
 window.showKidWallet=async function(kidId){
-  // Reload from Firebase to get fresh wallet data
+  // Reload fresh data from Firebase
   if(G.pUid){
     try{
       const snap=await getDoc(doc(db,'parents',G.pUid));
       if(snap.exists()){
         const d=snap.data();
         if(d.wallets)G.wallets=d.wallets;
-        if(d.rewards)G.rewards=d.rewards;
+        if(d.rewardClaims)G.rewardClaims=d.rewardClaims;
         if(d.starRate)G.starRate=d.starRate;
       }
     }catch(e){console.error('wallet reload',e);}
   }
-  // Ensure wallet screen exists
-  if(!document.getElementById('s-wallet')){
-    console.error('s-wallet screen missing');return;
-  }
+  if(!document.getElementById('s-wallet')){console.error('s-wallet missing');return;}
   const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
   const w=getWallet(kid.id);
-  SS('s-wallet');
   const currency=G.currency||'SAR';
-  let h=`
-    <div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:28px 24px;text-align:center;margin-bottom:16px;color:#fff">
-      <div style="font-size:13px;opacity:.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">💰 ${kid.name}'s Wallet</div>
-      <div style="font-size:48px;font-weight:900;color:#FFD700;line-height:1">${currency} ${w.balance.toFixed(2)}</div>
-      <div style="font-size:12px;opacity:.5;margin-top:8px">Earned from rewards · Future: linked to real account</div>
+  const isParent=!!auth.currentUser;
+
+  // Financial totals
+  const totalEarned=w.transactions.filter(tx=>tx.amount>0).reduce((a,tx)=>a+tx.amount,0);
+  const totalPaid=w.transactions.filter(tx=>tx.amount<0).reduce((a,tx)=>a+Math.abs(tx.amount),0);
+  const balance=w.balance||0;
+
+  let h='';
+
+  // ── Hero balance card ────────────────────────────────
+  h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:24px;text-align:center;margin-bottom:14px;color:#fff">
+    <div style="font-size:12px;opacity:.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">💰 ${kid.name}'s Wallet</div>
+    <div style="font-size:52px;font-weight:900;color:#FFD700;line-height:1">${currency} ${balance.toFixed(2)}</div>
+    <div style="font-size:12px;opacity:.5;margin-top:6px">Current balance</div>
+  </div>`;
+
+  // ── Summary row ──────────────────────────────────────
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+    <div style="background:var(--gl);border:1px solid var(--gb);border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:var(--gd)">${currency} ${totalEarned.toFixed(2)}</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:3px">📈 Total Earned</div>
     </div>
-    <div style="background:var(--gl);border:1px solid var(--gb);border-radius:14px;padding:14px;margin-bottom:16px;font-size:13px;color:#085041;line-height:1.6">
-      🔮 <strong>Coming soon:</strong> Link to Al Rajhi / STC Pay / your bank. Earnings transfer automatically.
+    <div style="background:var(--rl);border:1px solid var(--r);border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:var(--r)">${currency} ${totalPaid.toFixed(2)}</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:3px">💸 Paid Out</div>
     </div>
-    ${auth.currentUser?`<div style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px">💳 Clear wallet — parent paid in real life</div>
-      <input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Partial amount (empty = clear all)" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px"/>
+    <div style="background:#FFFBEA;border:1px solid #FFD700;border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:18px;font-weight:800;color:#7A4500">${currency} ${balance.toFixed(2)}</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:3px">⏳ Balance Due</div>
+    </div>
+  </div>`;
+
+  // ── Parent pay section (only visible to parent) ──────
+  if(isParent){
+    h+=`<div style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">💳 Mark as paid (parent)</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px">Once you've paid ${kid.name} in cash/transfer, record it here to keep the balance accurate.</div>
+      <input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Amount paid (leave empty = pay full balance ${currency} ${balance.toFixed(2)})" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px"/>
       <div style="display:flex;gap:8px">
-        <button class="btn pri" style="flex:1" onclick="parentClearWallet('${kid.id}',document.getElementById('clear-amt')?.value)">✅ Mark as paid</button>
-        <button class="btn" onclick="parentClearWallet('${kid.id}',null)">Clear all</button>
+        <button class="btn pri" style="flex:1" onclick="parentClearWallet('${kid.id}',document.getElementById('clear-amt')?.value)">✅ Record payment</button>
+        <button class="btn" onclick="parentClearWallet('${kid.id}',null)">Pay full ${currency} ${balance.toFixed(2)}</button>
       </div>
-    </div>`:''}` ;
+    </div>`;
+  }
+
+  // ── Transaction history ──────────────────────────────
   if(!w.transactions.length){
-    h+=`<div style="text-align:center;padding:32px;color:var(--t3)"><div style="font-size:40px;margin-bottom:10px">💳</div><div style="font-size:14px;font-weight:600;color:var(--t)">No transactions yet</div><div style="font-size:13px;margin-top:4px">Claim cash rewards to earn money here</div></div>`;
+    h+=`<div style="text-align:center;padding:32px;color:var(--t3)">
+      <div style="font-size:40px;margin-bottom:10px">💳</div>
+      <div style="font-size:14px;font-weight:600;color:var(--t)">No transactions yet</div>
+      <div style="font-size:13px;margin-top:4px">Claim cash rewards to earn money here</div>
+    </div>`;
   } else {
-    h+=`<div class="sl">Transaction history</div>`;
+    h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📋 Transaction History</div>`;
     w.transactions.forEach(tx=>{
-      const d=new Date(tx.date);
-      const ds=d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'});
+      const d=new Date(tx.date||tx.id?.replace('tx',''));
+      const ds=isNaN(d)?'—':d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'});
       const isDebit=tx.type==='debit'||tx.amount<0;
       h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--bd)">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:50%;background:${isDebit?'var(--rl)':'var(--gl)'};display:flex;align-items:center;justify-content:center;font-size:18px">${isDebit?'💸':'💰'}</div>
-          <div><div style="font-size:13px;font-weight:600;color:var(--t)">${tx.description}</div><div style="font-size:11px;color:var(--t3)">${ds}</div></div>
+          <div style="width:38px;height:38px;border-radius:50%;background:${isDebit?'var(--rl)':'var(--gl)'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${isDebit?'💸':'💰'}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--t)">${tx.description||tx.desc||'Transaction'}</div>
+            <div style="font-size:11px;color:var(--t3)">${ds}</div>
+          </div>
         </div>
-        <div style="font-size:16px;font-weight:700;color:${isDebit?'var(--r)':'var(--g)'}">${isDebit?'-':'+'}${currency} ${Math.abs(tx.amount).toFixed(2)}</div>
+        <div style="font-size:16px;font-weight:700;color:${isDebit?'var(--r)':'var(--g)'}">
+          ${isDebit?'−':'+'}${currency} ${Math.abs(tx.amount||0).toFixed(2)}
+        </div>
       </div>`;
     });
   }
+
   document.getElementById('wallet-body').innerHTML=h;
+  SS('s-wallet');
 };
 
-// ══════════════════════════════════════════════════════
-// TAB SWITCHING (safe)
-// ══════════════════════════════════════════════════════
-window.swApprTab=function(el,kidId){
-  G.apprTab=kidId;
-  // Update tab styles immediately
-  document.querySelectorAll('#pb .kid-tabs .kid-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  // Re-render just the content below tabs
-  pTab('appr');
-};
-window.swRwdTab=function(el,kidId){
-  G.rwdTab=kidId;
-  document.querySelectorAll('#pb .kid-tabs .kid-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  pTab('rewards');
-};
-
-// ── INIT ──────────────────────────────────────────────
-rHome();bCI();setAM('in');rAuth();
-</script>
-<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
-</body>
-</html>

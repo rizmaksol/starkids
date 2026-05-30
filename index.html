@@ -747,11 +747,22 @@ window.shCh=function(){
   if(!G.kid)return;
   var ws=wS(G.kid.id),ms=mS(G.kid.id);
   var cur=G.currency||'SAR',rate=G.starRate||0.25;
+  // Period-aware: weekly rewards reset each Sunday, monthly each month
+  var nowX=new Date(),dowX=nowX.getDay();
+  var wSDX=new Date(nowX);wSDX.setDate(nowX.getDate()-dowX);
+  var curWkX=wSDX.toISOString().slice(0,10);
+  var curMoX=nowX.getFullYear()+'-'+String(nowX.getMonth()+1).padStart(2,'0');
+  var giveLP=function(r){
+    if(!r.given)return false;
+    if(r.period==='week')return r.givenWeek===curWkX;
+    if(r.period==='month')return r.givenMonth===curMoX;
+    return true;
+  };
   var cl=G.rewards.filter(function(r){
     var c=r.period==='month'?ms:ws;
-    return c>=r.stars&&!r.given&&!r.claimed;
+    return c>=r.stars&&!giveLP(r)&&!r.claimed;
   });
-  if(!cl.length){alert('No rewards ready yet!');return;}
+  if(!cl.length){alert('No rewards unlocked yet! Keep earning stars.');return;}
   var old=document.getElementById('sk-rm');if(old)old.remove();
   var ov=document.createElement('div');
   ov.id='sk-rm';

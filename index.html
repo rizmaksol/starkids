@@ -813,6 +813,14 @@ window.shCh=function(){
 async function doClmR(ri,choiceType){
   var r=G.rewards[ri];
   if(!r){alert('Reward not found.');return;}
+  // Double-check not already claimed/given this period
+  var nowD=new Date(),dowD=nowD.getDay();
+  var wSD=new Date(nowD);wSD.setDate(nowD.getDate()-dowD);
+  var curWk=wSD.toISOString().slice(0,10);
+  var curMo=nowD.getFullYear()+'-'+String(nowD.getMonth()+1).padStart(2,'0');
+  if(r.claimed){alert('Already claimed! Wait for parent to confirm.');return;}
+  if(r.given&&r.period==='week'&&r.givenWeek===curWk){alert('Already given this week!');return;}
+  if(r.given&&r.period==='month'&&r.givenMonth===curMo){alert('Already given this month!');return;}
   r.claimed=true;r.claimedBy=G.kid.name;
   r.claimedAt=new Date().toISOString();r.choiceType=choiceType;
   if(choiceType==='cash'){
@@ -840,9 +848,25 @@ window.showKR=()=>{
   const currency=G.currency||'SAR';
   const rate=G.starRate||0.25;
   // Which rewards are claimable right now?
+  // Period-aware claimable check:
+  // A weekly reward resets every new week (Sunday)
+  // A monthly reward resets every new month
+  const now=new Date();
+  const dow=now.getDay();
+  const wStart=new Date(now);wStart.setDate(now.getDate()-dow);
+  const currentWeek=wStart.toISOString().slice(0,10);
+  const currentMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+  const isGivenThisPeriod=r=>{
+    if(!r.given)return false;
+    if(r.period==='week')return r.givenWeek===currentWeek;
+    if(r.period==='month')return r.givenMonth===currentMonth;
+    return true;
+  };
+
   const claimable=G.rewards.filter(r=>{
     const c=r.period==='month'?ms:ws;
-    return c>=r.stars&&!r.given&&!r.claimed;
+    return c>=r.stars && !isGivenThisPeriod(r) && !r.claimed;
   });
   let h='';
   // Stars summary bar
@@ -868,13 +892,15 @@ window.showKR=()=>{
     const ok=c>=r.stars;
     const pct=Math.min(100,Math.round(c/r.stars*100));
     const cashVal=(r.stars*rate).toFixed(2);
-    const statusLine=r.given?'✅ Given by parent'
+    const givenThisPeriod=isGivenThisPeriod(r);
+    const statusLine=givenThisPeriod?'✅ Given this '+(r.period==='week'?'week':'month')+' — resets next '+(r.period==='week'?'week':'month')
+      :r.given?'✅ Given (resets next '+(r.period==='week'?'week':'month')+')'
       :r.claimed?'🎯 Claimed ('+(r.choiceType==='cash'?'💰 Cash: '+(r.currency||currency)+' '+r.cashAmount:'🎁 Treat')+') — waiting for parent'
       :ok?'🏆 Unlocked! Tap button above to claim'
       :c+'/'+r.stars+' stars needed · '+(r.stars-c)+' to go';
-    h+=`<div class="rcard${ok&&!r.given&&!r.claimed?' unlocked':r.given?' given':''}">
+    h+=`<div class="rcard${ok&&!givenThisPeriod&&!r.claimed?' unlocked':givenThisPeriod?' given':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div>
+        <div style="font-size:13px;font-weight:600">${givenThisPeriod?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div>
         <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--g)">${r.stars}⭐</div><div style="font-size:10px;color:var(--t3)">${currency} ${cashVal}</div></div>
       </div>
       <div class="pb" style="margin-bottom:6px"><div class="pbf" style="width:${pct}%"></div></div>
@@ -986,29 +1012,43 @@ if(G.kids.length>1){h+=`<div class="kid-tabs">`;G.kids.forEach(k=>{const isA=G.r
 const sk=G.kids.find(k=>k.id===G.rwdTab)||G.kids[0];h+=rKRR(sk);}
 pc.innerHTML=h;return;}
 if(tab==='report'){rRep(pc);return;}};
-function rKRR(k){const ws=wS(k.id);const ms=mS(k.id);let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',34)}<div><div style="font-size:13px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐ · Month: ${ms}⭐</div></div></div>`;[...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{const ri=G.rewards.indexOf(r);const c=r.period==='month'?ms:ws;const ok=c>=r.stars;const pct=Math.min(100,Math.round(c/r.stars*100));
-  const rate=G.starRate||0.25;const cashVal=(r.stars*rate).toFixed(2);
-  h+=`<div class="rcard${ok&&!r.given?' unlocked':r.given?' given':''}">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div style="font-size:13px;font-weight:600">${r.given?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div>
-      <div style="font-size:11px;color:var(--t3);text-align:right">${r.stars}⭐<br>${G.currency||'SAR'} ${cashVal}</div>
-    </div>
-    <div class="pb" style="margin-bottom:6px"><div class="pbf" style="width:${pct}%"></div></div>
-    <div style="font-size:11px;color:var(--t3)">${r.given?'✅ Given to '+r.claimedBy:r.claimed?'🎯 '+(r.claimedBy||'Child')+' chose — '+(r.choiceType==='cash'?'💰 Cash: '+(r.currency||G.currency)+' '+r.cashAmount:'🎁 Treat'):ok?'🏆 Unlocked — waiting for child to claim':c+'/'+r.stars+' stars needed'} · ${r.period==='month'?'Monthly':'Weekly'}</div>
-  </div>`;});return h;}
-window.apA=idx=>{
-  const a=G.pending[idx];if(!a)return;
-  const lg=gLog(a.kidId,a.date);
-  lg.tasks[a.tid]='approved';
-  // Mark that this task was newly approved — kid will see badge on refresh
-  if(!lg.newlyApproved)lg.newlyApproved={};
-  lg.newlyApproved[a.tid]=new Date().toISOString();
-  saveLog(a.kidId,a.date);
-  G.pending.splice(idx,1);
-  pTab('appr');
-  // NO badge on parent side — badge fires on kid device only
-};
-window.rjA=function(idx){
+function rKRR(k){
+  const ws=wS(k.id);const ms=mS(k.id);
+  const currency=G.currency||'SAR';const rate=G.starRate||0.25;
+  // Period helpers
+  const now=new Date(),dow=now.getDay();
+  const wSD=new Date(now);wSD.setDate(now.getDate()-dow);
+  const curWk=wSD.toISOString().slice(0,10);
+  const curMo=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const givenThisPeriod=r=>{
+    if(!r.given)return false;
+    if(r.period==='week')return r.givenWeek===curWk;
+    if(r.period==='month')return r.givenMonth===curMo;
+    return r.given;
+  };
+  let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',34)}<div><div style="font-size:13px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐ · Month: ${ms}⭐</div></div></div>`;
+  [...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{
+    const c=r.period==='month'?ms:ws;
+    const ok=c>=r.stars;
+    const pct=Math.min(100,Math.round(c/r.stars*100));
+    const cashVal=(r.stars*rate).toFixed(2);
+    const gtp=givenThisPeriod(r);
+    const periodLabel=r.period==='month'?'Monthly':'Weekly';
+    const statusLine=gtp?'✅ Given this '+periodLabel.toLowerCase()+' · resets next '+periodLabel.toLowerCase()
+      :r.claimed?'🎯 '+(r.claimedBy||'Child')+' claimed — '+(r.choiceType==='cash'?'💰 Cash: '+(r.currency||currency)+' '+r.cashAmount:'🎁 Treat')
+      :ok?'🏆 Unlocked — waiting for child to claim'
+      :c+'/'+r.stars+' stars needed';
+    h+=`<div class="rcard${ok&&!gtp&&!r.claimed?' unlocked':gtp?' given':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:600">${gtp?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--g)">${r.stars}⭐</div><div style="font-size:10px;color:var(--t3)">${currency} ${cashVal}</div></div>
+      </div>
+      <div class="pb" style="margin-bottom:5px"><div class="pbf" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--t3)">${statusLine} · ${periodLabel}</div>
+    </div>`;
+  });
+  return h;
+};window.rjA=function(idx){
   const a=G.pending[idx];if(!a)return;
   // Remove any existing reject modal first
   document.getElementById('sk-reject-modal')?.remove();
@@ -1055,6 +1095,17 @@ window.cnR=async ri=>{
   const r=G.rewards[ri];if(!r)return;
   const kid=G.kids.find(k=>k.name===r.claimedBy);
   r.given=true;r.claimed=false;
+  // Store WHEN it was given so it can reset next week/month
+  const now=new Date();
+  if(r.period==='week'){
+    // Store the week start (Sunday) as the reset key
+    const dow=now.getDay();
+    const weekStart=new Date(now);weekStart.setDate(now.getDate()-dow);
+    r.givenWeek=weekStart.toISOString().slice(0,10);
+  } else {
+    // Monthly — store year-month
+    r.givenMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  }
   let msg='✅ Reward confirmed!';
   if(r.choiceType==='cash'&&r.cashAmount&&kid){
     addToWallet(kid.id,r.cashAmount,r.name+' — cash reward');

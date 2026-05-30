@@ -240,6 +240,7 @@ let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},
   leaderboardOn:true,
   wallets:{}, // kidId -> {balance:0, transactions:[{type,amount,desc,date}]}
   starRate:0.25, // 1 star = starRate SAR (configurable by parent)
+  rewardClaims:{}, // kidId -> { rewardId -> {choiceType,cashAmount,currency,claimedAt,claimedBy,givenWeek,givenMonth,given} }
   pending:[],kid:null,religion:'islam',currency:'SAR',prayOn:true,pEmoji:'👨‍👩‍👧',pPhoto:null,apprTab:null,rwdTab:null,repKid:null,PT:{},PC:'',plan:'trial',trialStart:null};
 // Plan limits
 const PLANS={
@@ -447,10 +448,10 @@ const syncSK=aKids=>{try{const s=gSK();const c=(aKids||[]).map(k=>k.code);localS
 function compress(src,mw,cb){try{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');let w=i.width,h=i.height;if(w>mw){h=Math.round(h*mw/w);w=mw;}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.55));};i.onerror=()=>cb(src);i.src=src;}catch{cb(src);}}
 // Firebase
 let _spt=null;
-async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,emoji:G.pEmoji,photo:G.pPhoto||null,plan:G.plan||'trial',trialStart:G.trialStart||new Date().toISOString(),goalJars:G.goalJars||{},praiseNotes:G.praiseNotes||{},badges:G.badges||{},leaderboardOn:G.leaderboardOn!==false,wallets:G.wallets||{},starRate:G.starRate||0.25,upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
+async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,rewardClaims:G.rewardClaims||{},wallets:G.wallets||{},emoji:G.pEmoji,photo:G.pPhoto||null,plan:G.plan||'trial',trialStart:G.trialStart||new Date().toISOString(),goalJars:G.goalJars||{},praiseNotes:G.praiseNotes||{},badges:G.badges||{},leaderboardOn:G.leaderboardOn!==false,wallets:G.wallets||{},starRate:G.starRate||0.25,upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
 let _slt={};
 async function saveLog(kidId,dk){if(!G.pUid)return;const key=kidId+'_'+dk;clearTimeout(_slt[key]);_slt[key]=setTimeout(async()=>{try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:l.photos||{},remarks:l.remarks||{},celebrated:l.celebrated||{},newlyApproved:l.newlyApproved||{},bonuses:l.bonuses||{}},upd:new Date().toISOString()});}catch(e){try{const l=gLog(kidId,dk);await setDoc(doc(db,'logs',`${G.pUid}_${kidId}_${dk}`),{pUid:G.pUid,kidId,date:dk,log:{prayers:l.prayers||{},tasks:l.tasks||{},ticked:l.ticked||{},photos:{}},upd:new Date().toISOString()});}catch(e2){console.error('sL',e2);}}},600);}
-async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DT;G.rewards=d.rewards||DR;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;G.plan=d.plan||'trial';G.trialStart=d.trialStart||new Date().toISOString();G.goalJars=d.goalJars||{};G.praiseNotes=d.praiseNotes||{};G.badges=d.badges||{};G.leaderboardOn=d.leaderboardOn!==false;G.wallets=d.wallets||{};G.starRate=d.starRate||0.25;}}catch(e){console.error('lP',e);}}
+async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',uid));if(s.exists()){const d=s.data();G.pData={name:d.name};G.religion=d.religion||'islam';G.currency=d.currency||'SAR';G.prayOn=d.prayOn!==false;G.kids=d.kids||[];G.tasks=d.tasks||DT;G.rewards=d.rewards||DR;G.pEmoji=d.emoji||'👨‍👩‍👧';G.pPhoto=d.photo||null;G.plan=d.plan||'trial';G.trialStart=d.trialStart||new Date().toISOString();G.goalJars=d.goalJars||{};G.praiseNotes=d.praiseNotes||{};G.badges=d.badges||{};G.leaderboardOn=d.leaderboardOn!==false;G.wallets=d.wallets||{};G.starRate=d.starRate||0.25;G.rewardClaims=d.rewardClaims||{};}}catch(e){console.error('lP',e);}}
 async function loadLogs(kidId){if(!G.pUid)return;try{const q=query(collection(db,'logs'),where('pUid','==',G.pUid),where('kidId','==',kidId));const s=await getDocs(q);s.forEach(d=>{const x=d.data();if(!G.logs[kidId])G.logs[kidId]={};if(x.log){G.logs[kidId][x.date]=x.log;if(!G.logs[kidId][x.date].photos)G.logs[kidId][x.date].photos={};if(!G.logs[kidId][x.date].remarks)G.logs[kidId][x.date].remarks={};}});}catch(e){console.error('lL',e);}}
 // Home
 function rHome(){const sp=gSP();const sk=gSK();let h='';
@@ -488,7 +489,7 @@ window.qKL=async code=>{SS('s-load');document.getElementById('lmsg').textContent
 async function doKL(code){try{const snap=await getDocs(collection(db,'parents'));let fk=null,fpd=null;snap.forEach(ps=>{const d=ps.data();if(d.kids){const k=d.kids.find(k=>k.code===code);if(k){fk=k;fpd={...d,uid:ps.id};}}});
 // FIX 3: Check kid still exists
 if(!fk||!fpd.kids.find(k=>k.code===code)){SS('s-code');bCI();const el=document.getElementById('cerr');if(el)el.textContent='Code not found. Ask your parent.';return;}
-G.pUid=fpd.uid;G.pData={name:fpd.name};G.religion=fpd.religion||'islam';G.currency=fpd.currency||'SAR';G.prayOn=fpd.prayOn!==false;G.kids=fpd.kids||[];G.tasks=fpd.tasks||DT;G.rewards=fpd.rewards||DR;G.kid=fk;
+G.pUid=fpd.uid;G.pData={name:fpd.name};G.religion=fpd.religion||'islam';G.currency=fpd.currency||'SAR';G.prayOn=fpd.prayOn!==false;G.kids=fpd.kids||[];G.tasks=fpd.tasks||DT;G.rewards=fpd.rewards||DR;G.rewardClaims=fpd.rewardClaims||{};G.wallets=fpd.wallets||{};G.kid=fk;
 await loadLogs(fk.id);sSK(fk,wS(fk.id));syncSK(fpd.kids);
 const a=document.getElementById('k-av');if(a)a.innerHTML=avD(fk.photo,fk.emoji||'👦',fk.color||'#1D9E75',36);
 document.getElementById('k-tit').textContent=fk.name+"'s tasks";document.getElementById('k-sub').textContent=dn()+' · '+today();
@@ -752,15 +753,18 @@ window.shCh=function(){
   var wSDX=new Date(nowX);wSDX.setDate(nowX.getDate()-dowX);
   var curWkX=wSDX.toISOString().slice(0,10);
   var curMoX=nowX.getFullYear()+'-'+String(nowX.getMonth()+1).padStart(2,'0');
+  var kidClaims=(G.rewardClaims||{})[G.kid.id]||{};
   var giveLP=function(r){
-    if(!r.given)return false;
-    if(r.period==='week')return r.givenWeek===curWkX;
-    if(r.period==='month')return r.givenMonth===curMoX;
+    var cl=kidClaims[r.id]||{};
+    if(!cl.given)return false;
+    if(r.period==='week')return cl.givenWeek===curWkX;
+    if(r.period==='month')return cl.givenMonth===curMoX;
     return true;
   };
   var cl=G.rewards.filter(function(r){
     var c=r.period==='month'?ms:ws;
-    return c>=r.stars&&!giveLP(r)&&!r.claimed;
+    var kc=kidClaims[r.id]||{};
+    return c>=r.stars&&!giveLP(r)&&!kc.claimed;
   });
   if(!cl.length){alert('No rewards unlocked yet! Keep earning stars.');return;}
   var old=document.getElementById('sk-rm');if(old)old.remove();
@@ -824,28 +828,49 @@ window.shCh=function(){
 async function doClmR(ri,choiceType){
   var r=G.rewards[ri];
   if(!r){alert('Reward not found.');return;}
-  // Double-check not already claimed/given this period
+  var kidId=G.kid.id;
+  var kidName=G.kid.name;
+  // Init per-kid claims
+  if(!G.rewardClaims)G.rewardClaims={};
+  if(!G.rewardClaims[kidId])G.rewardClaims[kidId]={};
+  var kidClaims=G.rewardClaims[kidId];
+  var existing=kidClaims[r.id]||{};
+  // Period check
   var nowD=new Date(),dowD=nowD.getDay();
   var wSD=new Date(nowD);wSD.setDate(nowD.getDate()-dowD);
   var curWk=wSD.toISOString().slice(0,10);
   var curMo=nowD.getFullYear()+'-'+String(nowD.getMonth()+1).padStart(2,'0');
-  if(r.claimed){alert('Already claimed! Wait for parent to confirm.');return;}
-  if(r.given&&r.period==='week'&&r.givenWeek===curWk){alert('Already given this week!');return;}
-  if(r.given&&r.period==='month'&&r.givenMonth===curMo){alert('Already given this month!');return;}
-  r.claimed=true;r.claimedBy=G.kid.name;
-  r.claimedAt=new Date().toISOString();r.choiceType=choiceType;
-  if(choiceType==='cash'){
-    r.cashAmount=parseFloat(((G.starRate||0.25)*r.stars).toFixed(2));
-    r.currency=G.currency||'SAR';
-  }
+  if(existing.claimed){alert('Already sent to parent! Waiting for confirmation.');return;}
+  if(existing.given&&r.period==='week'&&existing.givenWeek===curWk){alert('Already given this week!');return;}
+  if(existing.given&&r.period==='month'&&existing.givenMonth===curMo){alert('Already given this month!');return;}
+  // Record claim per kid
+  var cashAmount=choiceType==='cash'?parseFloat(((G.starRate||0.25)*r.stars).toFixed(2)):null;
+  kidClaims[r.id]={
+    claimed:true,
+    claimedBy:kidName,
+    kidId:kidId,
+    claimedAt:new Date().toISOString(),
+    choiceType:choiceType,
+    cashAmount:cashAmount,
+    currency:G.currency||'SAR',
+    rewardName:r.name,
+    rewardStars:r.stars,
+    rewardId:r.id,
+    given:false
+  };
+  // Write to Firestore — kid has no auth but rules allow write:true on parents
   try{
-    await setDoc(doc(db,'parents',G.pUid),{rewards:G.rewards,upd:new Date().toISOString()},{merge:true});
+    await setDoc(doc(db,'parents',G.pUid),{
+      rewardClaims:G.rewardClaims,
+      upd:new Date().toISOString()
+    },{merge:true});
     var msg=choiceType==='cash'
-      ?'Cash sent to parent! '+(r.currency||G.currency||'SAR')+' '+r.cashAmount+' added to wallet once confirmed.'
-      :'"'+r.name+'" sent to parent! They will confirm it soon!';
+      ?'Cash sent to parent!\n'+(G.currency||'SAR')+' '+cashAmount+' will be added to wallet once confirmed.'
+      :'"'+r.name+'" sent to parent! They will confirm soon!';
     alert(msg);
   }catch(e){
-    r.claimed=false;delete r.claimedBy;delete r.claimedAt;delete r.choiceType;delete r.cashAmount;delete r.currency;
+    // Revert
+    delete kidClaims[r.id];
     alert('Could not send. Check internet.\n'+e.message);return;
   }
   SS('s-kid');rKid();
@@ -868,16 +893,18 @@ window.showKR=()=>{
   const currentWeek=wStart.toISOString().slice(0,10);
   const currentMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 
-  const isGivenThisPeriod=r=>{
-    if(!r.given)return false;
-    if(r.period==='week')return r.givenWeek===currentWeek;
-    if(r.period==='month')return r.givenMonth===currentMonth;
+  const isGivenThisPeriod=(kc,r)=>{
+    if(!kc.given)return false;
+    if(r.period==='week')return kc.givenWeek===currentWeek;
+    if(r.period==='month')return kc.givenMonth===currentMonth;
     return true;
   };
 
+  const kidClaims=(G.rewardClaims||{})[G.kid.id]||{};
   const claimable=G.rewards.filter(r=>{
     const c=r.period==='month'?ms:ws;
-    return c>=r.stars && !isGivenThisPeriod(r) && !r.claimed;
+    const kc=kidClaims[r.id]||{};
+    return c>=r.stars && !isGivenThisPeriod(kc,r) && !kc.claimed;
   });
   let h='';
   // Stars summary bar
@@ -903,10 +930,11 @@ window.showKR=()=>{
     const ok=c>=r.stars;
     const pct=Math.min(100,Math.round(c/r.stars*100));
     const cashVal=(r.stars*rate).toFixed(2);
-    const givenThisPeriod=isGivenThisPeriod(r);
+    const kc=kidClaims[r.id]||{};
+    const givenThisPeriod=isGivenThisPeriod(kc,r);
     const statusLine=givenThisPeriod?'✅ Given this '+(r.period==='week'?'week':'month')+' — resets next '+(r.period==='week'?'week':'month')
       :r.given?'✅ Given (resets next '+(r.period==='week'?'week':'month')+')'
-      :r.claimed?'🎯 Claimed ('+(r.choiceType==='cash'?'💰 Cash: '+(r.currency||currency)+' '+r.cashAmount:'🎁 Treat')+') — waiting for parent'
+      :kc.claimed?'🎯 Claimed ('+(kc.choiceType==='cash'?'💰 Cash: '+(kc.currency||currency)+' '+kc.cashAmount:'🎁 Treat')+') — waiting for parent'
       :ok?'🏆 Unlocked! Tap button above to claim'
       :c+'/'+r.stars+' stars needed · '+(r.stars-c)+' to go';
     h+=`<div class="rcard${ok&&!givenThisPeriod&&!r.claimed?' unlocked':givenThisPeriod?' given':''}">
@@ -998,7 +1026,18 @@ function schedPrayerReminders(){
 // Parent tabs
 window.pTab=function(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));const el=document.getElementById('t-'+tab);if(el)el.classList.add('active');document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';const pc=document.getElementById('pb');
 if(tab==='appr'){
-const claimed=G.rewards.filter(r=>r.claimed&&!r.given);let h='';
+// Gather all pending reward claims across all kids
+  const claimed=[];
+  Object.keys(G.rewardClaims||{}).forEach(kidId=>{
+    const kidClaimsObj=G.rewardClaims[kidId]||{};
+    Object.keys(kidClaimsObj).forEach(rewardId=>{
+      const kc=kidClaimsObj[rewardId];
+      if(kc.claimed&&!kc.given){
+        const r=G.rewards.find(x=>x.id===rewardId);
+        if(r)claimed.push({...kc,reward:r,kidId,rewardId});
+      }
+    });
+  });let h='';
 if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 Reward claims</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);const isCashChoice=r.choiceType==='cash';h+=`<div class="card" style="border-color:${isCashChoice?'#FFD700':'var(--g)'};background:${isCashChoice?'#FFFBEA':'var(--gl)'}"><div style="font-size:13px;font-weight:600;color:${isCashChoice?'#7A4500':'#085041'};margin-bottom:4px">${isCashChoice?'💰':'🎁'} ${r.claimedBy} chose: ${r.name} ${isCashChoice?'(Cash — '+r.currency+' '+r.cashAmount+')':'(Treat)'}</div><div style="font-size:11px;color:${isCashChoice?'#A05A00':'#085041'};margin-bottom:8px">${r.stars}⭐${isCashChoice?' → 💰 '+(r.currency||G.currency)+' '+r.cashAmount+' will go to wallet':''}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="dR(${ri})">Decline</button><button class="btn pri sm" onclick="cnR(${ri})">${isCashChoice?'💰 Add to wallet':'✓ Give reward'}</button></div></div>`;});}
 if(!G.pending.length&&!claimed.length){pc.innerHTML=h+'<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';return;}
 if(G.pending.length){
@@ -1015,7 +1054,18 @@ h+=`<div style="display:flex;align-items:center;justify-content:space-between;ma
 h+=`<div style="font-size:12px;color:var(--t3);margin-bottom:12px">Kids can see each other's weekly stars. Turn off for private mode.</div>`;
 h+=`<div class="sl">Add new child</div><div class="ff"><label>Name</label><input id="kin" placeholder="e.g. Hamza" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/></div><div class="ff"><label>Choose emoji</label><div class="emoji-grid" id="nkeg">${KE.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="sNKE(this,'${e}')">${e}</div>`).join('')}</div></div><button class="btn pri" style="width:100%" onclick="addK()">+ Add child</button>`;pc.innerHTML=h;return;}
 // FIX 5: Rewards with per-kid tabs
-if(tab==='rewards'){const claimed=G.rewards.filter(r=>r.claimed&&!r.given);let h=`<div class="info g"><strong>Kids choose their reward</strong> when stars are reached.</div>`;
+if(tab==='rewards'){// Gather all pending reward claims across all kids
+  const claimed=[];
+  Object.keys(G.rewardClaims||{}).forEach(kidId=>{
+    const kidClaimsObj=G.rewardClaims[kidId]||{};
+    Object.keys(kidClaimsObj).forEach(rewardId=>{
+      const kc=kidClaimsObj[rewardId];
+      if(kc.claimed&&!kc.given){
+        const r=G.rewards.find(x=>x.id===rewardId);
+        if(r)claimed.push({...kc,reward:r,kidId,rewardId});
+      }
+    });
+  });let h=`<div class="info g"><strong>Kids choose their reward</strong> when stars are reached.</div>`;
 if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🔔 Action needed</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);h+=`<div class="rcard" style="border-color:var(--g);background:var(--gl)"><div style="font-size:13px;font-weight:600;color:#085041;margin-bottom:6px">🎯 ${r.claimedBy} chose: ${r.name}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="dR(${ri})">Decline</button><button class="btn pri sm" onclick="cnR(${ri})">✓ Give reward</button></div></div>`;});}
 h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Rewards</div><button class="btn pri sm" onclick="oRF(null)">+ Add</button></div>`;
 if(G.kids.length>0){if(!G.rwdTab||!G.kids.find(k=>k.id===G.rwdTab))G.rwdTab=G.kids[0].id;
@@ -1102,45 +1152,45 @@ window.confirmReject=function(idx,taId,errId,mid){
   G.pending.splice(idx,1);
   pTab('appr');
 };
+window.cnrConfirm=async function(kidId,rewardId){
+  if(!G.rewardClaims||!G.rewardClaims[kidId])return;
+  var kc=G.rewardClaims[kidId][rewardId];
+  if(!kc)return;
+  var kid=G.kids.find(k=>k.id===kidId);
+  kc.given=true;kc.claimed=false;
+  // Record when given (for period reset)
+  var now=new Date(),dow=now.getDay();
+  var wSD=new Date(now);wSD.setDate(now.getDate()-dow);
+  kc.givenWeek=wSD.toISOString().slice(0,10);
+  kc.givenMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var msg='Reward given!';
+  if(kc.choiceType==='cash'&&kc.cashAmount&&kid){
+    addToWallet(kidId,kc.cashAmount,(kc.rewardName||rewardId)+' — cash reward');
+    msg='Confirmed! '+(kc.currency||G.currency||'SAR')+' '+kc.cashAmount.toFixed(2)+' added to '+kid.name+"'s wallet!";
+  } else {
+    msg='"'+(kc.rewardName||rewardId)+'" given to '+(kc.claimedBy||'child')+'!';
+  }
+  try{
+    await setDoc(doc(db,'parents',G.pUid),{
+      rewardClaims:G.rewardClaims,wallets:G.wallets||{},upd:new Date().toISOString()
+    },{merge:true});
+  }catch(e){console.error('cnrConfirm',e);}
+  saveP();alert(msg);pTab('appr');
+};
+window.cnrDecline=function(kidId,rewardId){
+  if(!G.rewardClaims||!G.rewardClaims[kidId])return;
+  delete G.rewardClaims[kidId][rewardId];
+  saveP();pTab('appr');
+};
+// Legacy cnR/dR kept for backward compatibility
 window.cnR=async ri=>{
   const r=G.rewards[ri];if(!r)return;
   const kid=G.kids.find(k=>k.name===r.claimedBy);
   r.given=true;r.claimed=false;
-  // Store WHEN it was given so it can reset next week/month
-  const now=new Date();
-  if(r.period==='week'){
-    // Store the week start (Sunday) as the reset key
-    const dow=now.getDay();
-    const weekStart=new Date(now);weekStart.setDate(now.getDate()-dow);
-    r.givenWeek=weekStart.toISOString().slice(0,10);
-  } else {
-    // Monthly — store year-month
-    r.givenMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  }
-  let msg='✅ Reward confirmed!';
   if(r.choiceType==='cash'&&r.cashAmount&&kid){
     addToWallet(kid.id,r.cashAmount,r.name+' — cash reward');
-    msg='✅ Confirmed!\n💰 '+(r.currency||G.currency||'SAR')+' '+r.cashAmount.toFixed(2)+" added to "+kid.name+"'s wallet!";
-  } else if(r.type==='money'&&r.amount&&kid){
-    addToWallet(kid.id,parseFloat(r.amount),r.name);
-    msg='✅ Confirmed!\n💰 '+(G.currency||'SAR')+' '+r.amount+" added to "+kid.name+"'s wallet!";
-  } else {
-    msg='✅ "'+r.name+'" given to '+(r.claimedBy||'child')+'!';
   }
-  // Save to Firebase — parent IS authenticated so this works
-  await saveP();
-  // Also write wallet update directly so kid sees it on refresh
-  if(kid&&G.pUid){
-    try{
-      await setDoc(doc(db,'parents',G.pUid),{
-        wallets:G.wallets,
-        rewards:G.rewards,
-        upd:new Date().toISOString()
-      },{merge:true});
-    }catch(e){console.error('wallet save',e);}
-  }
-  alert(msg);
-  pTab('appr');
+  await saveP();pTab('appr');alert('Reward given!');
 };
 window.dR=ri=>{G.rewards[ri].claimed=false;delete G.rewards[ri].claimedBy;saveP();pTab('appr');};
 function pTR(t){const freq=t.freq||'daily';const qty=t.qty||1;const freqLabel=freq==='weekly'?'Weekly':freq==='monthly'?'Monthly':'Daily';return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${qty>1?qty+'x ':''}${freqLabel} · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="dlT('${t.id}')">🗑️</button></div></div>`;}

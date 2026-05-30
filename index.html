@@ -2056,4 +2056,45 @@ window.showKidWallet=async function(kidId){
   document.getElementById('wallet-body').innerHTML=h;
   SS('s-wallet');
 };
+window.parentClearWallet=async function(kidId,amount){
+  const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
+  const w=getWallet(kidId);
+  if(w.balance<=0){alert('Balance is already zero.');return;}
+  const cleared=amount&&parseFloat(amount)>0?Math.min(parseFloat(amount),w.balance):w.balance;
+  if(cleared<=0){alert('Enter a valid amount.');return;}
+  if(!confirm('Record payment of '+G.currency+' '+cleared.toFixed(2)+' to '+kid.name+'?'))return;
+  w.balance=Math.round((w.balance-cleared)*100)/100;
+  if(!w.transactions)w.transactions=[];
+  w.transactions.unshift({
+    type:'debit',
+    amount:-cleared,
+    description:'Paid by parent — '+(new Date().toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'})),
+    date:new Date().toISOString()
+  });
+  G.wallets[kidId]=w;
+  try{
+    await setDoc(doc(db,'parents',G.pUid),{wallets:G.wallets,upd:new Date().toISOString()},{merge:true});
+  }catch(e){await saveP();}
+  alert('✅ Payment recorded!\n'+kid.name+' received '+G.currency+' '+cleared.toFixed(2)+'\nRemaining balance: '+G.currency+' '+w.balance.toFixed(2));
+  showKidWallet(kidId);
+};
 
+window.swApprTab=function(el,kidId){
+  G.apprTab=kidId;
+  document.querySelectorAll('#pb .kid-tabs .kid-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  pTab('appr');
+};
+window.swRwdTab=function(el,kidId){
+  G.rwdTab=kidId;
+  document.querySelectorAll('#pb .kid-tabs .kid-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  pTab('rewards');
+};
+
+// ── INIT ──────────────────────────────────────────────
+rHome();bCI();setAM('in');rAuth();
+</script>
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
+</body>
+</html>

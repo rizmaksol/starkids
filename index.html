@@ -495,10 +495,10 @@ const a=document.getElementById('k-av');if(a)a.innerHTML=avD(fk.photo,fk.emoji||
 document.getElementById('k-tit').textContent=fk.name+"'s tasks";document.getElementById('k-sub').textContent=dn()+' · '+today();
 stKPL(fpd.uid);SS('s-kid');rKid();initPT();}catch(e){console.error('doKL',e);SS('s-home');rHome();alert('Error: '+e.message);}}
 // Listeners
-function stPL(uid){if(_uP)_uP();_uP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at)pTab(at.id.replace('t-',''));}},e=>console.error('PL',e));}
+function stPL(uid){if(_uP)_uP();_uP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;G.rewardClaims=d.rewardClaims||G.rewardClaims||{};G.wallets=d.wallets||G.wallets||{};if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at)pTab(at.id.replace('t-',''));}},e=>console.error('PL',e));}
 // FIX 3: Kid deletion listener
 // Claims handled via parent doc merge
-function stKPL(uid){if(_uKP)_uKP();_uKP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;if(G.kid&&(!d.kids||!d.kids.find(k=>k.id===G.kid.id))){stopL();syncSK([]);G.kid=null;SS('s-home');rHome();alert('Your account has been removed by the parent.');}},e=>console.error('KPL',e));}
+function stKPL(uid){if(_uKP)_uKP();_uKP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;G.rewardClaims=d.rewardClaims||G.rewardClaims||{};G.wallets=d.wallets||G.wallets||{};if(G.kid&&(!d.kids||!d.kids.find(k=>k.id===G.kid.id))){stopL();syncSK([]);G.kid=null;SS('s-home');rHome();alert('Your account has been removed by the parent.');}},e=>console.error('KPL',e));}
 function stLL(uid){
   if(_uL)_uL();_uL=onSnapshot(query(collection(db,'logs'),where('pUid','==',uid)),snap=>{snap.docChanges().forEach(ch=>{if(ch.type==='added'||ch.type==='modified'){const d=ch.doc.data();if(!G.logs[d.kidId])G.logs[d.kidId]={};if(d.log){G.logs[d.kidId][d.date]=d.log;if(!G.logs[d.kidId][d.date].photos)G.logs[d.kidId][d.date].photos={}; }}});rbP();document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';document.title=G.pending.length?`(${G.pending.length}) StarKids`:'StarKids';if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at&&at.id==='t-appr')pTab('appr');}},e=>console.error('LL',e));}
 function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}}
@@ -506,13 +506,21 @@ function rbP(){const np=[];Object.keys(G.logs).forEach(kidId=>{const kid=G.kids.
 // Kid dashboard
 function rKid(){const kid=G.kid;if(!kid)return;const dk=today();const log=gLog(kid.id,dk);const ts=cS(kid.id,dk);const ws=wS(kid.id);document.getElementById('k-st').textContent='⭐ '+ws;const dow=new Date().getDay();const pr=Pr();
 // FIX 1: claimable only when stars genuinely earned (approved tasks + prayers)
-const cl=G.rewards.filter(r=>{const c=r.period==='month'?mS(kid.id):ws;return c>=r.stars&&!r.given&&!r.claimed;});
+// Use per-kid rewardClaims for unlock banner
+  const kidClaimsNow=(G.rewardClaims||{})[kid.id]||{};
+  const nowRC=new Date(),dowRC=nowRC.getDay();
+  const wSDRC=new Date(nowRC);wSDRC.setDate(nowRC.getDate()-dowRC);
+  const curWkRC=wSDRC.toISOString().slice(0,10);
+  const curMoRC=nowRC.getFullYear()+'-'+String(nowRC.getMonth()+1).padStart(2,'0');
+  const isGivenNow=r=>{const kc=kidClaimsNow[r.id]||{};if(!kc.given)return false;if(r.period==='week')return kc.givenWeek===curWkRC;if(r.period==='month')return kc.givenMonth===curMoRC;return true;};
+  const cl=G.rewards.filter(r=>{const c=r.period==='month'?mS(kid.id):ws;const kc=kidClaimsNow[r.id]||{};return c>=r.stars&&!isGivenNow(r)&&!kc.claimed;});
 const rj=G.tasks.filter(t=>log.tasks[t.id]==='rejected');
 let h='';
 if(cl.length)h+=`<div class="unlock-banner" style="flex-direction:column;text-align:center;padding:16px;gap:10px"><div style="font-size:20px">🎉</div><div style="font-size:15px;font-weight:700">You unlocked ${cl.length} reward${cl.length>1?'s':''}!</div><div style="font-size:12px;opacity:.85">Tap below to claim your reward</div><button style="background:#fff;color:var(--a);border:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)" onclick="shCh()">🎁 Choose My Reward</button></div>`;
 if(rj.length)h+=`<div style="background:var(--rl);border:1px solid var(--r);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">💪</span><div><div style="font-size:13px;font-weight:600;color:var(--r)">Almost there!</div><div style="font-size:12px;color:#7A1535">${rj.length} task${rj.length>1?'s need':' needs'} a second try. Read the message and resubmit!</div></div></div>`;
 // Calculate claimed stars (rewards that have been claimed/given)
-  const claimedStars=G.rewards.filter(r=>(r.claimed||r.given)&&r.claimedBy===kid.name).reduce((a,r)=>a+r.stars,0);
+  const kidClaimsForBar=(G.rewardClaims||{})[kid.id]||{};
+  const claimedStars=G.rewards.reduce((a,r)=>{const kc=kidClaimsForBar[r.id]||{};return a+(kc.claimed||kc.given?r.stars:0);},0);
   const wallet=getWallet(kid.id);
   const currency=G.currency||'SAR';
   h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:16px 14px;margin-bottom:10px">
@@ -1038,7 +1046,26 @@ if(tab==='appr'){
       }
     });
   });let h='';
-if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 Reward claims</div>`;claimed.forEach(r=>{const ri=G.rewards.indexOf(r);const isCashChoice=r.choiceType==='cash';h+=`<div class="card" style="border-color:${isCashChoice?'#FFD700':'var(--g)'};background:${isCashChoice?'#FFFBEA':'var(--gl)'}"><div style="font-size:13px;font-weight:600;color:${isCashChoice?'#7A4500':'#085041'};margin-bottom:4px">${isCashChoice?'💰':'🎁'} ${r.claimedBy} chose: ${r.name} ${isCashChoice?'(Cash — '+r.currency+' '+r.cashAmount+')':'(Treat)'}</div><div style="font-size:11px;color:${isCashChoice?'#A05A00':'#085041'};margin-bottom:8px">${r.stars}⭐${isCashChoice?' → 💰 '+(r.currency||G.currency)+' '+r.cashAmount+' will go to wallet':''}</div><div style="display:flex;gap:6px"><button class="btn dan sm" onclick="dR(${ri})">Decline</button><button class="btn pri sm" onclick="cnR(${ri})">${isCashChoice?'💰 Add to wallet':'✓ Give reward'}</button></div></div>`;});}
+if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 Reward claims</div>`;claimed.forEach(function(kc){
+    const isCash=kc.choiceType==='cash';
+    const rName=kc.rewardName||kc.reward?.name||'Reward';
+    const rStars=kc.rewardStars||kc.reward?.stars||'?';
+    const rKidId=kc.kidId;
+    const rRewardId=kc.rewardId;
+    const kid=G.kids.find(k=>k.id===rKidId);
+    h+=`<div class="card" style="border-color:${isCash?'#FFD700':'var(--g)'};background:${isCash?'#FFFBEA':'var(--gl)'}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        ${avD(kid?.photo,kid?.emoji||'👦',kid?.color||'#1D9E75',28)}
+        <div style="font-size:13px;font-weight:700;color:${isCash?'#7A4500':'#085041'}">${isCash?'💰':'🎁'} ${kc.claimedBy} chose: ${rName}</div>
+      </div>
+      <div style="font-size:12px;color:${isCash?'#A05A00':'#085041'};margin-bottom:10px">${rStars}⭐ ${isCash?'→ '+(kc.currency||G.currency||'SAR')+' '+kc.cashAmount+' will go to wallet':'— Treat reward'}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn dan sm" onclick="cnrDecline('${rKidId}','${rRewardId}')">✕ Decline</button>
+        <button class="btn pri sm" onclick="cnrConfirm('${rKidId}','${rRewardId}')">${isCash?'💰 Confirm + add wallet':'✓ Give reward'}</button>
+      </div>
+    </div>`;
+  });}
+
 if(!G.pending.length&&!claimed.length){pc.innerHTML=h+'<div style="text-align:center;padding:56px 0;color:var(--t3);font-size:14px">✅<br><br>No pending approvals</div>';return;}
 if(G.pending.length){
 const byK={};G.pending.forEach((a,idx)=>{if(!byK[a.kidId])byK[a.kidId]={name:a.kidName,ph:a.kPh,em:a.kEm,co:a.kCo,items:[]};byK[a.kidId].items.push({...a,idx});});
@@ -1165,8 +1192,8 @@ window.cnrConfirm=async function(kidId,rewardId){
   kc.givenMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var msg='Reward given!';
   if(kc.choiceType==='cash'&&kc.cashAmount&&kid){
-    addToWallet(kidId,kc.cashAmount,(kc.rewardName||rewardId)+' — cash reward');
-    msg='Confirmed! '+(kc.currency||G.currency||'SAR')+' '+kc.cashAmount.toFixed(2)+' added to '+kid.name+"'s wallet!";
+    addToWallet(kidId,parseFloat(kc.cashAmount||0),(kc.rewardName||rewardId)+' — cash reward');
+    msg='Confirmed! '+(kc.currency||G.currency||'SAR')+' '+parseFloat(kc.cashAmount||0).toFixed(2)+' added to '+kid.name+"'s wallet!";
   } else {
     msg='"'+(kc.rewardName||rewardId)+'" given to '+(kc.claimedBy||'child')+'!';
   }

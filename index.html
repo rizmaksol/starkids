@@ -2220,7 +2220,6 @@ window.parentClearWallet=async function(kidId,amount){
   showKidWallet(kidId);
 };
 window.showKidWallet=async function(kidId){
-  // Reload fresh data from Firebase
   if(G.pUid){
     try{
       const snap=await getDoc(doc(db,'parents',G.pUid));
@@ -2233,87 +2232,84 @@ window.showKidWallet=async function(kidId){
     }catch(e){console.error('wallet reload',e);}
   }
   if(!document.getElementById('s-wallet')){console.error('s-wallet missing');return;}
+  if(!G.wallets)G.wallets={};
   const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
   const w=getWallet(kid.id);
   const currency=G.currency||'SAR';
   const isParent=!!auth.currentUser;
-
-  // Financial totals
   const totalEarned=w.transactions.filter(tx=>tx.amount>0).reduce((a,tx)=>a+tx.amount,0);
   const totalPaid=w.transactions.filter(tx=>tx.amount<0).reduce((a,tx)=>a+Math.abs(tx.amount),0);
   const balance=w.balance||0;
 
   let h='';
 
-  // ── Hero balance card ────────────────────────────────
+  // Hero balance
   h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:24px;text-align:center;margin-bottom:14px;color:#fff">
     <div style="font-size:12px;opacity:.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">💰 ${kid.name}'s Wallet</div>
     <div style="font-size:52px;font-weight:900;color:#FFD700;line-height:1">${currency} ${balance.toFixed(2)}</div>
-    <div style="font-size:12px;opacity:.5;margin-top:6px">Current balance</div>
+    <div style="font-size:12px;opacity:.5;margin-top:6px">Current balance owed</div>
   </div>`;
 
-  // ── Summary row ──────────────────────────────────────
+  // Summary 3 cols
   h+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
     <div style="background:var(--gl);border:1px solid var(--gb);border-radius:12px;padding:12px;text-align:center">
-      <div style="font-size:18px;font-weight:800;color:var(--gd)">${currency} ${totalEarned.toFixed(2)}</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gd)">${currency} ${totalEarned.toFixed(2)}</div>
       <div style="font-size:10px;color:var(--t3);margin-top:3px">📈 Total Earned</div>
     </div>
-    <div style="background:var(--rl);border:1px solid var(--r);border-radius:12px;padding:12px;text-align:center">
-      <div style="font-size:18px;font-weight:800;color:var(--r)">${currency} ${totalPaid.toFixed(2)}</div>
+    <div style="background:#FFF3F3;border:1px solid var(--r);border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:16px;font-weight:800;color:var(--r)">${currency} ${totalPaid.toFixed(2)}</div>
       <div style="font-size:10px;color:var(--t3);margin-top:3px">💸 Paid Out</div>
     </div>
     <div style="background:#FFFBEA;border:1px solid #FFD700;border-radius:12px;padding:12px;text-align:center">
-      <div style="font-size:18px;font-weight:800;color:#7A4500">${currency} ${balance.toFixed(2)}</div>
+      <div style="font-size:16px;font-weight:800;color:#7A4500">${currency} ${balance.toFixed(2)}</div>
       <div style="font-size:10px;color:var(--t3);margin-top:3px">⏳ Balance Due</div>
     </div>
   </div>`;
 
-  // ── Parent pay section (only visible to parent) ──────
-  if(isParent){
-    // Build parent pay section via DOM to avoid quote issues in onclick
-    const payDiv=document.createElement('div');
-    payDiv.style.cssText='background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px';
-    payDiv.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:6px">💳 Mark as paid (parent)</div>'
-      +'<div style="font-size:12px;color:var(--t3);margin-bottom:10px">Once you paid '+kid.name+' in cash or transfer, record it here to keep balance accurate.</div>'
-      +'<input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Amount paid (empty = full '+currency+' '+balance.toFixed(2)+')" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px;box-sizing:border-box"/>';
-    const btnRow=document.createElement('div');
-    btnRow.style.cssText='display:flex;gap:8px';
-    const partBtn=document.createElement('button');
-    partBtn.className='btn pri';partBtn.style.flex='1';
-    partBtn.textContent='✅ Record payment';
-    partBtn.onclick=function(){parentClearWallet(kid.id,document.getElementById('clear-amt')?.value);};
-    const fullBtn=document.createElement('button');
-    fullBtn.className='btn';
-    fullBtn.textContent='Pay full '+currency+' '+balance.toFixed(2);
-    fullBtn.onclick=function(){parentClearWallet(kid.id,null);};
-    btnRow.appendChild(partBtn);btnRow.appendChild(fullBtn);
-    payDiv.appendChild(btnRow);
-    // Inject after hero card — we'll append after innerHTML set
-    document.getElementById('wallet-body').appendChild(payDiv);
+  // How payment works (always visible — educates both parent and kid)
+  h+=`<div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:14px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:#1B5E20;margin-bottom:8px">📲 How payment works</div>
+    <div style="font-size:12px;color:#2E7D32;line-height:2">
+      <div>✅ <strong>Step 1:</strong> Parent approves task → stars added</div>
+      <div>🎁 <strong>Step 2:</strong> Kid claims reward as cash → sent to parent</div>
+      <div>💰 <strong>Step 3:</strong> Parent confirms → balance appears here</div>
+      <div>💳 <strong>Step 4:</strong> Pay in real life (cash / STC Pay / bank)</div>
+      <div>📱 <strong>Step 5:</strong> Parent taps Record payment → kid notified instantly</div>
+    </div>
+  </div>`;
+
+  // Parent pay section
+  if(isParent&&balance>0){
+    h+=`<div style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">💳 Record payment to ${kid.name}</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px">After paying in real life, record it here to update the balance.</div>
+      <input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Amount (leave empty to pay full ${currency} ${balance.toFixed(2)})" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px;box-sizing:border-box"/>
+      <div style="display:flex;gap:8px" id="pay-btns"></div>
+    </div>`;
   }
 
-  // ── Transaction history ──────────────────────────────
+  // Transaction history
   if(!w.transactions.length){
     h+=`<div style="text-align:center;padding:32px;color:var(--t3)">
       <div style="font-size:40px;margin-bottom:10px">💳</div>
       <div style="font-size:14px;font-weight:600;color:var(--t)">No transactions yet</div>
-      <div style="font-size:13px;margin-top:4px">Claim cash rewards to earn money here</div>
+      <div style="font-size:13px;margin-top:4px">Claim cash rewards to start earning</div>
     </div>`;
   } else {
     h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📋 Transaction History</div>`;
     w.transactions.forEach(tx=>{
-      const d=new Date(tx.date||tx.id?.replace('tx',''));
+      const d=new Date(tx.date||'');
       const ds=isNaN(d)?'—':d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'});
       const isDebit=tx.type==='debit'||tx.amount<0;
       h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--bd)">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:38px;height:38px;border-radius:50%;background:${isDebit?'var(--rl)':'var(--gl)'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${isDebit?'💸':'💰'}</div>
+          <div style="width:38px;height:38px;border-radius:50%;background:${isDebit?'#FFF3F3':'var(--gl)'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${isDebit?'💸':'💰'}</div>
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--t)">${tx.description||tx.desc||'Transaction'}</div>
             <div style="font-size:11px;color:var(--t3)">${ds}</div>
           </div>
         </div>
-        <div style="font-size:16px;font-weight:700;color:${isDebit?'var(--r)':'var(--g)'}">
+        <div style="font-size:15px;font-weight:700;color:${isDebit?'var(--r)':'var(--g)'}">
           ${isDebit?'−':'+'}${currency} ${Math.abs(tx.amount||0).toFixed(2)}
         </div>
       </div>`;
@@ -2324,7 +2320,29 @@ window.showKidWallet=async function(kidId){
   const wbody=document.getElementById('wallet-body');
   if(!wbody){console.error('wallet-body not found');return;}
   wbody.innerHTML=h;
+
+  // Attach pay buttons via DOM (avoids quote issues)
+  if(isParent&&balance>0){
+    const payBtns=document.getElementById('pay-btns');
+    if(payBtns){
+      const partBtn=document.createElement('button');
+      partBtn.className='btn pri';partBtn.style.flex='1';
+      partBtn.textContent='✅ Record partial payment';
+      partBtn.onclick=function(){
+        const amt=document.getElementById('clear-amt')?.value;
+        if(!amt||parseFloat(amt)<=0){alert('Enter an amount to record.');return;}
+        parentClearWallet(kid.id,amt);
+      };
+      const fullBtn=document.createElement('button');
+      fullBtn.className='btn';
+      fullBtn.textContent='Pay full '+currency+' '+balance.toFixed(2);
+      fullBtn.onclick=function(){parentClearWallet(kid.id,null);};
+      payBtns.appendChild(partBtn);
+      payBtns.appendChild(fullBtn);
+    }
+  }
 };
+
 window.parentClearWallet=async function(kidId,amount){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
   const w=getWallet(kidId);

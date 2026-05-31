@@ -445,7 +445,7 @@ const sSK=(kid,ws)=>{try{const kids=gSK();const i=kids.findIndex(k=>k.code===kid
 window.cSP=()=>{localStorage.removeItem(LP);rHome();};
 const syncSK=aKids=>{try{const s=gSK();const c=(aKids||[]).map(k=>k.code);localStorage.setItem(LK,JSON.stringify(s.filter(k=>c.includes(k.code))));}catch{}};
 // Image compression
-function compress(src,mw,cb){try{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');let w=i.width,h=i.height;if(w>mw){h=Math.round(h*mw/w);w=mw;}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.55));};i.onerror=()=>cb(src);i.src=src;}catch{cb(src);}}
+function compress(src,mw,cb){try{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');let w=i.width,h=i.height;if(w>mw){h=Math.round(h*mw/w);w=mw;}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.40));};i.onerror=()=>cb(src);i.src=src;}catch{cb(src);}}
 // Firebase
 let _spt=null;
 async function saveP(){if(!G.pUid)return;clearTimeout(_spt);_spt=setTimeout(async()=>{try{await setDoc(doc(db,'parents',G.pUid),{name:G.pData?.name||'Parent',religion:G.religion,currency:G.currency,prayOn:G.prayOn,kids:G.kids,tasks:G.tasks,rewards:G.rewards,rewardClaims:G.rewardClaims||{},wallets:G.wallets||{},emoji:G.pEmoji,photo:G.pPhoto||null,plan:G.plan||'trial',trialStart:G.trialStart||new Date().toISOString(),goalJars:G.goalJars||{},praiseNotes:G.praiseNotes||{},badges:G.badges||{},leaderboardOn:G.leaderboardOn!==false,wallets:G.wallets||{},starRate:G.starRate||0.25,upd:new Date().toISOString()});}catch(e){console.error('sP',e);}},600);}
@@ -601,7 +601,7 @@ window.hPh=function(inp,id){
   const kid=G.kid;if(!kid)return;
   const reader=new FileReader();
   reader.onload=ev=>{
-    compress(ev.target.result,700,data=>{
+    compress(ev.target.result,400,data=>{
       const lg=gLog(kid.id,today());
       if(!lg.photos)lg.photos={};
       lg.photos[id]=data;
@@ -2093,8 +2093,99 @@ window.swRwdTab=function(el,kidId){
 };
 
 // ── INIT ──────────────────────────────────────────────
-rHome();bCI();setAM('in');rAuth();
+// ═══════════════════════════════════════════════════
+// ONBOARDING — shown once to new users
+// ═══════════════════════════════════════════════════
+const OB_SLIDES=[
+  {
+    emoji:'⭐',
+    color:'linear-gradient(135deg,#1A1D2E,#2D3561)',
+    textColor:'#fff',
+    title:'Welcome to StarKids!',
+    sub:'The family app that turns daily habits into rewards — and builds real character.',
+    bullets:['✅ Kids earn stars for tasks & prayers','🎁 Stars unlock treats or real cash','📊 Parents approve, track, and reward']
+  },
+  {
+    emoji:'📋',
+    color:'linear-gradient(135deg,#E8F5E9,#C8E6C9)',
+    textColor:'#1B5E20',
+    title:'How it works',
+    sub:'Simple daily routine for the whole family.',
+    bullets:['1️⃣ Parent sets tasks, prayers & rewards','2️⃣ Kid completes tasks and taps ✓','3️⃣ Parent approves — stars are awarded','4️⃣ Kid claims reward: treat or cash 💰']
+  },
+  {
+    emoji:'💰',
+    color:'linear-gradient(135deg,#FFF8E1,#FFE082)',
+    textColor:'#7A4500',
+    title:'Real money. Real lessons.',
+    sub:'Every star has a cash value you set. Kids learn to earn, save, and choose wisely.',
+    bullets:['⭐ 1 star = SAR 0.25 (you set the rate)','🎁 Choose treat OR cash for any reward','💳 Wallet tracks balance & payment history','📊 Weekly report shows full performance']
+  }
+];
+let obIdx=0;
+function obRender(){
+  const s=OB_SLIDES[obIdx];
+  const total=OB_SLIDES.length;
+  document.getElementById('ob-slides').innerHTML=`
+    <div style="height:100%;background:${s.color};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;text-align:center">
+      <div style="font-size:80px;margin-bottom:20px;animation:badgePop .5s cubic-bezier(.34,1.56,.64,1)">${s.emoji}</div>
+      <div style="font-size:24px;font-weight:800;color:${s.textColor};margin-bottom:10px;line-height:1.2">${s.title}</div>
+      <div style="font-size:14px;color:${s.textColor};opacity:.75;margin-bottom:24px;line-height:1.5">${s.sub}</div>
+      <div style="text-align:left;width:100%">
+        ${s.bullets.map(b=>`<div style="font-size:14px;color:${s.textColor};padding:8px 12px;background:rgba(255,255,255,.35);border-radius:10px;margin-bottom:8px;font-weight:500">${b}</div>`).join('')}
+      </div>
+    </div>`;
+  // Dots
+  document.getElementById('ob-dots').innerHTML=OB_SLIDES.map((_,i)=>
+    `<div style="width:${i===obIdx?24:8}px;height:8px;border-radius:4px;background:${i===obIdx?'var(--g)':'var(--bd2)'};transition:all .3s"></div>`
+  ).join('');
+  // Button label
+  document.getElementById('ob-next').textContent=obIdx===total-1?'Start earning stars! ⭐':'Next →';
+}
+function obNext(){
+  if(obIdx<OB_SLIDES.length-1){obIdx++;obRender();}
+  else obSkip();
+}
+function obSkip(){
+  localStorage.setItem('sk_onboarded','1');
+  document.getElementById('sk-onboard').style.display='none';
+}
+function showOnboarding(){
+  if(localStorage.getItem('sk_onboarded'))return;
+  const el=document.getElementById('sk-onboard');
+  el.style.display='flex';
+  obRender();
+}
+
+// Global error handler — no more blank screens
+window.onerror=function(msg,src,line,col,err){
+  const known=['ResizeObserver','Non-Error','Script error'];
+  if(known.some(k=>String(msg).includes(k)))return false;
+  console.error('Global error:',msg,src,line);
+  const existing=document.getElementById('sk-err-banner');
+  if(existing)return false;
+  const b=document.createElement('div');
+  b.id='sk-err-banner';
+  b.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#D32F2F;color:#fff;padding:14px 16px;z-index:99999;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px';
+  b.innerHTML='<div><strong>Something went wrong.</strong><br><span style="opacity:.85;font-size:11px">'+String(msg).slice(0,80)+'</span></div>'
+    +'<button onclick="location.reload()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">↺ Reload</button>';
+  document.body.appendChild(b);
+  return false;
+};
+window.onunhandledrejection=function(e){
+  console.error('Unhandled promise:',e.reason);
+};
+rHome();bCI();setAM('in');rAuth();showOnboarding();
 </script>
 <script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
+<!-- ONBOARDING -->
+<div id="sk-onboard" style="display:none;position:fixed;inset:0;z-index:99998;background:#fff;flex-direction:column">
+  <div style="flex:1;overflow:hidden;position:relative" id="ob-slides"></div>
+  <div style="padding:20px 24px 32px">
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px" id="ob-dots"></div>
+    <button id="ob-next" onclick="obNext()" style="width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,#1D9E75,#16C784);border:none;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">Get Started →</button>
+    <button onclick="obSkip()" style="width:100%;padding:10px;border:none;background:none;color:var(--t3);font-size:13px;cursor:pointer;margin-top:8px">Skip intro</button>
+  </div>
+</div>
 </body>
 </html>

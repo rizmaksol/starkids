@@ -259,7 +259,7 @@ function canAddKid(){const p=getPlan();if(G.plan==='trial'&&isTrialActive())retu
 // ── UPGRADE FLOW ─────────────────────────────────────
 let _selectedPlan=null;
 
-function showUpgradePrompt(){
+window.showUpgradePrompt=function(){
   _selectedPlan=null;
   const overlay=document.createElement('div');
   overlay.id='upgrade-overlay';
@@ -1136,7 +1136,19 @@ function rKRR(k){
     </div>`;
   });
   return h;
-};window.rjA=function(idx){
+};window.apA=async function(idx){
+  const a=G.pending[idx];if(!a)return;
+  // Mark approved in log
+  const log=gLog(a.kidId,a.date);
+  log.tasks[a.tid]='approved';
+  // Save log to Firebase
+  await saveLog(a.kidId,a.date);
+  // Remove from pending
+  G.pending.splice(idx,1);
+  // Refresh parent approvals tab
+  pTab('appr');
+};
+window.rjA=function(idx){
   const a=G.pending[idx];if(!a)return;
   // Remove any existing reject modal first
   document.getElementById('sk-reject-modal')?.remove();

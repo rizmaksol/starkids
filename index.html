@@ -2123,7 +2123,7 @@ const OB_SLIDES=[
   }
 ];
 let obIdx=0;
-function obRender(){
+window.obRender=function(){
   const s=OB_SLIDES[obIdx];
   const total=OB_SLIDES.length;
   document.getElementById('ob-slides').innerHTML=`
@@ -2142,15 +2142,15 @@ function obRender(){
   // Button label
   document.getElementById('ob-next').textContent=obIdx===total-1?'Start earning stars! ⭐':'Next →';
 }
-function obNext(){
+window.obNext=function(){
   if(obIdx<OB_SLIDES.length-1){obIdx++;obRender();}
   else obSkip();
 }
-function obSkip(){
+window.obSkip=function(){
   localStorage.setItem('sk_onboarded','1');
   document.getElementById('sk-onboard').style.display='none';
 }
-function showOnboarding(){
+window.showOnboarding=function(){
   if(localStorage.getItem('sk_onboarded'))return;
   const el=document.getElementById('sk-onboard');
   el.style.display='flex';

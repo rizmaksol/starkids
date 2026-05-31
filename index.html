@@ -598,14 +598,16 @@ if(status==='none'||isRej||status==='pending'){
     // Submitted — show what was sent + allow photo change
     inner+=`<div style="font-size:11px;color:var(--a);font-weight:600;margin-bottom:7px">⏳ Submitted — waiting for parent approval</div>`;
     inner+=`<div class="proof-row" style="margin-bottom:0">
-      <label class="pcam-label${photo?' on':''}" for="ph_${t.id}" style="flex:1">${photo?'📷 Change photo':'📷 Add photo (optional)'}</label>
-      <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="position:fixed;top:0;left:0;width:100%;height:100%;opacity:0;z-index:-1" onchange="hPh(this,'${t.id}')"/>
+      <button class="pcam-label${photo?' on':''}" onclick="showPhotoChoice('${t.id}')" style="flex:1;border:none;cursor:pointer;font-family:inherit;text-align:left">${photo?'📷 Change photo':'📷 Add photo (optional)'}</button>
+      <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="display:none" onchange="hPh(this,'${t.id}')"/>
+      <input type="file" id="phc_${t.id}" name="phc_${t.id}" accept="image/*" capture="environment" style="display:none" onchange="hPh(this,'${t.id}')"/>
     </div>`;
   } else {
     // none or rejected — show full proof area
     inner+=`<div class="proof-row">
-      <label class="pcam-label${photo?' on':''}" for="ph_${t.id}" style="flex:1">${photo?'📷 Change photo':'📷 Add photo (optional)'}</label>
-      <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="position:fixed;top:0;left:0;width:100%;height:100%;opacity:0;z-index:-1" onchange="hPh(this,'${t.id}')"/>
+      <button class="pcam-label${photo?' on':''}" onclick="showPhotoChoice('${t.id}')" style="flex:1;border:none;cursor:pointer;font-family:inherit;text-align:left">${photo?'📷 Change photo':'📷 Add photo (optional)'}</button>
+      <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="display:none" onchange="hPh(this,'${t.id}')"/>
+      <input type="file" id="phc_${t.id}" name="phc_${t.id}" accept="image/*" capture="environment" style="display:none" onchange="hPh(this,'${t.id}')"/>
     </div>`;
   }
   if(photo)inner+=`<img class="proof-img" src="${photo}"/>`;
@@ -616,6 +618,52 @@ const ico=status==='approved'?'<div class="circ done">✓</div>':status==='pendi
 return `<div class="${cls}"><span class="tico">${t.ico}</span><div class="tinfo">${inner}</div>${ico}</div>`;}
 
 // FIX 2: Photo handler using onchange on inline input
+window.showPhotoChoice=function(taskId){
+  const old=document.getElementById('sk-photo-choice');if(old)old.remove();
+  const ov=document.createElement('div');
+  ov.id='sk-photo-choice';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:430px';
+  // Handle
+  const dh=document.createElement('div');
+  dh.style.cssText='width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px';
+  box.appendChild(dh);
+  // Title
+  const title=document.createElement('div');
+  title.style.cssText='font-size:15px;font-weight:700;margin-bottom:14px;text-align:center';
+  title.textContent='Add Photo';
+  box.appendChild(title);
+  // Camera button
+  const camBtn=document.createElement('button');
+  camBtn.style.cssText='width:100%;padding:14px;margin-bottom:10px;border-radius:12px;border:1.5px solid var(--g);background:var(--gl);font-size:15px;font-weight:600;color:var(--gd);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px';
+  camBtn.innerHTML='<span style="font-size:24px">📸</span> Take a photo';
+  camBtn.onclick=function(){
+    ov.remove();
+    const inp=document.getElementById('phc_'+taskId);
+    if(inp)inp.click();
+  };
+  box.appendChild(camBtn);
+  // Gallery button
+  const galBtn=document.createElement('button');
+  galBtn.style.cssText='width:100%;padding:14px;margin-bottom:10px;border-radius:12px;border:1.5px solid var(--bd);background:var(--bg2);font-size:15px;font-weight:600;color:var(--t);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px';
+  galBtn.innerHTML='<span style="font-size:24px">🖼️</span> Choose from gallery';
+  galBtn.onclick=function(){
+    ov.remove();
+    const inp=document.getElementById('ph_'+taskId);
+    if(inp)inp.click();
+  };
+  box.appendChild(galBtn);
+  // Cancel
+  const cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText='width:100%;padding:12px;border-radius:12px;border:none;background:none;font-size:14px;color:#999;cursor:pointer;font-family:inherit';
+  cancelBtn.textContent='Cancel';
+  cancelBtn.onclick=function(){ov.remove();};
+  box.appendChild(cancelBtn);
+  ov.appendChild(box);
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  document.body.appendChild(ov);
+};
 window.hPh=function(inp,id){
   const file=inp.files?.[0];if(!file)return;
   const kid=G.kid;if(!kid)return;
@@ -1135,10 +1183,28 @@ window.showCityPicker=function(){
 
 window.setPrayerCity=async function(city){
   if(!city||!city.trim())return;
-  localStorage.setItem('sk_city',city.trim());
+  city=city.trim();
+  localStorage.setItem('sk_city',city);
   localStorage.removeItem('sk_lat');localStorage.removeItem('sk_lon');
-  await initPT();
-  alert('Prayer times updated for '+city+'!');
+  // Fetch directly by city — don't go through GPS
+  const d=new Date();
+  const ds=String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+  try{
+    const r=await fetch('https://api.aladhan.com/v1/timingsByCity/'+ds+'?city='+encodeURIComponent(city)+'&country=SA&method=4');
+    const data=await r.json();
+    if(data.code===200){
+      const t=data.data.timings;
+      G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+      G.PC=city;
+      schedPrayerReminders();
+      rKid();
+      alert('✅ Prayer times updated for '+city+'!');
+    } else {
+      alert('City not found. Try another name.');
+    }
+  }catch(e){
+    alert('Could not fetch prayer times. Check internet.');
+  }
 };
 // Payment/reward notification toast
 function showPaymentToast(type,amount){
@@ -2175,15 +2241,26 @@ window.showKidWallet=async function(kidId){
 
   // ── Parent pay section (only visible to parent) ──────
   if(isParent){
-    h+=`<div style="background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:6px">💳 Mark as paid (parent)</div>
-      <div style="font-size:12px;color:var(--t3);margin-bottom:10px">Once you've paid ${kid.name} in cash/transfer, record it here to keep the balance accurate.</div>
-      <input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Amount paid (leave empty = pay full balance ${currency} ${balance.toFixed(2)})" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px"/>
-      <div style="display:flex;gap:8px">
-        <button class="btn pri" style="flex:1" onclick="parentClearWallet('${kid.id}',document.getElementById('clear-amt')?.value)">✅ Record payment</button>
-        <button class="btn" onclick="parentClearWallet('${kid.id}',null)">Pay full ${currency} ${balance.toFixed(2)}</button>
-      </div>
-    </div>`;
+    // Build parent pay section via DOM to avoid quote issues in onclick
+    const payDiv=document.createElement('div');
+    payDiv.style.cssText='background:var(--bg2);border:0.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px';
+    payDiv.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:6px">💳 Mark as paid (parent)</div>'
+      +'<div style="font-size:12px;color:var(--t3);margin-bottom:10px">Once you paid '+kid.name+' in cash or transfer, record it here to keep balance accurate.</div>'
+      +'<input id="clear-amt" type="number" min="0.01" step="0.01" placeholder="Amount paid (empty = full '+currency+' '+balance.toFixed(2)+')" style="width:100%;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;margin-bottom:8px;box-sizing:border-box"/>';
+    const btnRow=document.createElement('div');
+    btnRow.style.cssText='display:flex;gap:8px';
+    const partBtn=document.createElement('button');
+    partBtn.className='btn pri';partBtn.style.flex='1';
+    partBtn.textContent='✅ Record payment';
+    partBtn.onclick=function(){parentClearWallet(kid.id,document.getElementById('clear-amt')?.value);};
+    const fullBtn=document.createElement('button');
+    fullBtn.className='btn';
+    fullBtn.textContent='Pay full '+currency+' '+balance.toFixed(2);
+    fullBtn.onclick=function(){parentClearWallet(kid.id,null);};
+    btnRow.appendChild(partBtn);btnRow.appendChild(fullBtn);
+    payDiv.appendChild(btnRow);
+    // Inject after hero card — we'll append after innerHTML set
+    document.getElementById('wallet-body').appendChild(payDiv);
   }
 
   // ── Transaction history ──────────────────────────────
@@ -2214,8 +2291,8 @@ window.showKidWallet=async function(kidId){
     });
   }
 
-  document.getElementById('wallet-body').innerHTML=h;
   SS('s-wallet');
+  document.getElementById('wallet-body').innerHTML=h;
 };
 window.parentClearWallet=async function(kidId,amount){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;

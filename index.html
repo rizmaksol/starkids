@@ -513,6 +513,7 @@ function stKPL(uid){if(_uKP)_uKP();_uKP=onSnapshot(doc(db,'parents',uid),snap=>{
         showPaymentToast('credit',diff);
         if(document.getElementById('s-kid')?.classList.contains('active'))rKid();
       } else if(diff<-0.009){
+        // Parent paid — show confirmation to kid
         showPaymentToast('debit',Math.abs(diff));
         if(document.getElementById('s-kid')?.classList.contains('active'))rKid();
       }
@@ -1200,20 +1201,88 @@ window.setPrayerCity=async function(city){
   }
 };
 // Payment/reward notification toast
-function showPaymentToast(type,amount){
+function showPaymentToast(type,amount,kidName){
   const currency=G.currency||'SAR';
   const isCredit=type==='credit';
-  const el=document.createElement('div');
-  el.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:3000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none';
-  el.innerHTML='<div style="background:'+(isCredit?'linear-gradient(135deg,#1D9E75,#16C784)':'linear-gradient(135deg,#2196F3,#1565C0)')
-    +';color:#fff;border-radius:20px;padding:14px 24px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
-    +'<div style="font-size:28px;margin-bottom:4px">'+(isCredit?'💰':'💳')+'</div>'
-    +'<div style="font-size:15px;font-weight:800">'+(isCredit?currency+' '+amount.toFixed(2)+' added to wallet!':'Parent paid '+currency+' '+amount.toFixed(2)+'!')+'</div>'
-    +'<div style="font-size:12px;opacity:.85;margin-top:3px">'+(isCredit?'Tap 💰 to see your wallet':'Your wallet has been updated')+'</div>'
-    +'</div>';
-  document.body.appendChild(el);
-  setTimeout(()=>{el.style.transform='translateX(-50%) translateY(0)';},20);
-  setTimeout(()=>{el.style.transform='translateX(-50%) translateY(-120px)';setTimeout(()=>el.remove(),400);},4000);
+  const kid=G.kid;
+
+  // Full-screen confirmation modal — kid must tap to acknowledge
+  const old=document.getElementById('sk-pay-confirm');if(old)old.remove();
+  const ov=document.createElement('div');
+  ov.id='sk-pay-confirm';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.6)';
+
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:24px;padding:32px 24px;text-align:center;width:100%;max-width:340px;animation:badgePop .5s cubic-bezier(.34,1.56,.64,1)';
+
+  // Icon
+  const icon=document.createElement('div');
+  icon.style.cssText='font-size:64px;margin-bottom:16px';
+  icon.textContent=isCredit?'💰':'💳';
+  box.appendChild(icon);
+
+  // Title
+  const title=document.createElement('div');
+  title.style.cssText='font-size:22px;font-weight:800;color:#1B5E20;margin-bottom:8px';
+  title.textContent=isCredit?'Stars added to wallet!':'Parent paid you!';
+  box.appendChild(title);
+
+  // Amount
+  const amt=document.createElement('div');
+  amt.style.cssText='font-size:44px;font-weight:900;color:'+(isCredit?'#1D9E75':'#1565C0')+';margin:10px 0 6px';
+  amt.textContent=(isCredit?'+':'-')+currency+' '+amount.toFixed(2);
+  box.appendChild(amt);
+
+  // Description
+  const desc=document.createElement('div');
+  desc.style.cssText='font-size:14px;color:#666;margin-bottom:20px;line-height:1.5';
+  if(isCredit){
+    desc.textContent='Your cash reward has been confirmed by your parent and added to your wallet!';
+  } else {
+    // Show running balance
+    const bal=(G.wallets&&kid?getWallet(kid.id).balance:0)||0;
+    desc.innerHTML='Your parent paid you <strong>'+currency+' '+amount.toFixed(2)+'</strong>.<br>Remaining balance: <strong>'+currency+' '+bal.toFixed(2)+'</strong>';
+  }
+  box.appendChild(desc);
+
+  // Receipt-style detail box
+  const receipt=document.createElement('div');
+  receipt.style.cssText='background:#F5F5F5;border-radius:14px;padding:14px 18px;margin-bottom:20px;text-align:left';
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const timeStr=now.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'});
+  receipt.innerHTML='<div style="display:flex;justify-content:space-between;font-size:12px;color:#999;margin-bottom:6px"><span>Date</span><span>'+dateStr+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:12px;color:#999;margin-bottom:6px"><span>Time</span><span>'+timeStr+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#333"><span>'+(isCredit?'Credited':'Paid by parent')+'</span><span>'+(isCredit?'+':'-')+currency+' '+amount.toFixed(2)+'</span></div>';
+  box.appendChild(receipt);
+
+  // Confirm button
+  const btn=document.createElement('button');
+  btn.style.cssText='width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#1D9E75,#16C784);color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit';
+  btn.textContent='Got it! Thanks!';
+  btn.onclick=function(){
+    ov.style.transition='opacity .3s';
+    ov.style.opacity='0';
+    setTimeout(()=>ov.remove(),300);
+    // Refresh kid screen to show updated wallet balance
+    if(document.getElementById('s-kid')&&document.getElementById('s-kid').classList.contains('active')){
+      rKid();
+    }
+  };
+  box.appendChild(btn);
+
+  // View wallet link
+  const walletLink=document.createElement('button');
+  walletLink.style.cssText='width:100%;padding:10px;border:none;background:none;color:#1D9E75;font-size:13px;cursor:pointer;font-family:inherit;margin-top:6px;font-weight:600';
+  walletLink.textContent='View my wallet ->';
+  walletLink.onclick=function(){
+    ov.remove();
+    if(kid)showKidWallet(kid.id);
+  };
+  box.appendChild(walletLink);
+
+  ov.appendChild(box);
+  document.body.appendChild(ov);
 }
 
 let _prayerTimers=[];

@@ -674,12 +674,8 @@ window.hPh=function(inp,id){
       if(!lg.photos)lg.photos={};
       lg.photos[id]=data;
       if(lg.tasks[id]!=='pending'&&lg.tasks[id]!=='approved'){
-        lg.tasks[id]='pending';
-        const task=G.tasks.find(t=>t.id===id);
-        if(task){
-          addP(kid,task,id,lg);
-          showSubmitBadge(task.name,task.stars); // badge on photo submit
-        }
+        lg.tasks[id]='draft';
+        lg.ticked[id]=true;
       } else {
         // Update photo in existing pending
         const ex=G.pending.find(p=>p.kidId===kid.id&&p.tid===id&&p.date===today());
@@ -1653,15 +1649,47 @@ function gRep(kidId,period){
   </div>`;
 
   // ── Day by day ─────────────────────────────────────────
-  h+=`<div class="sl">Day by day</div><div class="dgrid">`;
-  (period==='week'?keys:wk()).forEach((dk,i)=>{
-    const s=cS(kidId,dk);
-    h+=`<div class="dcell${dk===td?' today':''}">
-      <div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div>
-      <div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div>
-    </div>`;
-  });
-  h+=`</div>`;
+  if(period==='week'){
+    h+=`<div class="sl">Day by day</div><div class="dgrid">`;
+    keys.forEach((dk,i)=>{
+      const s=cS(kidId,dk);
+      h+=`<div class="dcell${dk===td?' today':''}">
+        <div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div>
+      </div>`;
+    });
+    h+=`</div>`;
+  } else {
+    h+=`<div class="sl">Week by week</div>`;
+    const now2=new Date(),y2=now2.getFullYear(),mo2=now2.getMonth();
+    const firstDay=new Date(y2,mo2,1);
+    const lastDay=new Date(y2,mo2+1,0);
+    let wkStart=new Date(firstDay);
+    wkStart.setDate(firstDay.getDate()-firstDay.getDay());
+    let wkNum=1;
+    while(wkStart.getMonth()<=mo2&&wkNum<=6){
+      const wkEnd=new Date(wkStart);wkEnd.setDate(wkStart.getDate()+6);
+      let wkStars=0;
+      for(let dd=new Date(wkStart);dd<=wkEnd;dd.setDate(dd.getDate()+1)){
+        const dk2=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
+        wkStars+=cS(kidId,dk2);
+      }
+      const wkLabel='Week '+wkNum;
+      const d1=String(wkStart.getDate()).padStart(2,'0')+'/'+(wkStart.getMonth()+1);
+      const d2=String(Math.min(wkEnd.getDate(),lastDay.getDate())).padStart(2,'0')+'/'+(mo2+1);
+      const isCurWk=today()>=wkStart.toISOString().slice(0,10)&&today()<=wkEnd.toISOString().slice(0,10);
+      h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${isCurWk?'var(--gl)':'var(--bg2)'};border-radius:12px;margin-bottom:8px;border:${isCurWk?'1px solid var(--g)':'0.5px solid var(--bd)'}">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${isCurWk?'var(--gd)':'var(--t)'}">${wkLabel}${isCurWk?' ← this week':''}</div>
+          <div style="font-size:11px;color:var(--t3)">${d1} – ${d2}</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:${wkStars>0?'var(--g)':'var(--t3)'}">${wkStars}⭐</div>
+      </div>`;
+      wkStart.setDate(wkStart.getDate()+7);
+      wkNum++;
+      if(wkStart.getMonth()>mo2&&wkStart.getFullYear()>=y2)break;
+    }
+  }
 
   // ── Encouragement message ──────────────────────────────
   h+=`<div style="background:linear-gradient(135deg,var(--gl),#D0F7EC);border-radius:14px;padding:16px;text-align:center">
@@ -2150,6 +2178,7 @@ const _origAddP=typeof addP==='function'?addP:null;
 // 💰 KID WALLET (In-app bank)
 // ══════════════════════════════════════════════════════
 function getWallet(kidId){
+  if(!G.wallets)G.wallets={};
   if(!G.wallets[kidId])G.wallets[kidId]={balance:0,transactions:[]};
   return G.wallets[kidId];
 }
@@ -2292,7 +2321,9 @@ window.showKidWallet=async function(kidId){
   }
 
   SS('s-wallet');
-  document.getElementById('wallet-body').innerHTML=h;
+  const wbody=document.getElementById('wallet-body');
+  if(!wbody){console.error('wallet-body not found');return;}
+  wbody.innerHTML=h;
 };
 window.parentClearWallet=async function(kidId,amount){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;

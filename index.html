@@ -165,7 +165,7 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 <div class="screen" id="s-parent">
   <div class="topbar"><div style="display:flex;align-items:center;gap:10px"><div id="p-av" onclick="SS('s-set');rSet()" style="cursor:pointer"></div><div><div class="tb-t" id="p-tit">Dashboard</div><div class="tb-s" id="p-sub"></div></div></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="SS('s-set');rSet()">⚙️</button><button class="btn sm" onclick="doOut()">Exit</button></div></div>
   <div id="trial-banner" style="display:none;align-items:center;justify-content:space-between;padding:6px 14px;background:var(--al);border-bottom:0.5px solid var(--ab);font-size:12px;color:#633806;flex-shrink:0"></div>
-<div class="tabs"><div class="tab active" id="t-appr" onclick="pTab('appr')">Approvals<span id="adot"></span></div><div class="tab" id="t-tasks" onclick="pTab('tasks')">Tasks</div><div class="tab" id="t-kids" onclick="pTab('kids')">Kids</div><div class="tab" id="t-rewards" onclick="pTab('rewards')">Rewards</div><div class="tab" id="t-report" onclick="pTab('report')">Report</div></div>
+<div class="tabs"><div class="tab active" id="t-appr" onclick="pTab('appr')">Approvals<span id="adot"></span></div><div class="tab" id="t-tasks" onclick="pTab('tasks')">Tasks</div><div class="tab" id="t-kids" onclick="pTab('kids')">Kids</div><div class="tab" id="t-rewards" onclick="pTab('rewards')">Rewards</div><div class="tab" id="t-wallet" onclick="pTab('wallet')">💰 Pay</div><div class="tab" id="t-report" onclick="pTab('report')">Report</div></div>
   <div class="content" id="pb"></div>
 </div>
 <div class="screen" id="s-kid">
@@ -256,7 +256,7 @@ function isTrialActive(){
   return days<=7;
 }
 function canAddKid(){const p=getPlan();if(G.plan==='trial'&&isTrialActive())return G.kids.length<p.kids;if(G.plan==='premium')return true;return G.kids.length<1;}
-// ── UPGRADE FLOW ─────────────────────────────────────
+// -- UPGRADE FLOW -------------------------------------
 let _selectedPlan=null;
 
 window.showUpgradePrompt=function(){
@@ -284,7 +284,7 @@ window.showUpgradePrompt=function(){
           <div style="font-size:24px;font-weight:700;color:var(--t)">$4.99</div>
           <div style="font-size:11px;color:var(--t3)">per month</div>
         </div>
-        <!-- Yearly — highlighted -->
+        <!-- Yearly  -  highlighted -->
         <div id="plan-yearly" onclick="selectPlan('yearly')" style="border:2px solid var(--g);border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;background:var(--gl);position:relative">
           <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--g);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;white-space:nowrap">BEST VALUE</div>
           <div style="font-size:11px;color:var(--gd);margin-bottom:4px">YEARLY</div>
@@ -300,13 +300,13 @@ window.showUpgradePrompt=function(){
 
       <!-- Pay button -->
       <button id="pay-btn" onclick="proceedToPayment()" style="width:100%;padding:15px;border-radius:14px;background:#ccc;color:#fff;border:none;font-size:15px;font-weight:700;cursor:not-allowed;margin-bottom:10px;transition:background .2s">
-        Continue to Payment →
+        Continue to Payment ->
       </button>
       <button onclick="document.getElementById('upgrade-overlay').remove()" style="width:100%;padding:11px;border-radius:12px;background:none;border:0.5px solid var(--bd);font-size:13px;cursor:pointer;color:var(--t3)">
         Maybe later
       </button>
       <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--t3)">
-        Cancel anytime · Secure payment · Family-friendly
+        Cancel anytime &middot; Secure payment &middot; Family-friendly
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -324,11 +324,11 @@ window.selectPlan=function(plan){
   if(plan==='monthly'){
     mCard.style.border='2px solid var(--g)';mCard.style.background='var(--gl)';
     yCard.style.border='2px solid var(--bd)';yCard.style.background='#fff';
-    if(summary)summary.innerHTML='<strong>Monthly Plan</strong> — $4.99/month · Billed monthly · Cancel anytime';
+    if(summary)summary.innerHTML='<strong>Monthly Plan</strong>  -  $4.99/month &middot; Billed monthly &middot; Cancel anytime';
   } else {
     yCard.style.border='2px solid var(--g)';yCard.style.background='var(--gl)';
     mCard.style.border='2px solid var(--bd)';mCard.style.background='#fff';
-    if(summary)summary.innerHTML='<strong>Yearly Plan</strong> — $39.99/year · Save $19.89 · Cancel anytime';
+    if(summary)summary.innerHTML='<strong>Yearly Plan</strong>  -  $39.99/year &middot; Save $19.89 &middot; Cancel anytime';
   }
   if(btn){btn.style.background='var(--g)';btn.style.cursor='pointer';}
 };
@@ -341,7 +341,7 @@ window.proceedToPayment=function(){
     <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:430px">
       <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 20px"></div>
       <div style="font-size:18px;font-weight:700;margin-bottom:4px">💳 Payment Details</div>
-      <div style="font-size:13px;color:var(--t2);margin-bottom:20px">StarKids Premium · ${price}</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:20px">StarKids Premium &middot; ${price}</div>
 
       <div class="ff"><label>Cardholder name</label><input id="pay-name" class="inp" placeholder="Muhammad Rizwan" style="margin:0"/></div>
       <div class="ff" style="margin-top:10px"><label>Card number</label><input id="pay-card" class="inp" placeholder="1234 5678 9012 3456" maxlength="19" style="margin:0" oninput="fmtCard(this)"/></div>
@@ -360,7 +360,7 @@ window.proceedToPayment=function(){
         🔒 Pay ${price}
       </button>
       <button onclick="showUpgradePrompt()" style="width:100%;padding:11px;border-radius:12px;background:none;border:0.5px solid var(--bd);font-size:13px;cursor:pointer;color:var(--t3)">
-        ← Back to plans
+        <- Back to plans
       </button>
     </div>`;
 };
@@ -383,7 +383,7 @@ window.submitPayment=function(plan,price){
   const btn=document.querySelector('#upgrade-overlay button');
   if(btn){btn.textContent='Processing...';btn.disabled=true;}
   setTimeout(()=>{
-    // Simulate payment success — in production connect to Stripe/PayPal
+    // Simulate payment success  -  in production connect to Stripe/PayPal
     G.plan='premium';
     G.trialStart=null;
     saveP();
@@ -395,7 +395,7 @@ window.submitPayment=function(plan,price){
       <div style="font-size:64px;margin-bottom:16px">🎉</div>
       <div style="font-size:24px;font-weight:700;margin-bottom:8px">Welcome to Premium!</div>
       <div style="font-size:15px;opacity:.9;margin-bottom:6px">Your family is all set.</div>
-      <div style="font-size:13px;opacity:.75;margin-bottom:32px">${price} · Thank you for supporting StarKids</div>
+      <div style="font-size:13px;opacity:.75;margin-bottom:32px">${price} &middot; Thank you for supporting StarKids</div>
       <div style="background:rgba(255,255,255,.2);border-radius:14px;padding:16px 24px;margin-bottom:32px;font-size:13px;line-height:1.8">
         ✓ Unlimited children unlocked<br>
         ✓ All features activated<br>
@@ -455,26 +455,26 @@ async function loadP(uid){G.pUid=uid;try{const s=await getDoc(doc(db,'parents',u
 async function loadLogs(kidId){if(!G.pUid)return;try{const q=query(collection(db,'logs'),where('pUid','==',G.pUid),where('kidId','==',kidId));const s=await getDocs(q);s.forEach(d=>{const x=d.data();if(!G.logs[kidId])G.logs[kidId]={};if(x.log){G.logs[kidId][x.date]=x.log;if(!G.logs[kidId][x.date].photos)G.logs[kidId][x.date].photos={};if(!G.logs[kidId][x.date].remarks)G.logs[kidId][x.date].remarks={};}});}catch(e){console.error('lL',e);}}
 // Home
 function rHome(){const sp=gSP();const sk=gSK();let h='';
-if(sp){h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;margin-bottom:8px">👋 Welcome back</div><div class="saved-card" onclick="qPL('${encodeURIComponent(sp.email)}','${encodeURIComponent(sp.pass)}')">${avD(sp.photo,sp.emoji,'#1D9E75',46)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${sp.name}</div><div style="font-size:12px;color:var(--t3)">Parent · Tap to sign in</div></div><div style="font-size:20px;color:var(--t3)">→</div></div><div style="text-align:center;margin-bottom:12px"><span style="font-size:12px;color:var(--t3);cursor:pointer" onclick="cSP()">Not you? Sign in differently</span></div>`;}
+if(sp){h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;margin-bottom:8px">👋 Welcome back</div><div class="saved-card" onclick="qPL('${encodeURIComponent(sp.email)}','${encodeURIComponent(sp.pass)}')">${avD(sp.photo,sp.emoji,'#1D9E75',46)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${sp.name}</div><div style="font-size:12px;color:var(--t3)">Parent &middot; Tap to sign in</div></div><div style="font-size:20px;color:var(--t3)">-></div></div><div style="text-align:center;margin-bottom:12px"><span style="font-size:12px;color:var(--t3);cursor:pointer" onclick="cSP()">Not you? Sign in differently</span></div>`;}
 if(sk.length){h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;margin-bottom:8px">👦 I am a Kid</div><div class="kpicker">`;sk.forEach(k=>{h+=`<div class="kcard" onclick="qKL('${k.code}')">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',60)}<div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--g);font-weight:500">⭐ ${k.ws||0} this week</div></div>`;});h+=`</div>`;}
-if(!sp)h+=`<div class="lopt" onclick="SS('s-auth');rAuth()"><span style="font-size:22px;width:32px;text-align:center">👨‍👩‍👧</span><div><div style="font-size:14px;font-weight:600">Parent login / sign up</div><div style="font-size:12px;color:var(--t3)">Manage family · tasks · rewards</div></div></div>`;
-h+=`<div class="lopt" onclick="SS('s-code');bCI()"><span style="font-size:22px;width:32px;text-align:center">🔑</span><div><div style="font-size:14px;font-weight:600">I am a kid — enter code</div><div style="font-size:12px;color:var(--t3)">First time on this device?</div></div></div>`;
+if(!sp)h+=`<div class="lopt" onclick="SS('s-auth');rAuth()"><span style="font-size:22px;width:32px;text-align:center">👨‍👩‍👧</span><div><div style="font-size:14px;font-weight:600">Parent login / sign up</div><div style="font-size:12px;color:var(--t3)">Manage family &middot; tasks &middot; rewards</div></div></div>`;
+h+=`<div class="lopt" onclick="SS('s-code');bCI()"><span style="font-size:22px;width:32px;text-align:center">🔑</span><div><div style="font-size:14px;font-weight:600">I am a kid  -  enter code</div><div style="font-size:12px;color:var(--t3)">First time on this device?</div></div></div>`;
 document.getElementById('home-c').innerHTML=h;}
 // Auth
 let _am='in';
 window.setAM=m=>{_am=m;document.querySelectorAll('#aseg .segb').forEach((b,i)=>b.classList.toggle('active',(m==='in'&&i===0)||(m==='up'&&i===1)));rAuth();};
 window.rAuth=function(){const f=document.getElementById('aform');
-if(_am==='in'){f.innerHTML=`<div class="info g">Sign in to your parent account.</div><input class="inp" id="le" type="email" placeholder="Email" autocomplete="email"/><div style="position:relative;margin-bottom:10px"><input class="inp" id="lp" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px"/><div onclick="twP('lp','ley')" id="ley" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3)">👁</div></div><label class="check-row"><input type="checkbox" id="lr" checked/> Remember me</label><div id="aerr" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div><button class="btn pri" style="width:100%;padding:12px;margin-top:4px" onclick="doSI()">Sign in →</button><div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--g);cursor:pointer;font-weight:500" onclick="shReset()">Forgot password? →</span></div>`;}
-else{f.innerHTML=`<div class="info g">Create account. Free 7-day trial.</div><input class="inp" id="sn" placeholder="Your name" autocomplete="name"/><input class="inp" id="se" type="email" placeholder="Email" autocomplete="email"/><div style="position:relative;margin-bottom:10px"><input class="inp" id="sp" type="password" placeholder="Password (min 6)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px"/><div onclick="twP('sp','sey')" id="sey" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3)">👁</div></div><div class="ff"><label>Religion / prayer module</label><select id="sr" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"><option value="islam">Islam — 5 daily prayers</option><option value="christian">Christian — 3 prayer times</option><option value="other">Other — custom</option><option value="none">None — hide prayers</option></select></div><div class="ff"><label>Currency</label><select id="sc" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"><option value="SAR">SAR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="AED">AED</option></select></div><label class="check-row"><input type="checkbox" id="sr2" checked/> Remember me</label><div id="aerr" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div><button class="btn pri" style="width:100%;padding:12px;margin-top:4px" onclick="doSU()">Create account →</button>`;}};
+if(_am==='in'){f.innerHTML=`<div class="info g">Sign in to your parent account.</div><input class="inp" id="le" type="email" placeholder="Email" autocomplete="email"/><div style="position:relative;margin-bottom:10px"><input class="inp" id="lp" type="password" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px"/><div onclick="twP('lp','ley')" id="ley" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3)">👁</div></div><label class="check-row"><input type="checkbox" id="lr" checked/> Remember me</label><div id="aerr" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div><button class="btn pri" style="width:100%;padding:12px;margin-top:4px" onclick="doSI()">Sign in -></button><div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--g);cursor:pointer;font-weight:500" onclick="shReset()">Forgot password? -></span></div>`;}
+else{f.innerHTML=`<div class="info g">Create account. Free 7-day trial.</div><input class="inp" id="sn" placeholder="Your name" autocomplete="name"/><input class="inp" id="se" type="email" placeholder="Email" autocomplete="email"/><div style="position:relative;margin-bottom:10px"><input class="inp" id="sp" type="password" placeholder="Password (min 6)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px"/><div onclick="twP('sp','sey')" id="sey" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;color:var(--t3)">👁</div></div><div class="ff"><label>Religion / prayer module</label><select id="sr" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"><option value="islam">Islam  -  5 daily prayers</option><option value="christian">Christian  -  3 prayer times</option><option value="other">Other  -  custom</option><option value="none">None  -  hide prayers</option></select></div><div class="ff"><label>Currency</label><select id="sc" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"><option value="SAR">SAR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="AED">AED</option></select></div><label class="check-row"><input type="checkbox" id="sr2" checked/> Remember me</label><div id="aerr" style="color:var(--r);font-size:12px;min-height:16px;margin-bottom:8px"></div><button class="btn pri" style="width:100%;padding:12px;margin-top:4px" onclick="doSU()">Create account -></button>`;}};
 window.twP=(i,e)=>{const x=document.getElementById(i);const y=document.getElementById(e);if(!x)return;x.type=x.type==='password'?'text':'password';if(y)y.textContent=x.type==='password'?'👁':'🙈';};
-window.shReset=()=>{document.getElementById('aform').innerHTML=`<div class="info a">Enter your email to receive a reset link.</div><input class="inp" id="re" type="email" placeholder="Your email"/><div id="rmsg" style="font-size:13px;min-height:18px;text-align:center;margin-bottom:8px"></div><button class="btn pri" style="width:100%;padding:12px" onclick="doReset()">Send reset link →</button><div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--t3);cursor:pointer" onclick="rAuth()">← Back</span></div>`;};
+window.shReset=()=>{document.getElementById('aform').innerHTML=`<div class="info a">Enter your email to receive a reset link.</div><input class="inp" id="re" type="email" placeholder="Your email"/><div id="rmsg" style="font-size:13px;min-height:18px;text-align:center;margin-bottom:8px"></div><button class="btn pri" style="width:100%;padding:12px" onclick="doReset()">Send reset link -></button><div style="text-align:center;margin-top:12px"><span style="font-size:13px;color:var(--t3);cursor:pointer" onclick="rAuth()"><- Back</span></div>`;};
 window.doReset=async()=>{const e=document.getElementById('re').value.trim();const m=document.getElementById('rmsg');if(!e){m.style.color='var(--r)';m.textContent='Enter your email.';return;}m.style.color='var(--t3)';m.textContent='Sending...';try{await sendPasswordResetEmail(auth,e);m.style.color='var(--g)';m.textContent='✅ Reset link sent!';}catch(ex){m.style.color='var(--r)';m.textContent=ex.code==='auth/user-not-found'?'No account with this email.':ex.message;}};
 window.doSI=async()=>{const e=document.getElementById('le').value.trim(),p=document.getElementById('lp').value,rem=document.getElementById('lr').checked,err=document.getElementById('aerr');if(!e||!p){err.textContent='Fill all fields.';return;}err.textContent='Signing in...';try{await signInWithEmailAndPassword(auth,e,p);if(rem)G._rs={email:e,pass:p};}catch(ex){err.textContent=ex.code==='auth/invalid-credential'?'Wrong email or password.':ex.message;}};
 window.doSU=async()=>{const n=document.getElementById('sn').value.trim(),e=document.getElementById('se').value.trim(),p=document.getElementById('sp').value,rel=document.getElementById('sr').value,cur=document.getElementById('sc').value,rem=document.getElementById('sr2').checked,err=document.getElementById('aerr');if(!n||!e||!p){err.textContent='Fill all fields.';return;}if(p.length<6){err.textContent='Password min 6 chars.';return;}err.textContent='Creating...';try{const c=await createUserWithEmailAndPassword(auth,e,p);await updateProfile(c.user,{displayName:n});G.pUid=c.user.uid;G.pData={name:n};G.religion=rel;G.currency=cur;G.prayOn=rel!=='none';G.kids=[];G.tasks=DT;G.rewards=DR;G.pEmoji='👨‍👩‍👧';G.pPhoto=null;await saveP();if(rem)G._rs={email:e,pass:p};oPar(c.user);}catch(ex){err.textContent=ex.code==='auth/email-already-in-use'?'Email already used.':ex.message;}};
 window.qPL=async(ee,ep)=>{SS('s-load');document.getElementById('lmsg').textContent='Signing you in...';try{await signInWithEmailAndPassword(auth,decodeURIComponent(ee),decodeURIComponent(ep));}catch(e){SS('s-home');cSP();rHome();alert('Session expired. Please sign in again.');}};
 window.doOut=async()=>{stopL();await signOut(auth);G.pUid=null;G.pData=null;G.kids=[];G.logs={};G.pending=[];G.kid=null;document.title='StarKids';SS('s-home');rHome();};
 onAuthStateChanged(auth,async user=>{if(user){SS('s-load');document.getElementById('lmsg').textContent='Loading...';await loadP(user.uid);oPar(user);}else{rHome();}});
-function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' · '+today();
+function oPar(user){G.pData=G.pData||{name:user.displayName||'Parent'};if(G._rs){sSP({email:G._rs.email,pass:G._rs.pass,name:G.pData.name,emoji:G.pEmoji,photo:G.pPhoto,color:'#1D9E75'});G._rs=null;}document.getElementById('p-tit').textContent=(G.pData.name||'Parent')+"'s dashboard";document.getElementById('p-sub').textContent=dn()+' &middot; '+today();
   // Show trial/plan banner if trial
   if(G.plan==='trial'&&isTrialActive()){
     const days=G.trialStart?Math.max(0,7-Math.floor((Date.now()-new Date(G.trialStart).getTime())/(1000*60*60*24))):7;
@@ -492,7 +492,7 @@ if(!fk||!fpd.kids.find(k=>k.code===code)){SS('s-code');bCI();const el=document.g
 G.pUid=fpd.uid;G.pData={name:fpd.name};G.religion=fpd.religion||'islam';G.currency=fpd.currency||'SAR';G.prayOn=fpd.prayOn!==false;G.kids=fpd.kids||[];G.tasks=fpd.tasks||DT;G.rewards=fpd.rewards||DR;G.rewardClaims=fpd.rewardClaims||{};G.wallets=fpd.wallets||{};G.kid=fk;
 await loadLogs(fk.id);sSK(fk,wS(fk.id));syncSK(fpd.kids);
 const a=document.getElementById('k-av');if(a)a.innerHTML=avD(fk.photo,fk.emoji||'👦',fk.color||'#1D9E75',36);
-document.getElementById('k-tit').textContent=fk.name+"'s tasks";document.getElementById('k-sub').textContent=dn()+' · '+today();
+document.getElementById('k-tit').textContent=fk.name+"'s tasks";document.getElementById('k-sub').textContent=dn()+' &middot; '+today();
 stKPL(fpd.uid);SS('s-kid');rKid();initPT();}catch(e){console.error('doKL',e);SS('s-home');rHome();alert('Error: '+e.message);}}
 // Listeners
 function stPL(uid){if(_uP)_uP();_uP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;G.rewardClaims=d.rewardClaims||G.rewardClaims||{};G.wallets=d.wallets||G.wallets||{};if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at)pTab(at.id.replace('t-',''));}},e=>console.error('PL',e));}
@@ -553,15 +553,15 @@ if(rj.length)h+=`<div style="background:var(--rl);border:1px solid var(--r);bord
         <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">🎯 Claimed</div>
       </div>
       <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 6px;cursor:pointer" onclick="showKidWallet(G.kid.id)">
-        <div style="font-size:16px;font-weight:800;color:#00C48C">${wallet.balance>0?currency+' '+wallet.balance.toFixed(2):'—'}</div>
+        <div style="font-size:16px;font-weight:800;color:#00C48C">${wallet.balance>0?currency+' '+wallet.balance.toFixed(2):'-'}</div>
         <div style="font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">💰 Wallet</div>
       </div>
     </div>
-    <div style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.4)">Today: ${ts}⭐ · Tap 💰 to see wallet</div>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.4)">Today: ${ts}⭐ &middot; Tap 💰 to see wallet</div>
   </div>`;
 h+=`<div style="text-align:right;margin-bottom:8px"><button onclick="rfKid()" style="background:none;border:0.5px solid var(--bd);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--t3);cursor:pointer">🔄 Refresh</button></div>`;
-if(pr.length){const gpsLabel=localStorage.getItem('sk_lat')?'📍 GPS · '+(G.PC||''):'📍 '+(G.PC||'Riyadh');
-  h+=`<div class="sl" style="display:flex;align-items:center;justify-content:space-between"><span>🙏 Daily prayers · <span style="font-size:10px;color:var(--t3);font-weight:400">${gpsLabel}</span></span><button onclick="showCityPicker()" style="font-size:10px;color:var(--t3);background:none;border:0.5px solid var(--bd);border-radius:8px;padding:2px 8px;cursor:pointer">📍 Change</button></div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} · +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
+if(pr.length){const gpsLabel=localStorage.getItem('sk_lat')?'📍 GPS &middot; '+(G.PC||''):'📍 '+(G.PC||'Riyadh');
+  h+=`<div class="sl" style="display:flex;align-items:center;justify-content:space-between"><span>🙏 Daily prayers &middot; <span style="font-size:10px;color:var(--t3);font-weight:400">${gpsLabel}</span></span><button onclick="showCityPicker()" style="font-size:10px;color:var(--t3);background:none;border:0.5px solid var(--bd);border-radius:8px;padding:2px 8px;cursor:pointer">📍 Change</button></div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} &middot; +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
 const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));const bonus=G.tasks.filter(t=>t.cat==='bonus');
 // Show praise notes before tasks
 h+=renderPraiseNotes(kid.id);
@@ -576,9 +576,9 @@ const status=log.tasks[t.id]||'none';const photo=log.photos?.[t.id];
 const isRej=status==='rejected'||status==='rej';
 const ticked=!isRej&&!!log.ticked?.[t.id]; // no tick on rejected
 let cls='tr';if(status==='approved')cls+=' done';else if(status==='pending')cls+=' pend';else if(isRej)cls+=' rej';
-const sub=status==='approved'?`✅ Approved — you earned ${t.stars}⭐!`:status==='pending'?'⏳ Parent reviewing...':isRej?'❌ Rejected — see message below':`Complete to earn ${t.stars >= 2 ? '⭐'.repeat(t.stars) : '⭐'} ${t.stars} star${t.stars>1?'s':''}`;
+const sub=status==='approved'?`✅ Approved  -  you earned ${t.stars}⭐!`:status==='pending'?'⏳ Parent reviewing...':isRej?'❌ Rejected  -  see message below':`Complete to earn ${t.stars >= 2 ? '⭐'.repeat(t.stars) : '⭐'} ${t.stars} star${t.stars>1?'s':''}`;
 const sc=isRej?'tsub red':'tsub';
-const qtyLabel=t.qty&&t.qty>1?` (×${t.qty})`:'';let inner=`<div class="tname">${t.name}${qtyLabel}</div><div class="${sc}">${sub}</div>`;
+const qtyLabel=t.qty&&t.qty>1?` (x${t.qty})`:'';let inner=`<div class="tname">${t.name}${qtyLabel}</div><div class="${sc}">${sub}</div>`;
 // Show parent remark if rejected
 if(isRej&&log.remarks?.[t.id]){
   inner+=`<div style="background:#fff0f0;border:0.5px solid var(--r);border-radius:var(--rad);padding:8px 10px;margin-top:6px;font-size:12px;color:#791F1F;line-height:1.5">
@@ -586,24 +586,24 @@ if(isRej&&log.remarks?.[t.id]){
   </div>`;
 }
 if(status==='none'||isRej||status==='pending'){
-  // Always show buttons until approved — never hide them
+  // Always show buttons until approved  -  never hide them
   inner+=`<div class="proof-area">`;
   if(!isRej&&status!=='pending'){
-    // Tick button — show on none/rejected, hide once pending (already submitted)
+    // Tick button  -  show on none/rejected, hide once pending (already submitted)
     inner+=`<div class="proof-row" style="margin-bottom:7px">
       <div class="ptick${ticked?' on':''}" onclick="tTick('${t.id}')">${ticked?'✅ Ticked':'☐ Mark done'}</div>
     </div>`;
   }
   if(status==='pending'&&!isRej){
-    // Submitted — show what was sent + allow photo change
-    inner+=`<div style="font-size:11px;color:var(--a);font-weight:600;margin-bottom:7px">⏳ Submitted — waiting for parent approval</div>`;
+    // Submitted  -  show what was sent + allow photo change
+    inner+=`<div style="font-size:11px;color:var(--a);font-weight:600;margin-bottom:7px">⏳ Submitted  -  waiting for parent approval</div>`;
     inner+=`<div class="proof-row" style="margin-bottom:0">
       <button class="pcam-label${photo?' on':''}" onclick="showPhotoChoice('${t.id}')" style="flex:1;border:none;cursor:pointer;font-family:inherit;text-align:left">${photo?'📷 Change photo':'📷 Add photo (optional)'}</button>
       <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="display:none" onchange="hPh(this,'${t.id}')"/>
       <input type="file" id="phc_${t.id}" name="phc_${t.id}" accept="image/*" capture="environment" style="display:none" onchange="hPh(this,'${t.id}')"/>
     </div>`;
   } else {
-    // none or rejected — show full proof area
+    // none or rejected  -  show full proof area
     inner+=`<div class="proof-row">
       <button class="pcam-label${photo?' on':''}" onclick="showPhotoChoice('${t.id}')" style="flex:1;border:none;cursor:pointer;font-family:inherit;text-align:left">${photo?'📷 Change photo':'📷 Add photo (optional)'}</button>
       <input type="file" id="ph_${t.id}" name="ph_${t.id}" accept="image/*" style="display:none" onchange="hPh(this,'${t.id}')"/>
@@ -611,7 +611,7 @@ if(status==='none'||isRej||status==='pending'){
     </div>`;
   }
   if(photo)inner+=`<img class="proof-img" src="${photo}"/>`;
-  if(isRej)inner+=`<button class="resub-btn" onclick="reSub('${t.id}')">↩ Resubmit to parent</button>`;
+  if(isRej)inner+=`<button class="resub-btn" onclick="reSub('${t.id}')"><- Resubmit to parent</button>`;
   inner+=`</div>`;
 }else if(status==='approved'&&photo){inner+=`<img class="proof-img" src="${photo}" style="margin-top:6px"/>`;}
 const ico=status==='approved'?'<div class="circ done">✓</div>':status==='pending'?'<div class="circ pend">⏳</div>':isRej?'<div class="circ rej">✗</div>':'';
@@ -726,7 +726,7 @@ window.tPr=function(name){
   lg.prayers[name]=!lg.prayers[name];
   rKid();
   saveLog(kid.id,today());
-  // Check if all prayers done — show bonus badge
+  // Check if all prayers done  -  show bonus badge
   if(lg.prayers[name]){
     setTimeout(()=>checkBonuses(kid.id,today()),400);
   }
@@ -866,7 +866,7 @@ window.shCh=function(){
     card.appendChild(nm);
     var sb=document.createElement('div');
     sb.style.cssText='font-size:11px;color:#999;margin-bottom:14px';
-    sb.textContent=(r.period==='month'?'Monthly':'Weekly')+' reward · '+r.stars+' stars';
+    sb.textContent=(r.period==='month'?'Monthly':'Weekly')+' reward &middot; '+r.stars+' stars';
     card.appendChild(sb);
     var grid=document.createElement('div');
     grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px';
@@ -930,7 +930,7 @@ async function doClmR(ri,choiceType){
     rewardId:r.id,
     given:false
   };
-  // Write to Firestore — kid has no auth but rules allow write:true on parents
+  // Write to Firestore  -  kid has no auth but rules allow write:true on parents
   try{
     await setDoc(doc(db,'parents',G.pUid),{
       rewardClaims:G.rewardClaims,
@@ -989,7 +989,7 @@ window.showKR=()=>{
       <div style="text-align:center;cursor:pointer" onclick="showKidWallet(G.kid.id)"><div style="font-size:16px;font-weight:700;color:#FFD700">${currency} ${wallet.balance.toFixed(2)}</div><div style="font-size:10px;color:rgba(255,255,255,.6)">💰 wallet</div></div>
     </div>
   </div>`;
-  // Claim button — rendered INLINE in h (no separate DOM lookup needed)
+  // Claim button  -  rendered INLINE in h (no separate DOM lookup needed)
   if(claimable.length){
     h+=`<button onclick="shCh()" style="width:100%;padding:16px;margin-bottom:14px;border-radius:14px;background:linear-gradient(135deg,#FFD700,#FF9500);border:none;font-size:16px;font-weight:800;color:#7A4500;cursor:pointer;box-shadow:0 4px 16px rgba(255,149,0,.4);font-family:inherit">
       🎁 Choose Your Reward! (${claimable.length} ready)
@@ -1004,11 +1004,11 @@ window.showKR=()=>{
     const cashVal=(r.stars*rate).toFixed(2);
     const kc=kidClaims[r.id]||{};
     const givenThisPeriod=isGivenThisPeriod(kc,r);
-    const statusLine=givenThisPeriod?'✅ Given this '+(r.period==='week'?'week':'month')+' — resets next '+(r.period==='week'?'week':'month')
+    const statusLine=givenThisPeriod?'✅ Given this '+(r.period==='week'?'week':'month')+'  -  resets next '+(r.period==='week'?'week':'month')
       :r.given?'✅ Given (resets next '+(r.period==='week'?'week':'month')+')'
-      :kc.claimed?'🎯 Claimed ('+(kc.choiceType==='cash'?'💰 Cash: '+(kc.currency||currency)+' '+kc.cashAmount:'🎁 Treat')+') — waiting for parent'
+      :kc.claimed?'🎯 Claimed ('+(kc.choiceType==='cash'?'💰 Cash: '+(kc.currency||currency)+' '+kc.cashAmount:'🎁 Treat')+')  -  waiting for parent'
       :ok?'🏆 Unlocked! Tap button above to claim'
-      :c+'/'+r.stars+' stars needed · '+(r.stars-c)+' to go';
+      :c+'/'+r.stars+' stars needed &middot; '+(r.stars-c)+' to go';
     h+=`<div class="rcard${ok&&!givenThisPeriod&&!r.claimed?' unlocked':givenThisPeriod?' given':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:13px;font-weight:600">${givenThisPeriod?'✅':r.claimed?'🎯':ok?'🏆':'🔒'} ${r.name}</div>
@@ -1051,8 +1051,11 @@ window.initPT=async function(){
       const t=data.data.timings;
       G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
       // Get city name from reverse geocode or timezone
-      G.PC=data.data.meta.timezone?.split('/').pop().replace(/_/g,' ')||'Your location';
+      const tz=data.data.meta.timezone||'';
+      G.PC=tz.split('/').pop().replace(/_/g,' ')||'Your location';
+      // Save both coords AND city name so kid never needs to re-select
       localStorage.setItem('sk_lat',la);localStorage.setItem('sk_lon',lo);
+      localStorage.setItem('sk_city',G.PC);
       schedPrayerReminders();rKid();return true;
     }
     return false;
@@ -1087,31 +1090,25 @@ window.initPT=async function(){
       }
     }catch{}
   }
-  // 2. Request fresh GPS location
-  if(navigator.geolocation){
+  // 2. Try saved city (set by GPS or manual selection)  -  no GPS prompt needed
+  const savedCity=localStorage.getItem('sk_city');
+  if(savedCity){
+    try{const ok=await fetchByCity(savedCity);if(ok)return;}catch{}
+  }
+  // 3. First ever launch  -  try GPS silently (no prompt if already denied)
+  if(navigator.geolocation&&!savedCity){
     try{
       const pos=await new Promise((res,rej)=>
         navigator.geolocation.getCurrentPosition(res,rej,{
-          timeout:8000,
-          maximumAge:3600000, // accept 1-hour old position
-          enableHighAccuracy:false // faster, battery friendly
+          timeout:8000,maximumAge:86400000,enableHighAccuracy:false
         })
       );
       const la=pos.coords.latitude.toFixed(4),lo=pos.coords.longitude.toFixed(4);
       const ok=await fetchByCoords(la,lo);
       if(ok)return;
-    }catch(e){
-      console.log('GPS failed:',e.message);
-      // GPS denied or timed out — try city from saved preference
-    }
+    }catch(e){console.log('GPS:',e.message);}
   }
-  // 3. Try saved city preference
-  const savedCity=localStorage.getItem('sk_city')||'Riyadh';
-  try{
-    const ok=await fetchByCity(savedCity);
-    if(ok)return;
-  }catch{}
-  // 4. Hard fallback — Riyadh
+  // 4. Hard fallback  -  Riyadh
   try{await fetchByCity('Riyadh');}catch{}
 }
 // Let kid manually set their city for prayer times
@@ -1182,7 +1179,7 @@ window.setPrayerCity=async function(city){
   city=city.trim();
   localStorage.setItem('sk_city',city);
   localStorage.removeItem('sk_lat');localStorage.removeItem('sk_lon');
-  // Fetch directly by city — don't go through GPS
+  // Fetch directly by city  -  don't go through GPS
   const d=new Date();
   const ds=String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
   try{
@@ -1243,6 +1240,120 @@ function schedPrayerReminders(){
   });
 }
 // Parent tabs
+// =======================================================
+// PARENT PAYMENT DASHBOARD
+// =======================================================
+function rPWallet(){
+  const currency=G.currency||'SAR';
+  const rate=G.starRate||0.25;
+  const pc=document.getElementById('pb');
+  if(!G.kids.length){pc.innerHTML='<div style="padding:32px;text-align:center;color:var(--t3)">No kids added yet</div>';return;}
+  let totalDue=0;
+  G.kids.forEach(k=>{totalDue+=(getWallet(k.id).balance||0);});
+  let h='';
+  // Total payable banner
+  h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:var(--radl);padding:20px;margin-bottom:16px;color:#fff;text-align:center">
+    <div style="font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Total payable to all kids</div>
+    <div style="font-size:40px;font-weight:900;color:#FFD700">${currency} ${totalDue.toFixed(2)}</div>
+  </div>`;
+  // Per-kid cards
+  G.kids.forEach(kid=>{
+    const w=getWallet(kid.id);
+    const bal=w.balance||0;
+    const kidClaims=(G.rewardClaims||{})[kid.id]||{};
+    const earnedRewards=Object.values(kidClaims).filter(kc=>kc.given);
+    const cashOwed=earnedRewards.filter(kc=>kc.choiceType==='cash').reduce((a,kc)=>a+(kc.cashAmount||0),0);
+    const treatsOwed=earnedRewards.filter(kc=>kc.choiceType!=='cash');
+    h+=`<div style="border:0.5px solid ${bal>0?'#FFD700':'var(--bd)'};border-radius:var(--radl);padding:16px;margin-bottom:14px;background:${bal>0?'#FFFBEA':'var(--bg)'}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        ${avD(kid.photo,kid.emoji||'👦',kid.color||'#1D9E75',42)}
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:700">${kid.name}</div>
+          <div style="font-size:12px;color:var(--t3)">${wS(kid.id)}⭐ this week</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:24px;font-weight:900;color:${bal>0?'#C62828':'var(--t3)'}">${currency} ${bal.toFixed(2)}</div>
+          <div style="font-size:10px;color:var(--t3)">balance due</div>
+        </div>
+      </div>`;
+    // Earned rewards breakdown
+    if(earnedRewards.length){
+      h+=`<div style="background:rgba(0,0,0,.04);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:8px">Confirmed rewards</div>`;
+      earnedRewards.forEach(kc=>{
+        const isCash=kc.choiceType==='cash';
+        h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--bd)">
+          <div style="font-size:13px">${isCash?'💰':'🎁'} ${kc.rewardName||'Reward'}</div>
+          <div style="font-size:13px;font-weight:700;color:${isCash?'#C62828':'var(--g)'}">${isCash?currency+' '+kc.cashAmount:'Treat ✓'}</div>
+        </div>`;
+      });
+      h+=`</div>`;
+    }
+    // Pay section
+    if(bal>0){
+      h+=`<div style="display:flex;gap:8px;align-items:center">
+        <input id="pi-${kid.id}" type="number" min="0.01" max="${bal.toFixed(2)}" step="0.01"
+          placeholder="Amount (empty = full ${currency} ${bal.toFixed(2)})"
+          style="flex:1;padding:9px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;font-family:inherit"/>
+        <div id="pb-${kid.id}"></div>
+      </div>`;
+    } else {
+      h+=`<div style="text-align:center;padding:10px;font-size:13px;color:var(--g);font-weight:600">✅ All paid up!</div>`;
+    }
+    h+=`</div>`;
+  });
+  pc.innerHTML=h;
+  // Attach pay buttons after render (IIFE closure to capture kid.id)
+  G.kids.forEach(function(kid){
+    const bal=getWallet(kid.id).balance||0;
+    if(bal<=0)return;
+    const container=document.getElementById('pb-'+kid.id);
+    if(!container)return;
+    const payBtn=document.createElement('button');
+    payBtn.className='btn pri';
+    payBtn.innerHTML='✅ Pay';
+    (function(kId){
+      payBtn.onclick=function(){
+        const inp=document.getElementById('pi-'+kId);
+        const amt=inp&&inp.value?parseFloat(inp.value):null;
+        parentMarkPaid(kId,amt);
+      };
+    })(kid.id);
+    container.appendChild(payBtn);
+  });
+}
+
+window.parentMarkPaid=async function(kidId,amount){
+  const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
+  const w=getWallet(kidId);
+  const bal=w.balance||0;
+  if(bal<=0){alert('Nothing to pay.');return;}
+  const cleared=amount&&parseFloat(amount)>0?Math.min(parseFloat(amount),bal):bal;
+  if(!confirm('Mark '+G.currency+' '+cleared.toFixed(2)+' as paid to '+kid.name+'?'))return;
+  // Update wallet
+  w.balance=Math.round((w.balance-cleared)*100)/100;
+  if(!w.transactions)w.transactions=[];
+  const now=new Date();
+  w.transactions.unshift({
+    type:'debit',
+    amount:-cleared,
+    description:'Paid by parent - '+now.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'}),
+    date:now.toISOString()
+  });
+  G.wallets[kidId]=w;
+  try{
+    await setDoc(doc(db,'parents',G.pUid),{wallets:G.wallets,upd:now.toISOString()},{merge:true});
+    rPWallet();
+    // Kid's stKPL listener detects wallet change and shows payment notification
+    alert('Payment recorded! '+kid.name+' will be notified. Remaining: '+G.currency+' '+w.balance.toFixed(2));
+  }catch(e){
+    // revert on error
+    w.balance=Math.round((w.balance+cleared)*100)/100;
+    w.transactions.shift();
+    alert('Error: '+e.message);
+  }
+};
+
 window.pTab=function(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));const el=document.getElementById('t-'+tab);if(el)el.classList.add('active');document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';const pc=document.getElementById('pb');
 if(tab==='appr'){
 // Gather all pending reward claims across all kids
@@ -1269,7 +1380,7 @@ if(claimed.length){h+=`<div class="sl" style="color:var(--g);margin-top:0">🎯 
         ${avD(kid?.photo,kid?.emoji||'👦',kid?.color||'#1D9E75',28)}
         <div style="font-size:13px;font-weight:700;color:${isCash?'#7A4500':'#085041'}">${isCash?'💰':'🎁'} ${kc.claimedBy} chose: ${rName}</div>
       </div>
-      <div style="font-size:12px;color:${isCash?'#A05A00':'#085041'};margin-bottom:10px">${rStars}⭐ ${isCash?'→ '+(kc.currency||G.currency||'SAR')+' '+kc.cashAmount+' will go to wallet':'— Treat reward'}</div>
+      <div style="font-size:12px;color:${isCash?'#A05A00':'#085041'};margin-bottom:10px">${rStars}⭐ ${isCash?'-> '+(kc.currency||G.currency||'SAR')+' '+kc.cashAmount+' will go to wallet':' -  Treat reward'}</div>
       <div style="display:flex;gap:8px">
         <button class="btn dan sm" onclick="cnrDecline('${rKidId}','${rRewardId}')">✕ Decline</button>
         <button class="btn pri sm" onclick="cnrConfirm('${rKidId}','${rRewardId}')">${isCash?'💰 Confirm + add wallet':'✓ Give reward'}</button>
@@ -1283,11 +1394,11 @@ const byK={};G.pending.forEach((a,idx)=>{if(!byK[a.kidId])byK[a.kidId]={name:a.k
 const kIds=Object.keys(byK);if(!G.apprTab||!byK[G.apprTab])G.apprTab=kIds[0];
 // FIX: Per-kid tabs in approvals
 h+=`<div class="kid-tabs">`;kIds.forEach(kId=>{const kd=byK[kId];const isA=G.apprTab===kId;h+=`<div class="kid-tab${isA?' active':''}" onclick="swApprTab(this,'${kId}')">${avD(kd.ph,kd.em||'👦',kd.co||'#1D9E75',22)}<span>${kd.name}</span><span style="background:${isA?'var(--g)':'var(--bd2)'};color:${isA?'#fff':'var(--t3)'};border-radius:10px;padding:0 7px;font-size:11px">${kd.items.length}</span></div>`;});h+=`</div>`;
-const sel=byK[G.apprTab];if(sel){const ws=wS(G.apprTab);h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(sel.ph,sel.em||'👦',sel.co||'#1D9E75',38)}<div style="flex:1"><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ · ${sel.items.length} pending</div></div><button onclick="showPraiseModal('${G.apprTab}')" style="background:linear-gradient(135deg,#FFB3C6,#FF6B8A);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer">👏 Praise</button></div>`;
-sel.items.forEach(a=>{const hp=!!a.photo;const ht=!!a.ticked;const pl=hp&&ht?'📷+✓':hp?'📷 Photo':ht?'✓ Tick':'Submitted';const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:8px 0" onerror="this.style.display='none'"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">${ht?'✓ Tick submitted':'No proof yet'}</div>`;h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} · ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="rjA(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px;text-align:center;font-size:12px">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="apA(${a.idx})">✓ Approve</button></div></div>`;});}
+const sel=byK[G.apprTab];if(sel){const ws=wS(G.apprTab);h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(sel.ph,sel.em||'👦',sel.co||'#1D9E75',38)}<div style="flex:1"><div style="font-size:13px;font-weight:600">${sel.name}</div><div style="font-size:11px;color:var(--t3)">${ws}⭐ &middot; ${sel.items.length} pending</div></div><button onclick="showPraiseModal('${G.apprTab}')" style="background:linear-gradient(135deg,#FFB3C6,#FF6B8A);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer">👏 Praise</button></div>`;
+sel.items.forEach(a=>{const hp=!!a.photo;const ht=!!a.ticked;const pl=hp&&ht?'📷+✓':hp?'📷 Photo':ht?'✓ Tick':'Submitted';const ph=hp?`<img src="${a.photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:8px 0" onerror="this.style.display='none'"/>`:`<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;color:var(--t3);font-size:12px;margin:8px 0">${ht?'✓ Tick submitted':'No proof yet'}</div>`;h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:14px;font-weight:600">${a.task.ico} ${a.task.name}</div><span class="badge pend">Pending</span></div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">${a.time} &middot; ${pl}</div>${ph}<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><button class="btn dan sm" onclick="rjA(${a.idx})">✗ Reject</button><div style="flex:1;background:var(--bg2);border-radius:8px;padding:6px;text-align:center;font-size:12px">Gives <strong>${a.task.stars}⭐</strong></div><button class="btn pri sm" onclick="apA(${a.idx})">✓ Approve</button></div></div>`;});}
 }pc.innerHTML=h;return;}
 if(tab==='tasks'){const daily=G.tasks.filter(t=>t.cat==='daily');const bonus=G.tasks.filter(t=>t.cat==='bonus');let h=`<div class="info g">Kids see ✓ Tick and 📷 Photo on every task.</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="sl" style="margin:0">Daily (${daily.length})</div><button class="btn pri sm" onclick="oTF(null)">+ Add</button></div>`;daily.forEach(t=>h+=pTR(t));h+=`<div class="sl">Bonus (${bonus.length})</div>`;bonus.forEach(t=>h+=pTR(t));h+=`<button class="btn" style="width:100%;margin-top:6px" onclick="oTF(null)">+ Add bonus task</button>`;pc.innerHTML=h;return;}
-if(tab==='kids'){let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Children (${G.kids.length})</div></div>`;G.kids.forEach((k,ki)=>{const ws=wS(k.id);h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',50)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐</div></div><button class="btn sm" onclick="eKAv(${ki})">Edit photo</button></div><div class="codebox"><div class="codedigits">${k.code}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">Login code — share with ${k.name} only</div></div><div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm" onclick="rgnC('${k.id}')">🔄 New code</button><button class="btn dan sm" onclick="rmK('${k.id}')">Remove</button></div></div>`;});// Show leaderboard toggle + praise buttons per kid
+if(tab==='kids'){let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="sl" style="margin:0">Children (${G.kids.length})</div></div>`;G.kids.forEach((k,ki)=>{const ws=wS(k.id);h+=`<div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',50)}<div style="flex:1"><div style="font-size:14px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐</div></div><button class="btn sm" onclick="eKAv(${ki})">Edit photo</button></div><div class="codebox"><div class="codedigits">${k.code}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">Login code  -  share with ${k.name} only</div></div><div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm" onclick="rgnC('${k.id}')">🔄 New code</button><button class="btn dan sm" onclick="rmK('${k.id}')">Remove</button></div></div>`;});// Show leaderboard toggle + praise buttons per kid
 h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px"><div class="sl" style="margin:0">Family Leaderboard</div><button class="tog ${G.leaderboardOn?'on':'off'}" onclick="G.leaderboardOn=!G.leaderboardOn;saveP();pTab('kids')"></button></div>`;
 h+=`<div style="font-size:12px;color:var(--t3);margin-bottom:12px">Kids can see each other's weekly stars. Turn off for private mode.</div>`;
 h+=`<div class="sl">Add new child</div><div class="ff"><label>Name</label><input id="kin" placeholder="e.g. Hamza" style="width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:13px"/></div><div class="ff"><label>Choose emoji</label><div class="emoji-grid" id="nkeg">${KE.map((e,i)=>`<div class="emoji-opt${i===0?' selected':''}" onclick="sNKE(this,'${e}')">${e}</div>`).join('')}</div></div><button class="btn pri" style="width:100%" onclick="addK()">+ Add child</button>`;pc.innerHTML=h;return;}
@@ -1310,7 +1421,7 @@ if(G.kids.length>0){if(!G.rwdTab||!G.kids.find(k=>k.id===G.rwdTab))G.rwdTab=G.ki
 if(G.kids.length>1){h+=`<div class="kid-tabs">`;G.kids.forEach(k=>{const isA=G.rwdTab===k.id;h+=`<div class="kid-tab${isA?' active':''}" onclick="swRwdTab(this,'${k.id}')">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',22)}<span>${k.name}</span><span style="font-size:11px;color:${isA?'#085041':'var(--t3)'}">⭐${wS(k.id)}</span></div>`;});h+=`</div>`;}
 const sk=G.kids.find(k=>k.id===G.rwdTab)||G.kids[0];h+=rKRR(sk);}
 pc.innerHTML=h;return;}
-if(tab==='report'){rRep(pc);return;}};
+if(tab==='wallet'){rPWallet();return;}else if(tab==='report'){rRep(pc);return;}};
 function rKRR(k){
   const ws=wS(k.id);const ms=mS(k.id);
   const currency=G.currency||'SAR';const rate=G.starRate||0.25;
@@ -1325,7 +1436,7 @@ function rKRR(k){
     if(r.period==='month')return r.givenMonth===curMo;
     return r.given;
   };
-  let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',34)}<div><div style="font-size:13px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐ · Month: ${ms}⭐</div></div></div>`;
+  let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:var(--bg2);border-radius:var(--rad)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',34)}<div><div style="font-size:13px;font-weight:600">${k.name}</div><div style="font-size:12px;color:var(--t3)">Week: ${ws}⭐ &middot; Month: ${ms}⭐</div></div></div>`;
   [...G.rewards].sort((a,b)=>a.stars-b.stars).forEach(r=>{
     const c=r.period==='month'?ms:ws;
     const ok=c>=r.stars;
@@ -1333,9 +1444,9 @@ function rKRR(k){
     const cashVal=(r.stars*rate).toFixed(2);
     const gtp=givenThisPeriod(r);
     const periodLabel=r.period==='month'?'Monthly':'Weekly';
-    const statusLine=gtp?'✅ Given this '+periodLabel.toLowerCase()+' · resets next '+periodLabel.toLowerCase()
-      :r.claimed?'🎯 '+(r.claimedBy||'Child')+' claimed — '+(r.choiceType==='cash'?'💰 Cash: '+(r.currency||currency)+' '+r.cashAmount:'🎁 Treat')
-      :ok?'🏆 Unlocked — waiting for child to claim'
+    const statusLine=gtp?'✅ Given this '+periodLabel.toLowerCase()+' &middot; resets next '+periodLabel.toLowerCase()
+      :r.claimed?'🎯 '+(r.claimedBy||'Child')+' claimed  -  '+(r.choiceType==='cash'?'💰 Cash: '+(r.currency||currency)+' '+r.cashAmount:'🎁 Treat')
+      :ok?'🏆 Unlocked  -  waiting for child to claim'
       :c+'/'+r.stars+' stars needed';
     h+=`<div class="rcard${ok&&!gtp&&!r.claimed?' unlocked':gtp?' given':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1343,7 +1454,7 @@ function rKRR(k){
         <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--g)">${r.stars}⭐</div><div style="font-size:10px;color:var(--t3)">${currency} ${cashVal}</div></div>
       </div>
       <div class="pb" style="margin-bottom:5px"><div class="pbf" style="width:${pct}%"></div></div>
-      <div style="font-size:11px;color:var(--t3)">${statusLine} · ${periodLabel}</div>
+      <div style="font-size:11px;color:var(--t3)">${statusLine} &middot; ${periodLabel}</div>
     </div>`;
   });
   return h;
@@ -1374,11 +1485,11 @@ window.rjA=function(idx){
       <div style="width:32px;height:32px;border-radius:50%;background:var(--rl);display:flex;align-items:center;justify-content:center;font-size:16px">✗</div>
       <div>
         <div style="font-size:14px;font-weight:700">Reject Task</div>
-        <div style="font-size:12px;color:var(--t3)">${a.task.ico} ${a.task.name} · ${a.kidName}</div>
+        <div style="font-size:12px;color:var(--t3)">${a.task.ico} ${a.task.name} &middot; ${a.kidName}</div>
       </div>
     </div>
     <div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.5">Tell <strong>${a.kidName}</strong> why this was rejected and how to improve. This message will appear on their screen.</div>
-    <textarea id="${taId}" placeholder="e.g. The bed wasn't made properly — please tuck in the sheets and arrange the pillows neatly next time." style="width:100%;height:90px;padding:10px;border:1.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;font-family:inherit;resize:none;outline:none;color:var(--t)"></textarea>
+    <textarea id="${taId}" placeholder="e.g. The bed wasn't made properly  -  please tuck in the sheets and arrange the pillows neatly next time." style="width:100%;height:90px;padding:10px;border:1.5px solid var(--bd2);border-radius:var(--rad);font-size:13px;font-family:inherit;resize:none;outline:none;color:var(--t)"></textarea>
     <div id="${errId}" style="color:var(--r);font-size:12px;min-height:14px;margin:4px 0 10px"></div>
     <div style="display:flex;gap:8px">
       <button style="flex:1;padding:10px;border-radius:var(--rad);border:0.5px solid var(--bd2);background:#fff;font-size:13px;cursor:pointer;color:var(--t)" onclick="document.getElementById('${mid}').remove()">Cancel</button>
@@ -1415,7 +1526,7 @@ window.cnrConfirm=async function(kidId,rewardId){
   kc.givenMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var msg='Reward given!';
   if(kc.choiceType==='cash'&&kc.cashAmount&&kid){
-    addToWallet(kidId,parseFloat(kc.cashAmount||0),(kc.rewardName||rewardId)+' — cash reward');
+    addToWallet(kidId,parseFloat(kc.cashAmount||0),(kc.rewardName||rewardId)+'  -  cash reward');
     msg='Confirmed! '+(kc.currency||G.currency||'SAR')+' '+parseFloat(kc.cashAmount||0).toFixed(2)+' added to '+kid.name+"'s wallet!";
   } else {
     msg='"'+(kc.rewardName||rewardId)+'" given to '+(kc.claimedBy||'child')+'!';
@@ -1438,12 +1549,12 @@ window.cnR=async ri=>{
   const kid=G.kids.find(k=>k.name===r.claimedBy);
   r.given=true;r.claimed=false;
   if(r.choiceType==='cash'&&r.cashAmount&&kid){
-    addToWallet(kid.id,r.cashAmount,r.name+' — cash reward');
+    addToWallet(kid.id,r.cashAmount,r.name+'  -  cash reward');
   }
   await saveP();pTab('appr');alert('Reward given!');
 };
 window.dR=ri=>{G.rewards[ri].claimed=false;delete G.rewards[ri].claimedBy;saveP();pTab('appr');};
-function pTR(t){const freq=t.freq||'daily';const qty=t.qty||1;const freqLabel=freq==='weekly'?'Weekly':freq==='monthly'?'Monthly':'Daily';return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ · ${qty>1?qty+'x ':''}${freqLabel} · ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="dlT('${t.id}')">🗑️</button></div></div>`;}
+function pTR(t){const freq=t.freq||'daily';const qty=t.qty||1;const freqLabel=freq==='weekly'?'Weekly':freq==='monthly'?'Monthly':'Daily';return `<div class="tr"><span class="tico">${t.ico}</span><div class="tinfo"><div class="tname">${t.name}</div><div class="tsub">+${t.stars}⭐ &middot; ${qty>1?qty+'x ':''}${freqLabel} &middot; ${t.cat}</div></div><div style="display:flex;gap:4px"><button class="btn ib" onclick="oTF('${t.id}')">✏️</button><button class="btn ib dan" onclick="dlT('${t.id}')">🗑️</button></div></div>`;}
 window.oTF=id=>{
   const t=id?G.tasks.find(x=>x.id===id):null;
   G.editTask=id||null;
@@ -1480,7 +1591,7 @@ window.oTF=id=>{
     </select>
   </div>
   <div style="background:var(--bg2);border-radius:var(--rad);padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--t2)">
-    💡 Example: "Read 20 min" — 1 time, Daily, 2 stars
+    💡 Example: "Read 20 min"  -  1 time, Daily, 2 stars
   </div>
   <div style="display:flex;gap:8px">${t?`<button class="btn dan" onclick="dlT('${t.id}');pTab('tasks')">Delete</button>`:''}<button class="btn pri" onclick="svT()">Save task</button></div>`;
   document.getElementById('pb').innerHTML=h;
@@ -1545,10 +1656,10 @@ function gRep(kidId,period){
   const tp=tt?Math.round(td2/tt*100):0;
   const pp=pr.length?Math.round(pd/keys.length*100):null;
   const now=new Date();
-  const dl=period==='week'?`${wk()[0]} → ${wk()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;
+  const dl=period==='week'?`${wk()[0]} -> ${wk()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;
   const grade=tp>=90?{e:'🥇',l:'A+',c:'#FFD700',t:'Excellent'}:tp>=70?{e:'🥈',l:'A',c:'#C0C0C0',t:'Very good'}:tp>=50?{e:'🥉',l:'B',c:'#CD7F32',t:'Good progress'}:{e:'💪',l:'C',t:'Keep going',c:'var(--g)'};
 
-  // ── Wallet & rewards summary ─────────────────────────
+  // -- Wallet & rewards summary -------------------------
   const currency=G.currency||'SAR';
   const rate=G.starRate||0.25;
   const w=getWallet(kidId);
@@ -1579,7 +1690,7 @@ function gRep(kidId,period){
     <div style="font-size:56px;margin-bottom:8px">${grade.e}</div>
     <div style="font-size:28px;font-weight:800;color:#FFD700">${kid.name}</div>
     <div style="font-size:48px;font-weight:900;color:${grade.c};margin:8px 0">${grade.l}</div>
-    <div style="font-size:13px;opacity:.7">Week of ${wk()[0]} — ${wk()[6]}</div>
+    <div style="font-size:13px;opacity:.7">Week of ${wk()[0]}  -  ${wk()[6]}</div>
     ${badgeStr?`<div style="font-size:24px;margin-top:8px">${badgeStr}</div>`:''}
   </div>
 
@@ -1602,7 +1713,7 @@ function gRep(kidId,period){
     </div>
   </div>`;
 
-  // ── Progress bars ─────────────────────────────────────
+  // -- Progress bars -------------------------------------
   h+=`<div style="background:var(--bg);border:0.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px">`;
   [{l:'Daily Tasks',v:tp,max:100,u:'%',c:'var(--g)'},
    {l:'Stars earned',v:ts,max:Math.max(ts,50),u:'⭐',c:'var(--p)'},
@@ -1619,7 +1730,7 @@ function gRep(kidId,period){
   });
   h+=`</div>`;
 
-  // ── Wallet & Rewards Financial Summary ────────────────
+  // -- Wallet & Rewards Financial Summary ----------------
   h+=`<div style="background:linear-gradient(135deg,#1A1D2E,#2D3561);border-radius:14px;padding:18px;margin-bottom:14px;color:#fff">
     <div style="font-size:13px;font-weight:700;color:#FFD700;margin-bottom:14px;letter-spacing:.05em">💰 EARNINGS SUMMARY</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
@@ -1648,7 +1759,7 @@ function gRep(kidId,period){
     </div>
   </div>`;
 
-  // ── Day by day ─────────────────────────────────────────
+  // -- Day by day -----------------------------------------
   if(period==='week'){
     h+=`<div class="sl">Day by day</div><div class="dgrid">`;
     keys.forEach((dk,i)=>{
@@ -1680,8 +1791,8 @@ function gRep(kidId,period){
       const isCurWk=today()>=wkStart.toISOString().slice(0,10)&&today()<=wkEnd.toISOString().slice(0,10);
       h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${isCurWk?'var(--gl)':'var(--bg2)'};border-radius:12px;margin-bottom:8px;border:${isCurWk?'1px solid var(--g)':'0.5px solid var(--bd)'}">
         <div>
-          <div style="font-size:13px;font-weight:700;color:${isCurWk?'var(--gd)':'var(--t)'}">${wkLabel}${isCurWk?' ← this week':''}</div>
-          <div style="font-size:11px;color:var(--t3)">${d1} – ${d2}</div>
+          <div style="font-size:13px;font-weight:700;color:${isCurWk?'var(--gd)':'var(--t)'}">${wkLabel}${isCurWk?' <- this week':''}</div>
+          <div style="font-size:11px;color:var(--t3)">${d1} - ${d2}</div>
         </div>
         <div style="font-size:20px;font-weight:800;color:${wkStars>0?'var(--g)':'var(--t3)'}">${wkStars}⭐</div>
       </div>`;
@@ -1691,22 +1802,22 @@ function gRep(kidId,period){
     }
   }
 
-  // ── Encouragement message ──────────────────────────────
+  // -- Encouragement message ------------------------------
   h+=`<div style="background:linear-gradient(135deg,var(--gl),#D0F7EC);border-radius:14px;padding:16px;text-align:center">
     <div style="font-size:18px;margin-bottom:4px">${grade.e}</div>
-    <div style="font-size:14px;font-weight:700;color:var(--gd)">${tp>=90?'Outstanding week! You are a superstar!':tp>=70?'Great effort this week!':tp>=50?'Good progress — keep it up!':'Every star counts — let\'s do more tomorrow!'}</div>
+    <div style="font-size:14px;font-weight:700;color:var(--gd)">${tp>=90?'Outstanding week! You are a superstar!':tp>=70?'Great effort this week!':tp>=50?'Good progress  -  keep it up!':'Every star counts  -  let\'s do more tomorrow!'}</div>
   </div>`;
 
   document.getElementById('rc').innerHTML=h;
 }
 
-window.rSet=()=>{const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼'];let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center"><div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div><div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div><label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" name="parent-profile-photo" accept="image/*" capture="environment" style="display:none" onchange="hPPh(this)"/></label><div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="sPE('${e}')">${e}</div>`).join('')}</div><button class="btn dan" style="width:100%;margin-top:10px" onclick="doOut()">Sign out</button></div>`;h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();rSet()"></button></div>`;if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam — 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian — 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div><div class="sl">Star value (reward rate)</div><div class="card"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">Set how much 1 star is worth in cash. Kids can choose cash instead of a treat reward.</div><div style="display:flex;align-items:center;gap:10px"><div style="font-size:22px">⭐ =</div><input type="number" id="star-rate-inp" min="0.05" max="10" step="0.05" value="${G.starRate||0.25}" style="width:90px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:16px;font-weight:700;text-align:center"/><div style="font-size:15px;font-weight:600">${G.currency||'SAR'}</div></div><button class="btn pri sm" style="margin-top:10px" onclick="G.starRate=parseFloat(document.getElementById('star-rate-inp').value)||0.25;saveP();alert('Star rate saved: 1⭐ = '+G.starRate+' '+G.currency);">Save rate</button></div><div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');rSet()">Clear all saved logins</button></div>`;document.getElementById('setb').innerHTML=h;};
+window.rSet=()=>{const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼'];let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center"><div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div><div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div><label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" name="parent-profile-photo" accept="image/*" capture="environment" style="display:none" onchange="hPPh(this)"/></label><div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="sPE('${e}')">${e}</div>`).join('')}</div><button class="btn dan" style="width:100%;margin-top:10px" onclick="doOut()">Sign out</button></div>`;h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();rSet()"></button></div>`;if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam  -  5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian  -  3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div><div class="sl">Star value (reward rate)</div><div class="card"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">Set how much 1 star is worth in cash. Kids can choose cash instead of a treat reward.</div><div style="display:flex;align-items:center;gap:10px"><div style="font-size:22px">⭐ =</div><input type="number" id="star-rate-inp" min="0.05" max="10" step="0.05" value="${G.starRate||0.25}" style="width:90px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:16px;font-weight:700;text-align:center"/><div style="font-size:15px;font-weight:600">${G.currency||'SAR'}</div></div><button class="btn pri sm" style="margin-top:10px" onclick="G.starRate=parseFloat(document.getElementById('star-rate-inp').value)||0.25;saveP();alert('Star rate saved: 1⭐ = '+G.starRate+' '+G.currency);">Save rate</button></div><div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');rSet()">Clear all saved logins</button></div>`;document.getElementById('setb').innerHTML=h;};
 window.hPPh=function(inp){const file=inp.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{compress(ev.target.result,300,data=>{G.pPhoto=data;G.pEmoji=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);});};reader.readAsDataURL(file);inp.value='';};
 window.sPE=e=>{G.pEmoji=e;G.pPhoto=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(null,G.pEmoji,'#1D9E75',36);};
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 🏺 GOAL JARS
-// ══════════════════════════════════════════════════════
+// ======================================================
 function getJars(kidId){return G.goalJars[kidId]||[];}
 
 window.showGoalJars=function(kidId){
@@ -1767,9 +1878,9 @@ window.saveJar=function(){
   else{pTab('report');SS('s-parent');}
 };
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 🏅 ACHIEVEMENT BADGES
-// ══════════════════════════════════════════════════════
+// ======================================================
 const ALL_BADGES=[
   {id:'first10',emoji:'🌟',name:'First Stars',desc:'Earned your first 10 stars'},
   {id:'first50',emoji:'⭐',name:'Star Collector',desc:'Earned 50 stars total'},
@@ -1860,9 +1971,9 @@ window.showBadges=function(kidId){
   document.getElementById('badges-body').innerHTML=h;
 };
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 👏 PARENT PRAISE NOTES
-// ══════════════════════════════════════════════════════
+// ======================================================
 const PRAISE_PRESETS=[
   {e:'👏',msg:'Great job today!'},
   {e:'🌟',msg:'I am so proud of you!'},
@@ -1927,15 +2038,15 @@ function renderPraiseNotes(kidId){
     const d=new Date(n.date);const ds=d.toLocaleDateString('en',{weekday:'short',day:'numeric',month:'short'});
     h+=`<div style="background:linear-gradient(135deg,#FFF4F7,#FFE9EF);border:1px solid #FFB3C6;border-radius:var(--radl);padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start">
       <div style="font-size:28px;flex-shrink:0">${n.e}</div>
-      <div><div style="font-size:14px;color:var(--t);font-weight:500;line-height:1.4">${n.msg}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">From ${n.from} · ${ds}</div></div>
+      <div><div style="font-size:14px;color:var(--t);font-weight:500;line-height:1.4">${n.msg}</div><div style="font-size:11px;color:var(--t3);margin-top:4px">From ${n.from} &middot; ${ds}</div></div>
     </div>`;
   });
   return h;
 }
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 🏆 FAMILY LEADERBOARD
-// ══════════════════════════════════════════════════════
+// ======================================================
 window.showLeaderboard=function(){
   if(!G.leaderboardOn){alert('Leaderboard is turned off in Settings.');return;}
   SS('s-lb');
@@ -1964,9 +2075,9 @@ window.showLeaderboard=function(){
   document.getElementById('lb-body').innerHTML=h;
 };
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 📊 VISUAL WEEKLY REPORT CARD
-// ══════════════════════════════════════════════════════
+// ======================================================
 window.showReportCard=function(kidId){
   const kid=G.kids.find(k=>k.id===kidId)||G.kid;if(!kid)return;
   const ws=wS(kid.id);const streak=calcStreak(kid.id);
@@ -1984,7 +2095,7 @@ window.showReportCard=function(kidId){
       <div style="font-size:56px;margin-bottom:8px">${grade.e}</div>
       <div style="font-size:28px;font-weight:800;color:#FFD700">${kid.name}</div>
       <div style="font-size:48px;font-weight:900;color:${grade.c};margin:8px 0">${grade.l}</div>
-      <div style="font-size:13px;opacity:.7">Week of ${wk()[0]} — ${wk()[6]}</div>
+      <div style="font-size:13px;opacity:.7">Week of ${wk()[0]}  -  ${wk()[6]}</div>
       ${badges?`<div style="font-size:24px;margin-top:8px">${badges}</div>`:''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
@@ -2020,9 +2131,9 @@ window.showReportCard=function(kidId){
     </div>`;
 };
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 🏅 BONUS STARS & GOLDEN BADGES
-// ══════════════════════════════════════════════════════
+// ======================================================
 
 // Appreciation messages for task completion
 const TASK_PRAISE=[
@@ -2096,7 +2207,7 @@ function showTaskPraise(taskName){
     <div style="background:rgba(255,255,255,.5);border-radius:14px;padding:10px 18px;margin-bottom:14px">
       <div style="font-size:14px;color:#7A2500;font-weight:700">✓ ${taskName}</div>
     </div>
-    <div style="display:inline-block;background:rgba(0,0,0,.15);border-radius:20px;padding:6px 20px;font-size:12px;color:rgba(255,255,255,.9)">Tap to continue →</div>
+    <div style="display:inline-block;background:rgba(0,0,0,.15);border-radius:20px;padding:6px 20px;font-size:12px;color:rgba(255,255,255,.9)">Tap to continue -></div>
   </div>`;
   el.onclick=()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);};
   document.body.appendChild(el);
@@ -2120,7 +2231,7 @@ async function checkBonuses(kidId, dk){
     showGoldenBadge({
       emoji:'🕌',
       title:'All Prayers Complete!',
-      subtitle:'Amazing — all prayers done today!',
+      subtitle:'Amazing  -  all prayers done today!',
       stars:5
     });
   }
@@ -2160,7 +2271,7 @@ async function checkBonuses(kidId, dk){
       showGoldenBadge({
         emoji:'🏆',
         title:'90% Weekly Champion!',
-        subtitle:'Outstanding week — '+pct+'% tasks completed!',
+        subtitle:'Outstanding week  -  '+pct+'% tasks completed!',
         stars:10
       });
     },3500); // delay so it doesn't overlap prayer badge
@@ -2174,9 +2285,9 @@ async function checkBonuses(kidId, dk){
 // Kid-side immediate feedback when submitting
 const _origAddP=typeof addP==='function'?addP:null;
 
-// ══════════════════════════════════════════════════════
+// ======================================================
 // 💰 KID WALLET (In-app bank)
-// ══════════════════════════════════════════════════════
+// ======================================================
 function getWallet(kidId){
   if(!G.wallets)G.wallets={};
   if(!G.wallets[kidId])G.wallets[kidId]={balance:0,transactions:[]};
@@ -2195,7 +2306,7 @@ function addToWallet(kidId,amount,description){
   });
   if(w.transactions.length>50)w.transactions=w.transactions.slice(0,50);
   G.wallets[kidId]=w;
-  // Don't call saveP here — caller will do it after all changes
+  // Don't call saveP here  -  caller will do it after all changes
 }
 window.parentClearWallet=async function(kidId,amount){
   const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;
@@ -2209,7 +2320,7 @@ window.parentClearWallet=async function(kidId,amount){
   w.transactions.unshift({
     type:'debit',
     amount:-cleared,
-    description:'Paid by parent — '+(new Date().toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'})),
+    description:'Paid by parent - '+(new Date().toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'})),
     date:new Date().toISOString()
   });
   G.wallets[kidId]=w;
@@ -2266,15 +2377,15 @@ window.showKidWallet=async function(kidId){
     </div>
   </div>`;
 
-  // How payment works (always visible — educates both parent and kid)
+  // How payment works (always visible  -  educates both parent and kid)
   h+=`<div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:14px;padding:14px;margin-bottom:14px">
     <div style="font-size:13px;font-weight:700;color:#1B5E20;margin-bottom:8px">📲 How payment works</div>
     <div style="font-size:12px;color:#2E7D32;line-height:2">
-      <div>✅ <strong>Step 1:</strong> Parent approves task → stars added</div>
-      <div>🎁 <strong>Step 2:</strong> Kid claims reward as cash → sent to parent</div>
-      <div>💰 <strong>Step 3:</strong> Parent confirms → balance appears here</div>
+      <div>✅ <strong>Step 1:</strong> Parent approves task -> stars added</div>
+      <div>🎁 <strong>Step 2:</strong> Kid claims reward as cash -> sent to parent</div>
+      <div>💰 <strong>Step 3:</strong> Parent confirms -> balance appears here</div>
       <div>💳 <strong>Step 4:</strong> Pay in real life (cash / STC Pay / bank)</div>
-      <div>📱 <strong>Step 5:</strong> Parent taps Record payment → kid notified instantly</div>
+      <div>📱 <strong>Step 5:</strong> Parent taps Record payment -> kid notified instantly</div>
     </div>
   </div>`;
 
@@ -2299,7 +2410,7 @@ window.showKidWallet=async function(kidId){
     h+=`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📋 Transaction History</div>`;
     w.transactions.forEach(tx=>{
       const d=new Date(tx.date||'');
-      const ds=isNaN(d)?'—':d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'});
+      const ds=isNaN(d)?'-':d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'});
       const isDebit=tx.type==='debit'||tx.amount<0;
       h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--bd)">
         <div style="display:flex;align-items:center;gap:10px">
@@ -2310,7 +2421,7 @@ window.showKidWallet=async function(kidId){
           </div>
         </div>
         <div style="font-size:15px;font-weight:700;color:${isDebit?'var(--r)':'var(--g)'}">
-          ${isDebit?'−':'+'}${currency} ${Math.abs(tx.amount||0).toFixed(2)}
+          ${isDebit?'-':'+'}${currency} ${Math.abs(tx.amount||0).toFixed(2)}
         </div>
       </div>`;
     });
@@ -2355,7 +2466,7 @@ window.parentClearWallet=async function(kidId,amount){
   w.transactions.unshift({
     type:'debit',
     amount:-cleared,
-    description:'Paid by parent — '+(new Date().toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'})),
+    description:'Paid by parent - '+(new Date().toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'})),
     date:new Date().toISOString()
   });
   G.wallets[kidId]=w;
@@ -2379,17 +2490,17 @@ window.swRwdTab=function(el,kidId){
   pTab('rewards');
 };
 
-// ── INIT ──────────────────────────────────────────────
-// ═══════════════════════════════════════════════════
-// ONBOARDING — shown once to new users
-// ═══════════════════════════════════════════════════
+// -- INIT ----------------------------------------------
+// ===================================================
+// ONBOARDING  -  shown once to new users
+// ===================================================
 const OB_SLIDES=[
   {
     emoji:'⭐',
     color:'linear-gradient(135deg,#1A1D2E,#2D3561)',
     textColor:'#fff',
     title:'Welcome to StarKids!',
-    sub:'The family app that turns daily habits into rewards — and builds real character.',
+    sub:'The family app that turns daily habits into rewards  -  and builds real character.',
     bullets:['✅ Kids earn stars for tasks & prayers','🎁 Stars unlock treats or real cash','📊 Parents approve, track, and reward']
   },
   {
@@ -2398,7 +2509,7 @@ const OB_SLIDES=[
     textColor:'#1B5E20',
     title:'How it works',
     sub:'Simple daily routine for the whole family.',
-    bullets:['1️⃣ Parent sets tasks, prayers & rewards','2️⃣ Kid completes tasks and taps ✓','3️⃣ Parent approves — stars are awarded','4️⃣ Kid claims reward: treat or cash 💰']
+    bullets:['1️⃣ Parent sets tasks, prayers & rewards','2️⃣ Kid completes tasks and taps ✓','3️⃣ Parent approves  -  stars are awarded','4️⃣ Kid claims reward: treat or cash 💰']
   },
   {
     emoji:'💰',
@@ -2427,7 +2538,7 @@ window.obRender=function(){
     `<div style="width:${i===obIdx?24:8}px;height:8px;border-radius:4px;background:${i===obIdx?'var(--g)':'var(--bd2)'};transition:all .3s"></div>`
   ).join('');
   // Button label
-  document.getElementById('ob-next').textContent=obIdx===total-1?'Start earning stars! ⭐':'Next →';
+  document.getElementById('ob-next').textContent=obIdx===total-1?'Start earning stars! ⭐':'Next ->';
 }
 window.obNext=function(){
   if(obIdx<OB_SLIDES.length-1){obIdx++;obRender();}
@@ -2444,8 +2555,8 @@ window.showOnboarding=function(){
   obRender();
 }
 
-// Global error handler — no more blank screens
-window.onerror=function(msg,src,line,col,err){
+// Global error handler  -  no more blank screens
+window.onerror=function(msg,src,line,col,err){console.error('ERROR at',src,'line',line,'col',col,'msg',msg);
   const known=['ResizeObserver','Non-Error','Script error'];
   if(known.some(k=>String(msg).includes(k)))return false;
   console.error('Global error:',msg,src,line);
@@ -2455,7 +2566,7 @@ window.onerror=function(msg,src,line,col,err){
   b.id='sk-err-banner';
   b.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#D32F2F;color:#fff;padding:14px 16px;z-index:99999;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px';
   b.innerHTML='<div><strong>Something went wrong.</strong><br><span style="opacity:.85;font-size:11px">'+String(msg).slice(0,80)+'</span></div>'
-    +'<button onclick="location.reload()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">↺ Reload</button>';
+    +'<button onclick="location.reload()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"><- Reload</button>';
   document.body.appendChild(b);
   return false;
 };
@@ -2464,7 +2575,18 @@ window.onunhandledrejection=function(e){
 };
 rHome();bCI();setAM('in');rAuth();showOnboarding();
 </script>
-<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/starkids/sw.js').catch(()=>{});});}</script>
+<script>
+if('serviceWorker'in navigator){
+  // Clear old caches first
+  if(caches&&caches.keys){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));}
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){r.unregister();});
+  });
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/starkids/sw.js').catch(function(){});
+  });
+}
+</script>
 <!-- ONBOARDING -->
 <div id="sk-onboard" style="display:none;position:fixed;inset:0;z-index:99998;background:#fff;flex-direction:column">
   <div style="flex:1;overflow:hidden;position:relative" id="ob-slides"></div>

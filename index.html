@@ -498,7 +498,26 @@ stKPL(fpd.uid);SS('s-kid');rKid();initPT();}catch(e){console.error('doKL',e);SS(
 function stPL(uid){if(_uP)_uP();_uP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.kids=d.kids||G.kids;G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;G.rewardClaims=d.rewardClaims||G.rewardClaims||{};G.wallets=d.wallets||G.wallets||{};if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at)pTab(at.id.replace('t-',''));}},e=>console.error('PL',e));}
 // FIX 3: Kid deletion listener
 // Claims handled via parent doc merge
-function stKPL(uid){if(_uKP)_uKP();_uKP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;G.rewardClaims=d.rewardClaims||G.rewardClaims||{};G.wallets=d.wallets||G.wallets||{};if(G.kid&&(!d.kids||!d.kids.find(k=>k.id===G.kid.id))){stopL();syncSK([]);G.kid=null;SS('s-home');rHome();alert('Your account has been removed by the parent.');}},e=>console.error('KPL',e));}
+function stKPL(uid){if(_uKP)_uKP();_uKP=onSnapshot(doc(db,'parents',uid),snap=>{if(!snap.exists())return;const d=snap.data();
+    G.tasks=d.tasks||G.tasks;G.rewards=d.rewards||G.rewards;
+    G.rewardClaims=d.rewardClaims||G.rewardClaims||{};
+    // Check if wallet balance changed (parent paid or reward confirmed)
+    const oldWallet=G.wallets&&G.kid?((G.wallets[G.kid.id])||{balance:0}):{balance:0};
+    const oldBal=oldWallet.balance||0;
+    G.wallets=d.wallets||G.wallets||{};
+    if(G.kid){
+      const newBal=(G.wallets[G.kid.id]||{balance:0}).balance||0;
+      const diff=Math.round((newBal-oldBal)*100)/100;
+      // Show notification for credits (reward confirmed) and debits (parent paid)
+      if(diff>0.009){
+        showPaymentToast('credit',diff);
+        if(document.getElementById('s-kid')?.classList.contains('active'))rKid();
+      } else if(diff<-0.009){
+        showPaymentToast('debit',Math.abs(diff));
+        if(document.getElementById('s-kid')?.classList.contains('active'))rKid();
+      }
+    }
+    if(G.kid&&(!d.kids||!d.kids.find(k=>k.id===G.kid.id))){stopL();syncSK([]);G.kid=null;SS('s-home');rHome();alert('Your account has been removed by the parent.');}},e=>console.error('KPL',e));}
 function stLL(uid){
   if(_uL)_uL();_uL=onSnapshot(query(collection(db,'logs'),where('pUid','==',uid)),snap=>{snap.docChanges().forEach(ch=>{if(ch.type==='added'||ch.type==='modified'){const d=ch.doc.data();if(!G.logs[d.kidId])G.logs[d.kidId]={};if(d.log){G.logs[d.kidId][d.date]=d.log;if(!G.logs[d.kidId][d.date].photos)G.logs[d.kidId][d.date].photos={}; }}});rbP();document.getElementById('adot').innerHTML=G.pending.length?'<span class="ndot"></span>':'';document.title=G.pending.length?`(${G.pending.length}) StarKids`:'StarKids';if(document.getElementById('s-parent').classList.contains('active')){const at=document.querySelector('.tab.active');if(at&&at.id==='t-appr')pTab('appr');}},e=>console.error('LL',e));}
 function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}}
@@ -541,7 +560,8 @@ if(rj.length)h+=`<div style="background:var(--rl);border:1px solid var(--r);bord
     <div style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.4)">Today: ${ts}⭐ · Tap 💰 to see wallet</div>
   </div>`;
 h+=`<div style="text-align:right;margin-bottom:8px"><button onclick="rfKid()" style="background:none;border:0.5px solid var(--bd);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--t3);cursor:pointer">🔄 Refresh</button></div>`;
-if(pr.length){h+=`<div class="sl">🙏 Daily prayers${G.PC?` · 📍${G.PC}`:''}</div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} · +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
+if(pr.length){const gpsLabel=localStorage.getItem('sk_lat')?'📍 GPS · '+(G.PC||''):'📍 '+(G.PC||'Riyadh');
+  h+=`<div class="sl" style="display:flex;align-items:center;justify-content:space-between"><span>🙏 Daily prayers · <span style="font-size:10px;color:var(--t3);font-weight:400">${gpsLabel}</span></span><button onclick="showCityPicker()" style="font-size:10px;color:var(--t3);background:none;border:0.5px solid var(--bd);border-radius:8px;padding:2px 8px;cursor:pointer">📍 Change</button></div><div class="pgrid">`;pr.forEach((p,pi)=>{const done=!!log.prayers[p.n];const t=G.PT[p.n]||p.t;const nxt=isNP(pi,pr,log);h+=`<div class="pcard${done?' done':''}${nxt?' next':''}" onclick="tPr('${p.n}')" style="cursor:pointer"><div><div style="font-size:13px;font-weight:600">${p.n}${nxt?'<span style="font-size:9px;background:var(--a);color:#fff;padding:2px 6px;border-radius:6px;margin-left:5px">NEXT</span>':''}</div><div style="font-size:11px;color:var(--t3)">${t} · +1⭐</div></div><div class="circ${done?' done':''}" style="${done?'box-shadow:0 0 8px rgba(0,196,140,.4)':''}">${done?'✓':''}</div></div>`;});h+=`</div>`;}
 const daily=G.tasks.filter(t=>t.cat==='daily'&&(!t.showerOnly||SHD.includes(dow)));const bonus=G.tasks.filter(t=>t.cat==='bonus');
 // Show praise notes before tasks
 h+=renderPraiseNotes(kid.id);
@@ -974,40 +994,169 @@ function calcStreak(kidId){
   return streak;
 }
 function isNP(idx,pr,log){if(!G.PT)return false;const now=new Date();const nm=now.getHours()*60+now.getMinutes();for(let i=0;i<pr.length;i++){if(log.prayers[pr[i].n])continue;const t=G.PT[pr[i].n];if(t){const[h,m]=t.split(':').map(Number);if((h*60+m)>=nm)return i===idx;}else return i===idx;break;}return false;}
-async function initPT(){
+window.initPT=async function(){
   if(!G.prayOn||G.religion!=='islam')return;
-  // Request notification permission for prayer reminders
-  if('Notification' in window && Notification.permission==='default'){
-    Notification.requestPermission();
-  }
-  try{
-    const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
-    const la=pos.coords.latitude.toFixed(4),lo=pos.coords.longitude.toFixed(4);
-    const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
-    const r=await fetch(`https://api.aladhan.com/v1/timings/${ds}?latitude=${la}&longitude=${lo}&method=4`);
+  if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();
+  const d=new Date();
+  const ds=String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+  // Helper: fetch by coords
+  async function fetchByCoords(la,lo){
+    const r=await fetch('https://api.aladhan.com/v1/timings/'+ds+'?latitude='+la+'&longitude='+lo+'&method=4');
     const data=await r.json();
     if(data.code===200){
       const t=data.data.timings;
       G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
-      G.PC=data.data.meta.timezone?.split('/').pop().replace(/_/g,' ')||'';
-      schedPrayerReminders();
-      rKid();
+      // Get city name from reverse geocode or timezone
+      G.PC=data.data.meta.timezone?.split('/').pop().replace(/_/g,' ')||'Your location';
+      localStorage.setItem('sk_lat',la);localStorage.setItem('sk_lon',lo);
+      schedPrayerReminders();rKid();return true;
     }
-  }catch{
+    return false;
+  }
+  // Helper: fetch by city fallback
+  async function fetchByCity(city='Riyadh'){
+    const r=await fetch('https://api.aladhan.com/v1/timingsByCity/'+ds+'?city='+city+'&country=SA&method=4');
+    const data=await r.json();
+    if(data.code===200){
+      const t=data.data.timings;
+      G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+      G.PC=city+' (default)';
+      schedPrayerReminders();rKid();return true;
+    }
+    return false;
+  }
+  // 1. Try cached GPS coords first (instant, no permission prompt needed)
+  const cachedLat=localStorage.getItem('sk_lat');
+  const cachedLon=localStorage.getItem('sk_lon');
+  if(cachedLat&&cachedLon){
     try{
-      const d=new Date(),ds=`${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
-      const r=await fetch(`https://api.aladhan.com/v1/timingsByCity/${ds}?city=Riyadh&country=SA&method=4`);
-      const data=await r.json();
-      if(data.code===200){
-        const t=data.data.timings;
-        G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
-        G.PC='Riyadh (default)';
-        schedPrayerReminders();
-        rKid();
+      const ok=await fetchByCoords(cachedLat,cachedLon);
+      if(ok){
+        // Silently refresh GPS in background for tomorrow
+        if(navigator.geolocation){
+          navigator.geolocation.getCurrentPosition(pos=>{
+            localStorage.setItem('sk_lat',pos.coords.latitude.toFixed(4));
+            localStorage.setItem('sk_lon',pos.coords.longitude.toFixed(4));
+          },()=>{},{timeout:10000,maximumAge:3600000});
+        }
+        return;
       }
     }catch{}
   }
+  // 2. Request fresh GPS location
+  if(navigator.geolocation){
+    try{
+      const pos=await new Promise((res,rej)=>
+        navigator.geolocation.getCurrentPosition(res,rej,{
+          timeout:8000,
+          maximumAge:3600000, // accept 1-hour old position
+          enableHighAccuracy:false // faster, battery friendly
+        })
+      );
+      const la=pos.coords.latitude.toFixed(4),lo=pos.coords.longitude.toFixed(4);
+      const ok=await fetchByCoords(la,lo);
+      if(ok)return;
+    }catch(e){
+      console.log('GPS failed:',e.message);
+      // GPS denied or timed out — try city from saved preference
+    }
+  }
+  // 3. Try saved city preference
+  const savedCity=localStorage.getItem('sk_city')||'Riyadh';
+  try{
+    const ok=await fetchByCity(savedCity);
+    if(ok)return;
+  }catch{}
+  // 4. Hard fallback — Riyadh
+  try{await fetchByCity('Riyadh');}catch{}
 }
+// Let kid manually set their city for prayer times
+window.showCityPicker=function(){
+  const old=document.getElementById('sk-city-modal');if(old)old.remove();
+  const ov=document.createElement('div');
+  ov.id='sk-city-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:16px;padding:24px;width:100%;max-width:340px';
+  // Title
+  const title=document.createElement('div');
+  title.style.cssText='font-size:16px;font-weight:700;margin-bottom:8px';
+  title.textContent='🕌 Prayer Times Location';
+  box.appendChild(title);
+  const sub=document.createElement('div');
+  sub.style.cssText='font-size:13px;color:#999;margin-bottom:14px';
+  sub.textContent='Enter your city for accurate prayer times';
+  box.appendChild(sub);
+  // City input
+  const inp=document.createElement('input');
+  inp.id='city-inp';inp.type='text';
+  inp.placeholder='e.g. Jeddah, Makkah, Riyadh';
+  inp.style.cssText='width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit;box-sizing:border-box';
+  box.appendChild(inp);
+  // Quick city buttons
+  const cities=['Jeddah','Makkah','Riyadh','Madinah','Dammam','Taif'];
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px';
+  cities.forEach(function(c){
+    const btn=document.createElement('button');
+    btn.textContent=c;
+    btn.style.cssText='padding:7px 4px;border:0.5px solid #ddd;border-radius:8px;background:#f5f5f5;font-size:12px;cursor:pointer;font-family:inherit';
+    btn.onclick=function(){inp.value=c;};
+    grid.appendChild(btn);
+  });
+  box.appendChild(grid);
+  // Cancel + Set buttons
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:8px';
+  const cancelBtn=document.createElement('button');
+  cancelBtn.textContent='Cancel';
+  cancelBtn.style.cssText='flex:1;padding:11px;border-radius:10px;border:0.5px solid #ddd;background:none;cursor:pointer;font-family:inherit';
+  cancelBtn.onclick=function(){ov.remove();};
+  const setBtn=document.createElement('button');
+  setBtn.textContent='✓ Set';
+  setBtn.style.cssText='flex:1;padding:11px;border-radius:10px;border:none;background:#1D9E75;color:#fff;font-weight:700;cursor:pointer;font-family:inherit';
+  setBtn.onclick=function(){var city=inp.value.trim();if(!city)return;ov.remove();setPrayerCity(city);};
+  row.appendChild(cancelBtn);row.appendChild(setBtn);
+  box.appendChild(row);
+  // GPS link
+  const gpsBtn=document.createElement('button');
+  gpsBtn.textContent='📡 Use GPS instead';
+  gpsBtn.style.cssText='width:100%;margin-top:10px;font-size:12px;color:#999;background:none;border:none;cursor:pointer;font-family:inherit';
+  gpsBtn.onclick=function(){
+    localStorage.removeItem('sk_lat');localStorage.removeItem('sk_lon');
+    ov.remove();initPT();
+  };
+  box.appendChild(gpsBtn);
+  ov.appendChild(box);
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  document.body.appendChild(ov);
+  setTimeout(function(){inp.focus();},100);
+};
+
+window.setPrayerCity=async function(city){
+  if(!city||!city.trim())return;
+  localStorage.setItem('sk_city',city.trim());
+  localStorage.removeItem('sk_lat');localStorage.removeItem('sk_lon');
+  await initPT();
+  alert('Prayer times updated for '+city+'!');
+};
+// Payment/reward notification toast
+function showPaymentToast(type,amount){
+  const currency=G.currency||'SAR';
+  const isCredit=type==='credit';
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:3000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none';
+  el.innerHTML='<div style="background:'+(isCredit?'linear-gradient(135deg,#1D9E75,#16C784)':'linear-gradient(135deg,#2196F3,#1565C0)')
+    +';color:#fff;border-radius:20px;padding:14px 24px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="font-size:28px;margin-bottom:4px">'+(isCredit?'💰':'💳')+'</div>'
+    +'<div style="font-size:15px;font-weight:800">'+(isCredit?currency+' '+amount.toFixed(2)+' added to wallet!':'Parent paid '+currency+' '+amount.toFixed(2)+'!')+'</div>'
+    +'<div style="font-size:12px;opacity:.85;margin-top:3px">'+(isCredit?'Tap 💰 to see your wallet':'Your wallet has been updated')+'</div>'
+    +'</div>';
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.transform='translateX(-50%) translateY(0)';},20);
+  setTimeout(()=>{el.style.transform='translateX(-50%) translateY(-120px)';setTimeout(()=>el.remove(),400);},4000);
+}
+
 let _prayerTimers=[];
 function schedPrayerReminders(){
   _prayerTimers.forEach(t=>clearTimeout(t));

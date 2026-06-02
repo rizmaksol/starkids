@@ -498,7 +498,7 @@ window.qPL=async(ee,ep)=>{
     // Session expired - go to login form with email pre-filled
     SS('s-auth');
     rAuth();
-    const emailInp=document.getElementById('em');
+    const emailInp=document.getElementById('le');
     if(emailInp&&ee)emailInp.value=decodeURIComponent(ee);
   }
 };
@@ -1864,7 +1864,18 @@ window.parentMarkPaid=async function(kidId,amount){
   }catch(e){w.balance=Math.round((w.balance+cleared)*100)/100;w.transactions.shift();alert('Error: '+e.message);}
 };
 
-window.kidLogin=()=>SS('s-code');
+window.kidLogin = async function(){
+  const code = Array.from(
+    document.querySelectorAll('#ci input')
+  ).map(i=>i.value).join('');
+
+  if(code.length!==6){
+    document.getElementById('cerr').textContent='Enter 6 digits';
+    return;
+  }
+
+  await doKL(code);
+};
 window.doOut=async()=>{await signOut(auth);G.pUid=null;G.kids=[];G.tasks=DT;G.rewards=DR;localStorage.removeItem(LP);rHome();};
 rHome();bCI();setAM('in');rAuth();
 </script>

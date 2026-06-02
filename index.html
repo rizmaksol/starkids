@@ -222,20 +222,10 @@ textarea:focus{border-color:var(--r)!important;outline:none}
 </div>
 
 <script>
-// Kill service worker SYNCHRONOUSLY before Firebase loads
 (function(){
   if(!navigator.serviceWorker)return;
-  // Claim control and clear cache immediately
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    regs.forEach(function(r){
-      r.unregister();
-      console.log('SW unregistered');
-    });
-  });
-  // Clear all caches
-  if(window.caches){
-    caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});
-  }
+  navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister();});});
+  if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});
 })();
 </script>
 <script type="module">
@@ -249,7 +239,16 @@ const PC=[{n:'Morning prayer',t:'Start'},{n:'Midday prayer',t:'Noon'},{n:'Evenin
 const SHD=[0,3];const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const DS=['S','M','T','W','T','F','S'];
 const KE=['👦','👧','🧒','👶','🦁','🐯','🦊','🐻','🐼','🦄','🐸','🐧','🦋','⭐','🚀','⚽','🎮','🎨','🎵','🌟','🏆','💪','🧠','🌈'];
 const DT=[{id:'t1',ico:'🛏',name:'Make bed',cat:'daily',stars:1},{id:'t2',ico:'🪥',name:'Brush teeth (morning)',cat:'daily',stars:1},{id:'t3',ico:'🪥',name:'Brush teeth (night)',cat:'daily',stars:1},{id:'t4',ico:'📚',name:'Study 30 min',cat:'daily',stars:2},{id:'t5',ico:'🏃',name:'Outdoor play',cat:'daily',stars:1},{id:'t6',ico:'🧹',name:'Clean room',cat:'daily',stars:1},{id:'t7',ico:'❤️',name:'Help parents',cat:'daily',stars:1},{id:'t8',ico:'🤝',name:'Good behavior',cat:'daily',stars:1},{id:'t9',ico:'📺',name:'Limited TV',cat:'daily',stars:1},{id:'t10',ico:'🚿',name:'Shower day',cat:'daily',stars:1,showerOnly:true},{id:'b1',ico:'📿',name:'Memorised dua/verse',cat:'bonus',stars:2},{id:'b2',ico:'🎨',name:'Drew a picture',cat:'bonus',stars:1},{id:'b3',ico:'📖',name:'Read a story book',cat:'bonus',stars:1},{id:'b4',ico:'🍳',name:'Helped cook',cat:'bonus',stars:1},{id:'b5',ico:'🕊️',name:'No fighting all day',cat:'bonus',stars:2}];
-const DR=[{id:'r1',name:'Ice cream',stars:20,period:'week',type:'treat',amount:null,payType:null,given:false},{id:'r2',name:'Family movie',stars:35,period:'week',type:'treat',amount:null,payType:null,given:false},{id:'r3',name:'Small toy',stars:50,period:'month',type:'treat',amount:null,payType:null,given:false},{id:'r4',name:'Cash reward',stars:60,period:'month',type:'money',amount:20,payType:'cash',given:false},{id:'r5',name:'Special outing',stars:80,period:'month',type:'treat',amount:null,payType:null,given:false}];
+const DR=[
+  {id:'r1',name:'Ice cream',emoji:'🍦',stars:20,desc:'Any ice cream or dessert'},
+  {id:'r2',name:'Screen time +1hr',emoji:'📱',stars:30,desc:'1 extra hour screen time'},
+  {id:'r3',name:'Choose dinner',emoji:'🍕',stars:45,desc:'You pick family dinner tonight'},
+  {id:'r4',name:'Small toy',emoji:'🎮',stars:60,desc:'Small toy up to SAR 30'},
+  {id:'r5',name:'Movie night',emoji:'🎬',stars:80,desc:'Movie of your choice with family'},
+  {id:'r6',name:'Cash reward',emoji:'💰',stars:100,desc:'Cash added to your wallet'},
+  {id:'r7',name:'Fun outing',emoji:'🎡',stars:150,desc:'Park, bowling, anywhere!'},
+  {id:'r8',name:'Big gift',emoji:'🎁',stars:200,desc:'Big gift up to SAR 100'},
+]
 let G={pUid:null,pData:null,kids:[],tasks:DT,rewards:DR,logs:{},
   goalJars:{}, // kidId -> [{name,emoji,targetStars,currentStars,achieved}]
   praiseNotes:{}, // kidId -> [{msg,emoji,from,date}]
@@ -520,9 +519,7 @@ function stLL(uid){
 function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}}
 function rbP(){const np=[];Object.keys(G.logs).forEach(kidId=>{const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;Object.keys(G.logs[kidId]).forEach(dk=>{const log=G.logs[kidId][dk];if(!log||!log.tasks)return;G.tasks.forEach(task=>{if(log.tasks[task.id]==='pending'){if(!np.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk))np.push({kidId,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid:task.id,date:dk,time:'',photo:log.photos?.[task.id]||null,ticked:!!log.ticked?.[task.id]});}});});});G.pending=np;}
 // Kid dashboard
-function isNP(pi,pr,log){
-  for(var i=0;i<pr.length;i++){if(!log.prayers[pr[i].n])return i===pi;}return false;
-}
+function isNP(pi,pr,log){for(var i=0;i<pr.length;i++){if(!log.prayers[pr[i].n])return i===pi;}return false;}
 async function initPT(){
   if(!G.prayOn||G.religion!=='islam')return;
   const d=new Date(),ds=String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
@@ -530,9 +527,8 @@ async function initPT(){
   async function byCity(city){try{const r=await fetch('https://api.aladhan.com/v1/timingsByCity/'+ds+'?city='+encodeURIComponent(city)+'&country=SA&method=4');const data=await r.json();if(data.code===200){const t=data.data.timings;G.PT={Fajr:t.Fajr,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};G.PC=city;schedPrayerReminders();rKid();return true;}}catch(e){}return false;}
   const cLat=localStorage.getItem('sk_lat'),cLon=localStorage.getItem('sk_lon');
   if(cLat&&cLon){const ok=await byCoords(cLat,cLon);if(ok){navigator.geolocation?.getCurrentPosition(p=>{localStorage.setItem('sk_lat',p.coords.latitude.toFixed(4));localStorage.setItem('sk_lon',p.coords.longitude.toFixed(4));},{},{timeout:10000,maximumAge:3600000});return;}}
-  const sCity=localStorage.getItem('sk_city');
-  if(sCity&&sCity!=='Riyadh (default)'){const ok=await byCity(sCity);if(ok)return;}
-  if(navigator.geolocation){try{const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000,maximumAge:0,enableHighAccuracy:false}));const ok=await byCoords(pos.coords.latitude.toFixed(4),pos.coords.longitude.toFixed(4));if(ok)return;}catch(e){console.log('GPS:',e.message);}}
+  const sCity=localStorage.getItem('sk_city');if(sCity&&sCity!=='Riyadh (default)'){const ok=await byCity(sCity);if(ok)return;}
+  if(navigator.geolocation){try{const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000,maximumAge:0,enableHighAccuracy:false}));const ok=await byCoords(pos.coords.latitude.toFixed(4),pos.coords.longitude.toFixed(4));if(ok)return;}catch(e){}}
   await byCity('Riyadh');G.PC='Riyadh (default)';rKid();
 }
 function rKid(){const kid=G.kid;if(!kid)return;const dk=today();const log=gLog(kid.id,dk);const ts=cS(kid.id,dk);const ws=wS(kid.id);document.getElementById('k-st').textContent='⭐ '+ws;const dow=new Date().getDay();const pr=Pr();
@@ -872,60 +868,52 @@ window.showKR=function(){
   var dLeft=5-dow;if(dLeft<=0)dLeft+=7;
   var cashEq=parseFloat((ts*rate).toFixed(2));
   var h='';
-  // Red McDonald's hero
   h+='<div style="background:linear-gradient(135deg,#DA020E,#FF1744);border-radius:var(--radl);margin-bottom:14px;overflow:hidden">'
    +'<div style="padding:20px;text-align:center">'
    +'<div style="font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Your Stars</div>'
    +'<div style="font-size:64px;font-weight:900;color:#FFC72C;line-height:1">'+ts+'</div>'
-   +'<div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px">⭐ Stars never expire! Keep earning!</div>'
+   +'<div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px">Stars never expire! Keep earning!</div>'
    +'</div>'
    +'<div style="background:rgba(0,0,0,.2);padding:10px 20px;display:flex;justify-content:space-between;align-items:center">'
    +'<div style="font-size:12px;color:rgba(255,255,255,.7)">Cash equivalent</div>'
    +'<div style="font-size:16px;font-weight:800;color:#FFC72C">'+cur+' '+cashEq.toFixed(2)+'</div>'
    +'</div></div>';
-  // Status
-  if(claimedWk){
-    h+='<div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#1B5E20;text-align:center">✅ Claimed this week! Come back next Friday.</div>';
-  }else if(isWE){
-    h+='<div style="background:#FFF8E1;border:2px solid #FFC72C;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#7A4500;text-align:center;font-weight:700">\uD83C\uDF89 Weekend - tap a reward to claim!</div>';
-  }else{
-    h+='<div style="background:#FFF8E1;border:1px solid #FFC72C;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#7A4500;text-align:center">\uD83D\uDCC5 Claim day: Friday - '+dLeft+' day'+(dLeft!==1?'s':'')+' away!</div>';
-  }
+  if(claimedWk){h+='<div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#1B5E20;text-align:center">Claimed this week! Come back next Friday.</div>';}
+  else if(isWE){h+='<div style="background:#FFF8E1;border:2px solid #FFC72C;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#7A4500;text-align:center;font-weight:700">Weekend - tap a reward to claim it now!</div>';}
+  else{h+='<div style="background:#FFF8E1;border:1px solid #FFC72C;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#7A4500;text-align:center">Claim day: Friday - '+dLeft+' day'+(dLeft!==1?'s':'')+' away!</div>';}
   h+='<div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Redeem Stars</div>';
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
-  // CARD 1: Dynamic cash card
   var cashRi=G.rewards.findIndex(function(r){return r.id==='r6';});
   var canCashClaim=ts>0&&isWE&&!claimedWk;
-  h+='<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);border:2px solid '+(canCashClaim?'#FFC72C':'#eee')+';'+(canCashClaim?'cursor:pointer;':'')+' " '+(canCashClaim&&cashRi>=0?'class="sk-rw-card" data-ri="'+cashRi+'"':'')+'>' 
-   +'<div style="background:linear-gradient(135deg,#FFC72C,#FF9500);padding:24px 12px;text-align:center">' 
-   +'<div style="font-size:10px;color:rgba(0,0,0,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Cash Value</div>' 
-   +'<div style="font-size:28px;font-weight:900;color:#7A2500">'+cur+' '+cashEq.toFixed(2)+'</div>' 
-   +'<div style="font-size:10px;color:rgba(0,0,0,.5);margin-top:2px">='+ts+' ⭐</div>' 
-   +'</div>' 
-   +'<div style="padding:10px 12px 12px">' 
-   +'<div style="font-size:13px;font-weight:700;margin-bottom:4px">\uD83D\uDCB0 Take Cash</div>' 
-   +'<div style="font-size:11px;color:#999;margin-bottom:8px">Convert stars to '+cur+'</div>' 
+  h+='<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);border:2px solid '+(canCashClaim?'#FFC72C':'#eee')+';'+(canCashClaim?'cursor:pointer;':'')+' " '+(canCashClaim&&cashRi>=0?'class="sk-rw-card" data-ri="'+cashRi+'"':'')+'>'  
+   +'<div style="background:linear-gradient(135deg,#FFC72C,#FF9500);padding:24px 12px;text-align:center">'
+   +'<div style="font-size:10px;color:rgba(0,0,0,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Cash Value</div>'
+   +'<div style="font-size:28px;font-weight:900;color:#7A2500">'+cur+' '+cashEq.toFixed(2)+'</div>'
+   +'<div style="font-size:10px;color:rgba(0,0,0,.5);margin-top:2px">= '+ts+' stars</div>'
+   +'</div>'
+   +'<div style="padding:10px 12px 12px">'
+   +'<div style="font-size:13px;font-weight:700;margin-bottom:4px">Cash Reward</div>'
+   +'<div style="font-size:11px;color:#999;margin-bottom:8px">Convert stars to '+cur+'</div>'
    +(canCashClaim?'<div style="background:#DA020E;color:#fff;border-radius:8px;padding:7px;text-align:center;font-size:12px;font-weight:800">Claim Now!</div>'
      :(ts===0?'<div style="background:#f5f5f5;color:#999;border-radius:8px;padding:7px;text-align:center;font-size:11px">Earn stars first</div>'
      :'<div style="background:#f5f5f5;color:#999;border-radius:8px;padding:7px;text-align:center;font-size:11px">'+(claimedWk?'Claimed':'Claim on Friday!')+'</div>'))
    +'</div></div>';
-  // Reward tier cards
   G.rewards.forEach(function(r,ri){
     if(r.id==='r6')return;
     var unlocked=ts>=r.stars;
     var canClaim=unlocked&&isWE&&!claimedWk;
     var pct=Math.min(100,Math.round(ts/r.stars*100));
-    h+='<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);border:2px solid '+(canClaim?'#DA020E':(unlocked?'#1D9E75':'#eee'))+';'+(canClaim?'cursor:pointer;':'opacity:'+(unlocked?1:.8)+'')+'" '+(canClaim?'class="sk-rw-card" data-ri="'+ri+'"':'')+'>' 
-     +'<div style="background:'+(unlocked?'linear-gradient(135deg,#E8F5E9,#C8E6C9)':'#f5f5f5')+';padding:24px 12px;text-align:center;position:relative">' 
-     +'<div style="font-size:46px">'+(r.emoji||'\uD83C\uDF81')+'</div>' 
-     +'<div style="position:absolute;top:8px;right:8px;background:'+(unlocked?'#FFC72C':'rgba(0,0,0,.4)')+';color:'+(unlocked?'#7A2500':'#fff')+';border-radius:12px;padding:3px 8px;font-size:10px;font-weight:800">'+r.stars+'⭐</div>' 
-     +'</div>' 
-     +'<div style="padding:10px 12px 12px">' 
-     +'<div style="font-size:13px;font-weight:700;margin-bottom:3px">'+r.name+'</div>' 
-     +'<div style="font-size:11px;color:#999;margin-bottom:8px">'+r.desc+'</div>' 
+    h+='<div style="border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);border:2px solid '+(canClaim?'#DA020E':(unlocked?'#1D9E75':'#eee'))+';'+(canClaim?'cursor:pointer;':'opacity:'+(unlocked?1:.8))+'; " '+(canClaim?'class="sk-rw-card" data-ri="'+ri+'"':'')+'>'  
+     +'<div style="background:'+(unlocked?'linear-gradient(135deg,#E8F5E9,#C8E6C9)':'#f5f5f5')+';padding:24px 12px;text-align:center;position:relative">'
+     +'<div style="font-size:46px">'+(r.emoji||'')+'</div>'
+     +'<div style="position:absolute;top:8px;right:8px;background:'+(unlocked?'#FFC72C':'rgba(0,0,0,.4)')+';color:'+(unlocked?'#7A2500':'#fff')+';border-radius:12px;padding:3px 8px;font-size:10px;font-weight:800">'+r.stars+'</div>'
+     +'</div>'
+     +'<div style="padding:10px 12px 12px">'
+     +'<div style="font-size:13px;font-weight:700;margin-bottom:3px">'+r.name+'</div>'
+     +'<div style="font-size:11px;color:#999;margin-bottom:8px">'+r.desc+'</div>'
      +(canClaim?'<div style="background:#DA020E;color:#fff;border-radius:8px;padding:7px;text-align:center;font-size:12px;font-weight:800">Claim!</div>'
-      :unlocked?'<div style="background:#f5f5f5;color:#999;border-radius:8px;padding:7px;text-align:center;font-size:11px">'+(claimedWk?'Claimed':'Claim on Friday!')+'</div>'
-      :'<div style="margin-bottom:4px"><div style="height:4px;background:#eee;border-radius:2px"><div style="height:100%;width:'+pct+'%;background:#FFC72C;border-radius:2px"></div></div></div><div style="background:#f5f5f5;color:#999;border-radius:8px;padding:7px;text-align:center;font-size:11px">\uD83D\uDD12 '+(r.stars-ts)+' more ⭐</div>')
+      :unlocked?'<div style="background:#f5f5f5;color:#999;border-radius:8px;padding:7px;text-align:center;font-size:11px">'+(claimedWk?'Claimed':'Claim Friday!')+'</div>'
+      :'<div style="margin-bottom:4px"><div style="height:4px;background:#eee;border-radius:2px"><div style="height:100%;width:'+pct+'%;background:#FFC72C;border-radius:2px"></div></div></div><div style="background:#f5f5f5;color:#999;border-radius:8px;padding:7px;text-align:center;font-size:11px">'+(r.stars-ts)+' more stars needed</div>')
      +'</div></div>';
   });
   h+='</div>';
@@ -1143,7 +1131,7 @@ window.dlR=idx=>{if(!confirm('Delete?'))return;G.rewards.splice(idx,1);saveP();p
 function rRep(pc){let h=`<div class="kid-tabs" id="rks">`;G.kids.forEach((k,i)=>{h+=`<div class="kid-tab${i===0?' active':''}" onclick="sRK('${k.id}',this)">${avD(k.photo,k.emoji||'👦',k.color||'#1D9E75',22)} ${k.name}</div>`;});h+=`</div><div id="rb"></div>`;pc.innerHTML=h;if(G.kids.length)sRK(G.kids[0].id,document.querySelector('#rks .kid-tab'));}
 window.sRK=(id,el)=>{G.repKid=id;document.querySelectorAll('#rks .kid-tab').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');const rb=document.getElementById('rb');if(!rb)return;rb.innerHTML=`<div class="seg" id="rps"><div class="segb active" onclick="sRP('week')">📅 Weekly</div><div class="segb" onclick="sRP('month')">📆 Monthly</div></div><div id="rc"></div>`;sRP('week');};
 window.sRP=p=>{document.querySelectorAll('#rps .segb').forEach((b,i)=>b.classList.toggle('active',(p==='week'&&i===0)||(p==='month'&&i===1)));gRep(G.repKid,p);};
-function gRep(kidId,period){const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;const keys=period==='week'?wk():mk();const pr=Pr();const td=today();let ts=0,pd=0,td2=0,tt=0,bd=0;keys.forEach(dk=>{ts+=cS(kidId,dk);const log=gLog(kidId,dk);let ap=pr.length>0;pr.forEach(p=>{if(!log.prayers[p.n])ap=false;});if(ap&&pr.length)pd++;G.tasks.filter(t=>t.cat==='daily').forEach(t=>{tt++;if(log.tasks[t.id]==='approved')td2++;});G.tasks.filter(t=>t.cat==='bonus').forEach(t=>{if(log.tasks[t.id]==='approved')bd++;});});const tp=tt?Math.round(td2/tt*100):0;const pp=pr.length?Math.round(pd/keys.length*100):null;const now=new Date();const dl=period==='week'?`${wk()[0]} -> ${wk()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;const grade=tp>=90?'🥇 Excellent':tp>=70?'🥈 Very good':tp>=50?'🥉 Good':'💪 Keep going';const msg=tp>=90?'Outstanding!':tp>=70?'Great effort!':tp>=50?'Good progress!':"Let's encourage more.";let h=`<div class="rphdr"><div style="font-size:32px;margin-bottom:8px">${grade.split(' ')[0]}</div><div style="font-size:18px;font-weight:800">${kid.name}'s Report</div><div style="font-size:12px;opacity:.8;margin-top:4px">${period==='week'?'📅 Weekly':'📆 Monthly'} . ${dl}</div></div><div class="sgrid"><div class="scard"><div class="sgnum">${ts}</div><div class="sglbl">⭐ Stars</div></div><div class="scard"><div class="sgnum">${tp}%</div><div class="sglbl">📋 Tasks</div></div>`;if(pp!==null)h+=`<div class="scard"><div class="sgnum">${pp}%</div><div class="sglbl">🙏 Prayers</div></div>`;h+=`<div class="scard"><div class="sgnum">${bd}</div><div class="sglbl">⭐ Bonus</div></div></div>`;[{l:'Daily tasks',v:tp,max:100,u:'%'},{l:'Stars earned',v:ts,max:Math.max(ts,50),u:'⭐'}].forEach(b=>{const pct=b.max?Math.min(100,Math.round(b.v/b.max*100)):0;h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500"><span>${b.l}</span><span>${b.v}${b.u}</span></div><div class="pb"><div class="pbf" style="width:${pct}%"></div></div></div>`;});if(period==='week'){h+=`<div class="sl">Day by day</div><div class="dgrid">`;keys.forEach((dk,i)=>{const s=cS(kidId,dk);h+=`<div class="dcell${dk===td?' today':''}"><div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div></div>`;});h+=`</div>`;}else{h+=`<div class="sl">Week by week</div>`;const now2=new Date(),y2=now2.getFullYear(),mo2=now2.getMonth();let wkS=new Date(y2,mo2,1);wkS.setDate(wkS.getDate()-wkS.getDay());for(let wn=1;wn<=6;wn++){const wkE=new Date(wkS);wkE.setDate(wkS.getDate()+6);if(wkS>new Date(y2,mo2+1,0))break;let st=0;for(let dd=new Date(wkS);dd<=wkE;dd.setDate(dd.getDate()+1)){const dk2=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');st+=cS(kidId,dk2);}const d1=String(wkS.getDate()).padStart(2,'0')+'/'+(wkS.getMonth()+1);const d2=String(Math.min(wkE.getDate(),new Date(y2,mo2+1,0).getDate())).padStart(2,'0')+'/'+(mo2+1);const isCW=today()>=wkS.toISOString().slice(0,10)&&today()<=wkE.toISOString().slice(0,10);h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${isCW?'var(--gl)':'var(--bg2)'};border-radius:12px;margin-bottom:8px"><div><div style="font-size:13px;font-weight:700">Week ${wn}${isCW?' (this week)':''}</div><div style="font-size:11px;color:var(--t3)">${d1} - ${d2}</div></div><div style="font-size:20px;font-weight:800;color:var(--g)">${st} ⭐</div></div>`;wkS.setDate(wkS.getDate()+7);}}}<div class="info g" style="text-align:center"><div style="font-size:20px;margin-bottom:4px">${grade}</div><div style="font-size:13px">${msg}</div></div>`;document.getElementById('rc').innerHTML=h;}
+function gRep(kidId,period){const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;const keys=period==='week'?wk():mk();const pr=Pr();const td=today();let ts=0,pd=0,td2=0,tt=0,bd=0;keys.forEach(dk=>{ts+=cS(kidId,dk);const log=gLog(kidId,dk);let ap=pr.length>0;pr.forEach(p=>{if(!log.prayers[p.n])ap=false;});if(ap&&pr.length)pd++;G.tasks.filter(t=>t.cat==='daily').forEach(t=>{tt++;if(log.tasks[t.id]==='approved')td2++;});G.tasks.filter(t=>t.cat==='bonus').forEach(t=>{if(log.tasks[t.id]==='approved')bd++;});});const tp=tt?Math.round(td2/tt*100):0;const pp=pr.length?Math.round(pd/keys.length*100):null;const now=new Date();const dl=period==='week'?`${wk()[0]} -> ${wk()[6]}`:`${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}`;const grade=tp>=90?'🥇 Excellent':tp>=70?'🥈 Very good':tp>=50?'🥉 Good':'💪 Keep going';const msg=tp>=90?'Outstanding!':tp>=70?'Great effort!':tp>=50?'Good progress!':"Let's encourage more.";let h=`<div class="rphdr"><div style="font-size:32px;margin-bottom:8px">${grade.split(' ')[0]}</div><div style="font-size:18px;font-weight:800">${kid.name}'s Report</div><div style="font-size:12px;opacity:.8;margin-top:4px">${period==='week'?'📅 Weekly':'📆 Monthly'} . ${dl}</div></div><div class="sgrid"><div class="scard"><div class="sgnum">${ts}</div><div class="sglbl">⭐ Stars</div></div><div class="scard"><div class="sgnum">${tp}%</div><div class="sglbl">📋 Tasks</div></div>`;if(pp!==null)h+=`<div class="scard"><div class="sgnum">${pp}%</div><div class="sglbl">🙏 Prayers</div></div>`;h+=`<div class="scard"><div class="sgnum">${bd}</div><div class="sglbl">⭐ Bonus</div></div></div>`;[{l:'Daily tasks',v:tp,max:100,u:'%'},{l:'Stars earned',v:ts,max:Math.max(ts,50),u:'⭐'}].forEach(b=>{const pct=b.max?Math.min(100,Math.round(b.v/b.max*100)):0;h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500"><span>${b.l}</span><span>${b.v}${b.u}</span></div><div class="pb"><div class="pbf" style="width:${pct}%"></div></div></div>`;});h+=`<div class="sl">Day by day</div><div class="dgrid">`;(period==='week'?keys:wk()).forEach((dk,i)=>{const s=cS(kidId,dk);h+=`<div class="dcell${dk===td?' today':''}"><div style="font-size:9px;color:var(--t3);font-weight:600">${DS[i]}</div><div style="font-size:13px;font-weight:700;color:var(--g)">${s}</div></div>`;});h+=`</div><div class="info g" style="text-align:center"><div style="font-size:20px;margin-bottom:4px">${grade}</div><div style="font-size:13px">${msg}</div></div>`;document.getElementById('rc').innerHTML=h;}
 // Settings
 window.rSet=()=>{const PE=['👨‍👩‍👧','👩‍👧','👨‍👧','👩','👨','👩‍💼','👨‍💼'];let h=`<div class="sl">Your profile</div><div class="card" style="text-align:center"><div style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid var(--g);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;background:#1D9E7522">${G.pPhoto?`<img src="${G.pPhoto}" style="width:100%;height:100%;object-fit:cover"/>`:G.pEmoji||'👨‍👩‍👧'}</div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${G.pData?.name||'Parent'}</div><div style="font-size:12px;color:var(--t3);margin-bottom:10px">${auth.currentUser?.email||''}</div><label class="btn sm" style="cursor:pointer;display:inline-block;margin-bottom:10px">📷 Change photo<input type="file" name="parent-profile-photo" accept="image/*" capture="environment" style="display:none" onchange="hPPh(this)"/></label><div class="emoji-grid">${PE.map(e=>`<div class="emoji-opt${(G.pEmoji||'👨‍👩‍👧')===e?' selected':''}" onclick="sPE('${e}')">${e}</div>`).join('')}</div><button class="btn dan" style="width:100%;margin-top:10px" onclick="doOut()">Sign out</button></div>`;h+=`<div class="sl">Prayer module</div><div class="card"><div class="togrow"><div><div style="font-size:13px;font-weight:600">Enable prayer section</div></div><button class="tog ${G.prayOn?'on':'off'}" onclick="G.prayOn=!G.prayOn;saveP();rSet()"></button></div>`;if(G.prayOn)h+=`<div style="margin-top:10px"><div class="ff" style="margin:0"><label>Religion</label><select id="s-rel" onchange="G.religion=this.value;saveP()"><option value="islam"${G.religion==='islam'?' selected':''}>Islam - 5 prayers</option><option value="christian"${G.religion==='christian'?' selected':''}>Christian - 3 times</option><option value="other"${G.religion==='other'?' selected':''}>Other</option></select></div></div>`;h+=`</div><div class="sl">Currency</div><div class="card"><div class="ff" style="margin:0"><select onchange="G.currency=this.value;saveP()"><option value="SAR"${G.currency==='SAR'?' selected':''}>SAR</option><option value="USD"${G.currency==='USD'?' selected':''}>USD</option><option value="GBP"${G.currency==='GBP'?' selected':''}>GBP</option><option value="AED"${G.currency==='AED'?' selected':''}>AED</option></select></div></div><div class="sl">Star value (reward rate)</div><div class="card"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">Set how much 1 star is worth in cash. Kids can choose cash instead of a treat reward.</div><div style="display:flex;align-items:center;gap:10px"><div style="font-size:22px">⭐ =</div><input type="number" id="star-rate-inp" min="0.05" max="10" step="0.05" value="${G.starRate||0.25}" style="width:90px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rad);font-size:16px;font-weight:700;text-align:center"/><div style="font-size:15px;font-weight:600">${G.currency||'SAR'}</div></div><button class="btn pri sm" style="margin-top:10px" onclick="G.starRate=parseFloat(document.getElementById('star-rate-inp').value)||0.25;saveP();alert('Star rate saved: 1⭐ = '+G.starRate+' '+G.currency);">Save rate</button></div><div class="sl">Saved logins</div><div class="card"><button class="btn dan sm" onclick="localStorage.clear();alert('Cleared.');rSet()">Clear all saved logins</button></div>`;document.getElementById('setb').innerHTML=h;};
 window.hPPh=function(inp){const file=inp.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{compress(ev.target.result,300,data=>{G.pPhoto=data;G.pEmoji=null;saveP();rSet();const a=document.getElementById('p-av');if(a)a.innerHTML=avD(G.pPhoto,G.pEmoji,'#1D9E75',36);});};reader.readAsDataURL(file);inp.value='';};
@@ -1845,15 +1833,8 @@ window.parentMarkPaid=async function(kidId,amount){
   }catch(e){w.balance=Math.round((w.balance+cleared)*100)/100;w.transactions.shift();alert('Error: '+e.message);}
 };
 
-// (init moved to end)
-remove('active'));
-  el.classList.add('active');
-  pTab('rewards');
-};
-
-// ── INIT ──────────────────────────────────────────────
 rHome();bCI();setAM('in');rAuth();
 </script>
-<!-- SW cleared above -->
+<!-- SW handled above -->
 </body>
 </html>

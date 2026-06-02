@@ -1,0 +1,36 @@
+// firestore.rules
+// StarKids V10 — Initial Security Rules
+// Sprint 1: Authentication + Kids Management
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Parents ──────────────────────────────────────────────
+    // A parent can only read/write their own document
+    match /parents/{parentId} {
+      allow read, write: if request.auth != null && request.auth.uid == parentId;
+    }
+
+    // ── Kids ─────────────────────────────────────────────────
+    // Parent can read/write their own kids
+    // Anyone can READ kids by code (needed for kid login)
+    match /kids/{kidId} {
+      allow read: if true;   // needed for code-based kid login
+      allow create: if request.auth != null
+                    && request.resource.data.parentId == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.parentId == request.auth.uid;
+    }
+
+    // ── Everything else — locked until Sprint 2+ ──────────────
+    match /tasks/{id}       { allow read, write: if false; }
+    match /submissions/{id} { allow read, write: if false; }
+    match /wallets/{id}     { allow read, write: if false; }
+    match /goals/{id}       { allow read, write: if false; }
+    match /rewards/{id}     { allow read, write: if false; }
+    match /praise/{id}      { allow read, write: if false; }
+    match /values/{id}      { allow read, write: if false; }
+  }
+}

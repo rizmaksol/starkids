@@ -1,0 +1,10 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Storage is locked until Sprint 4 (avatars / reward images)
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

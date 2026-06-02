@@ -1,0 +1,481 @@
+/* ============================================================
+   StarKids V10 — styles.css
+   Clean, child-friendly, modular design system
+   ============================================================ */
+
+/* ── Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap');
+
+/* ── Design Tokens ────────────────────────────────────────── */
+:root {
+  --color-bg:         #f0f4ff;
+  --color-surface:    #ffffff;
+  --color-primary:    #6c63ff;
+  --color-primary-dk: #4f48c4;
+  --color-secondary:  #ffb347;
+  --color-accent:     #ff6b9d;
+  --color-success:    #43d98c;
+  --color-danger:     #ff5252;
+  --color-text:       #2d2d4e;
+  --color-muted:      #8e8eaa;
+  --color-border:     #e2e6ff;
+
+  --radius-sm:   8px;
+  --radius-md:   16px;
+  --radius-lg:   24px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 2px 8px rgba(108, 99, 255, 0.10);
+  --shadow-md: 0 6px 24px rgba(108, 99, 255, 0.15);
+  --shadow-lg: 0 12px 40px rgba(108, 99, 255, 0.20);
+
+  --font-display: 'Fredoka One', cursive;
+  --font-body:    'Nunito', sans-serif;
+
+  --transition: 0.2s ease;
+}
+
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ── Screen System ────────────────────────────────────────── */
+.screen {
+  display: none;
+  min-height: 100vh;
+  padding: 24px 16px;
+  animation: fadeIn 0.3s ease;
+}
+.screen.active { display: flex; flex-direction: column; align-items: center; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── App Shell ────────────────────────────────────────────── */
+.app-bar {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.app-logo {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--color-primary);
+  letter-spacing: 0.5px;
+}
+
+.app-logo span { color: var(--color-secondary); }
+
+/* ── Card ─────────────────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 20px;
+}
+
+.card__title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-primary);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* ── Form Elements ────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+}
+
+input:focus, select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 24px;
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+  text-decoration: none;
+  width: 100%;
+}
+
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(108, 99, 255, 0.40);
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-dk);
+  box-shadow: 0 6px 20px rgba(108, 99, 255, 0.50);
+  transform: translateY(-1px);
+}
+
+.btn--secondary {
+  background: var(--color-bg);
+  color: var(--color-primary);
+  border: 2px solid var(--color-border);
+}
+.btn--secondary:hover:not(:disabled) {
+  background: var(--color-border);
+}
+
+.btn--accent {
+  background: var(--color-secondary);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(255, 179, 71, 0.40);
+}
+.btn--accent:hover:not(:disabled) {
+  background: #e09f3e;
+  transform: translateY(-1px);
+}
+
+.btn--kid {
+  background: linear-gradient(135deg, #ff6b9d, #ff8c42);
+  color: #fff;
+  font-size: 1.25rem;
+  padding: 18px 24px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 6px 20px rgba(255, 107, 157, 0.40);
+}
+.btn--kid:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(255, 107, 157, 0.50);
+}
+
+.btn--danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+.btn--danger:hover:not(:disabled) { background: #e04545; }
+
+.btn--sm {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  width: auto;
+  border-radius: var(--radius-full);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-muted);
+  box-shadow: none;
+  font-size: 0.875rem;
+  width: auto;
+  padding: 8px 16px;
+}
+.btn--ghost:hover { color: var(--color-primary); }
+
+/* ── Home Screen ──────────────────────────────────────────── */
+.home-hero {
+  text-align: center;
+  padding: 40px 0 32px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.home-hero__star {
+  font-size: 5rem;
+  animation: float 3s ease-in-out infinite;
+  display: block;
+  margin-bottom: 16px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+
+.home-hero__title {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.home-hero__title span { color: var(--color-secondary); }
+
+.home-hero__tagline {
+  color: var(--color-muted);
+  font-size: 1rem;
+  margin-top: 10px;
+  margin-bottom: 32px;
+}
+
+.home-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.divider {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin: 4px 0;
+}
+
+/* ── Auth Screens ─────────────────────────────────────────── */
+.auth-switch {
+  text-align: center;
+  margin-top: 16px;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.auth-switch button {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+/* ── Kid Code Input ───────────────────────────────────────── */
+.code-input-wrap {
+  position: relative;
+}
+
+#kid-code-input {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  font-family: var(--font-display);
+  color: var(--color-primary);
+}
+
+/* ── Kids List ────────────────────────────────────────────── */
+.kids-list-header {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--color-primary);
+  margin-bottom: 12px;
+}
+
+.kid-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  transition: box-shadow var(--transition);
+}
+
+.kid-card:hover { box-shadow: var(--shadow-sm); }
+
+.kid-card__avatar {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.kid-card__info { flex: 1; min-width: 0; }
+
+.kid-card__name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.kid-card__age, .kid-card__code {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.code-display {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--color-primary);
+  letter-spacing: 0.1em;
+  transition: color 0.2s;
+}
+
+.code-flash { color: var(--color-success); }
+
+.kid-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.empty-state {
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 0.95rem;
+  padding: 20px;
+}
+
+/* ── Add Kid Form ─────────────────────────────────────────── */
+.avatar-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.avatar-row input { flex: 1; }
+
+.avatar-preview {
+  font-size: 1.8rem;
+  line-height: 1;
+  width: 44px;
+  text-align: center;
+}
+
+/* ── Parent Dashboard ─────────────────────────────────────── */
+.dashboard-welcome {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--color-text);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* ── Kid Dashboard ────────────────────────────────────────── */
+.kid-dashboard-hero {
+  text-align: center;
+  padding: 20px 0;
+  width: 100%;
+  max-width: 480px;
+}
+
+.kid-dashboard-hero__name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+
+.kid-dashboard-hero__stars {
+  font-size: 1.5rem;
+  color: var(--color-secondary);
+  margin-bottom: 24px;
+}
+
+.kid-dashboard-placeholder {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 32px;
+  text-align: center;
+  color: var(--color-muted);
+  width: 100%;
+  max-width: 480px;
+  font-size: 1rem;
+}
+
+.kid-dashboard-placeholder .emoji { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+/* ── Toast ────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--color-text);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.9rem;
+  z-index: 9999;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+  white-space: nowrap;
+  max-width: 90vw;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.toast--show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast--success { background: var(--color-success); color: #fff; }
+.toast--error   { background: var(--color-danger);  color: #fff; }
+.toast--info    { background: var(--color-primary);  color: #fff; }
+
+/* ── Spacers & Helpers ────────────────────────────────────── */
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.w-full { width: 100%; max-width: 480px; }
+
+.back-btn {
+  align-self: flex-start;
+  margin-bottom: 8px;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .card { padding: 24px 18px; }
+  .home-hero__title { font-size: 2.2rem; }
+  .kid-card__actions { flex-direction: row; }
+}

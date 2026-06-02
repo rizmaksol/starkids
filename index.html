@@ -512,6 +512,13 @@ function stLL(uid){
 function stopL(){if(_uP){_uP();_uP=null;}if(_uL){_uL();_uL=null;}if(_uKP){_uKP();_uKP=null;}}
 function rbP(){const np=[];Object.keys(G.logs).forEach(kidId=>{const kid=G.kids.find(k=>k.id===kidId);if(!kid)return;Object.keys(G.logs[kidId]).forEach(dk=>{const log=G.logs[kidId][dk];if(!log||!log.tasks)return;G.tasks.forEach(task=>{if(log.tasks[task.id]==='pending'){if(!np.find(p=>p.kidId===kidId&&p.tid===task.id&&p.date===dk))np.push({kidId,kidName:kid.name,kPh:kid.photo,kEm:kid.emoji,kCo:kid.color,task,tid:task.id,date:dk,time:'',photo:log.photos?.[task.id]||null,ticked:!!log.ticked?.[task.id]});}});});});G.pending=np;}
 // Kid dashboard
+// isNP: is this prayer (index pi) the next one not yet done?
+function isNP(pi,pr,log){
+  for(var i=0;i<pr.length;i++){
+    if(!log.prayers[pr[i].n])return i===pi;
+  }
+  return false;
+}
 function rKid(){const kid=G.kid;if(!kid)return;const dk=today();const log=gLog(kid.id,dk);const ts=cS(kid.id,dk);const ws=wS(kid.id);document.getElementById('k-st').textContent='⭐ '+ws;const dow=new Date().getDay();const pr=Pr();
 // FIX 1: claimable only when stars genuinely earned (approved tasks + prayers)
 const cl=G.rewards.filter(r=>{const c=r.period==='month'?mS(kid.id):ws;return c>=r.stars&&!r.given&&!r.claimed;});

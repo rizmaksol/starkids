@@ -80,6 +80,7 @@
     <button class="tab-btn"        id="tab-btn-approvals" onclick="showTab('approvals')">✅ Approve <span id="approvals-badge" class="badge" style="display:none;"></span></button>
     <button class="tab-btn"        id="tab-btn-wallets"   onclick="showTab('wallets')">⭐ Wallets</button>
     <button class="tab-btn"        id="tab-btn-rewards"   onclick="showTab('rewards')">🎁 Rewards</button>
+    <button class="tab-btn"        id="tab-btn-finance"   onclick="showTab('finance')">💰 Finance</button>
   </div>
 
   <!-- Kids tab -->
@@ -148,6 +149,7 @@
     <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
     <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
     <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ 0 Stars</div>
+    <div class="kid-dashboard-money" id="kid-dashboard-money">💰 ﷼ 0.00</div>
     <!-- Streak display -->
     <div id="kid-streak-bar" class="streak-bar" style="display:none;"></div>
   </div>
@@ -242,6 +244,20 @@
   </div>
 </div>
 
+<!-- ════════════════════ MODAL: ADD JOB ════════════════════ -->
+<div class="modal-overlay" id="modal-add-job" onclick="handleModalClick(event,'modal-add-job')">
+  <div class="modal-box">
+    <h3 class="modal-title">Add Entrepreneur Job 💼</h3>
+    <div class="form-group"><label>Job Title *</label><input id="new-job-title" type="text" placeholder="e.g. Wash the car" /></div>
+    <div class="form-group"><label>Description</label><input id="new-job-desc" type="text" placeholder="e.g. Full wash inside and out" /></div>
+    <div class="form-group"><label>⭐ Stars to earn</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('new-job-stars',-5)">−</button><input id="new-job-stars" type="number" value="20" min="1" max="200" readonly /><button type="button" class="stars-btn" onclick="adjustStars('new-job-stars',5)">+</button></div>
+    </div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="new-job-emoji" type="text" value="💼" maxlength="2" /><span id="new-job-emoji-preview" class="avatar-preview">💼</span></div></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddJob()">Cancel</button><button class="btn btn--primary" id="btn-save-new-job">Add Job 💼</button></div>
+  </div>
+</div>
+
 <!-- ═════════════════════════════ TOAST ═════════════════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
@@ -296,7 +312,7 @@
   }
   function handleModalClick(e, id) {
     if (e.target.id !== id) return;
-    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal };
+    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob };
     map[id]?.();
   }
   function adjustStars(inputId, delta) {
@@ -306,6 +322,7 @@
   document.getElementById("kid-avatar")?.addEventListener("input", e => document.getElementById("avatar-preview").textContent = e.target.value||"🌟");
   document.getElementById("new-reward-emoji")?.addEventListener("input", e => document.getElementById("new-reward-emoji-preview").textContent = e.target.value||"🎁");
   document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value||"🎁");
+  document.getElementById("new-job-emoji")?.addEventListener("input", e => document.getElementById("new-job-emoji-preview").textContent = e.target.value||"💼");
   document.getElementById("kid-code-input")?.addEventListener("input", e => { if(e.target.value.length>6) e.target.value=e.target.value.slice(0,6); });
 </script>
 </body>

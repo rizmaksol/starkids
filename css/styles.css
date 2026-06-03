@@ -1162,3 +1162,80 @@ input:focus, select:focus {
   background: none; border: none; color: #fff;
   font-size: 1.1rem; cursor: pointer; padding: 4px 8px;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SPRINT 6 — Finance, Money, Entrepreneur Jobs
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Money value on kid dashboard ────────────────────────── */
+.kid-dashboard-money {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-success);
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+
+/* ── Rate preview box ─────────────────────────────────────── */
+.rate-preview-box {
+  background: linear-gradient(135deg, #f4f2ff, #fff9e6);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 0.03em;
+}
+
+/* ── Wallet money line ────────────────────────────────────── */
+.wallet-money {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-success);
+  margin-bottom: 6px;
+}
+
+/* ── Job catalog item (parent) ────────────────────────────── */
+.job-catalog-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.job-emoji  { font-size: 1.8rem; flex-shrink: 0; line-height: 1.2; }
+.job-info   { flex: 1; min-width: 0; }
+.job-title  { font-weight: 700; font-size: 0.9rem; color: var(--color-text); }
+.job-desc   { font-size: 0.78rem; color: var(--color-muted); margin-top: 2px; }
+.job-stars  { font-size: 0.8rem; color: var(--color-secondary); font-weight: 700; margin-top: 4px; }
+
+/* ── Job kid item (kid view) ──────────────────────────────── */
+.job-kid-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #fff9e6, #fffbf0);
+  border: 2px solid var(--color-secondary);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: box-shadow var(--transition);
+}
+.job-kid-item:hover { box-shadow: var(--shadow-sm); }
+.job-kid-item--claimed {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Entrepreneur task card ───────────────────────────────── */
+.task-card--job {
+  border-color: var(--color-secondary);
+  background: linear-gradient(135deg, #fffbf0, #fff);
+}

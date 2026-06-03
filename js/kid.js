@@ -5,28 +5,21 @@
 //          Real photo upload to Firebase Storage
 // ============================================================
 
-import { db, storage } from "./firebase.js";
+import { db } from "./firebase.js";
 import {
   collection, addDoc, getDocs, getDoc, doc,
   deleteDoc, query, where, serverTimestamp, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import {
-  ref, uploadBytes, getDownloadURL, deleteObject
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── Generate a random 6-digit code ───────────────────────────
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ── Upload kid photo to Firebase Storage ─────────────────────
-// Returns the download URL string
+// ── uploadKidPhoto — base64 now handled in app.js via fileToBase64
+// Kept for API compatibility
 export async function uploadKidPhoto(parentId, kidId, file) {
-  const ext      = file.name.split(".").pop() || "jpg";
-  const path     = `kids/${parentId}/${kidId}.${ext}`;
-  const photoRef = ref(storage, path);
-  await uploadBytes(photoRef, file);
-  return await getDownloadURL(photoRef);
+  return null; // base64 handled in app.js before calling updateKidPhoto
 }
 
 // ── Add a new kid ─────────────────────────────────────────────

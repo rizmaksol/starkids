@@ -69,6 +69,16 @@ function compressImage(file, maxWidth = 800, quality = 0.7) {
   });
 }
 
+// ── Convert file to base64 data URL ──────────────────────────
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result);
+    reader.onerror = e => reject(e);
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Remember Me ───────────────────────────────────────────────
 const LS_EMAIL = "sk_remembered_email";
 const saveEmail     = e  => localStorage.setItem(LS_EMAIL, e);
@@ -928,16 +938,20 @@ document.getElementById("btn-confirm-submit-task")?.addEventListener("click", as
   // Upload photo with 15s timeout — if it fails, submit without photo
   if (file) {
     try {
-      toast("Compressing & uploading photo… 📸", "info");
+      toast("Processing photo… 📸", "info");
       const compressed = await compressImage(file, 400, 0.65);
-      const uploadPromise = uploadTaskPhoto(currentKid.id, submitTaskId, compressed);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Upload timeout")), 15000)
-      );
-      photoURL = await Promise.race([uploadPromise, timeoutPromise]);
+      const b64 = await fileToBase64(compressed);
+      // Firestore doc limit is 1MB — base64 at 400px is ~40KB, well within limit
+      if (b64.length > 700000) {
+        toast("Photo too large even after compression — sent without photo.", "info");
+        photoURL = null;
+      } else {
+        photoURL = b64;
+        toast("Photo ready! ✅", "success");
+      }
     } catch(e) {
-      console.warn("Photo upload failed, submitting without photo:", e);
-      toast("Photo upload failed — submitting without photo.", "info");
+      console.error("Photo processing failed:", e);
+      toast("Photo failed — task sent without photo.", "info");
       photoURL = null;
     }
   }

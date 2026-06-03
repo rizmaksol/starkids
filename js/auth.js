@@ -1,7 +1,6 @@
 // ============================================================
 // js/auth.js
 // Parent Authentication — StarKids V10
-// Handles: Signup · Login · Logout · Auth state
 // ============================================================
 
 import { auth, db } from "./firebase.js";
@@ -9,12 +8,18 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  browserLocalPersistence,
+  setPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  doc, setDoc, getDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── Sign Up ──────────────────────────────────────────────────
-// Creates a Firebase Auth user + a /parents/{uid} Firestore doc
+// Force local persistence so auth survives page reloads on GitHub Pages
+await setPersistence(auth, browserLocalPersistence);
+
+// ── Sign Up ───────────────────────────────────────────────────
 export async function signUpParent(name, email, password) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   const uid = credential.user.uid;
@@ -28,26 +33,24 @@ export async function signUpParent(name, email, password) {
   return credential.user;
 }
 
-// ── Login ────────────────────────────────────────────────────
+// ── Login ─────────────────────────────────────────────────────
 export async function loginParent(email, password) {
   const credential = await signInWithEmailAndPassword(auth, email, password);
   return credential.user;
 }
 
-// ── Logout ───────────────────────────────────────────────────
+// ── Logout ────────────────────────────────────────────────────
 export async function logoutParent() {
   await signOut(auth);
 }
 
-// ── Fetch parent profile ─────────────────────────────────────
+// ── Fetch parent profile ──────────────────────────────────────
 export async function getParentProfile(uid) {
   const snap = await getDoc(doc(db, "parents", uid));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-// ── Auth State Observer ──────────────────────────────────────
-// callback(user) is called whenever auth state changes.
-// user is null when logged out, Firebase User object when logged in.
+// ── Auth State Observer ───────────────────────────────────────
 export function onAuthChange(callback) {
   return onAuthStateChanged(auth, callback);
 }

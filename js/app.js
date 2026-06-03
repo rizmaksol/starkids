@@ -162,8 +162,16 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
 
   setLoading(btn, true);
   try {
-    await signUpParent(name, email, password);
+    const user = await signUpParent(name, email, password);
     toast("Account created! Welcome to StarKids! 🌟", "success");
+
+    // Force navigation immediately
+    currentParent = { uid: user.uid, ...(await getParentProfile(user.uid)) };
+    document.getElementById("parent-name-display").textContent =
+      `Welcome, ${currentParent.name}! 👋`;
+    showScreen("screen-parent-dashboard");
+    loadKids();
+
   } catch (err) {
     toast(friendlyError(err), "error");
   } finally {
@@ -186,7 +194,7 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
 
   setLoading(btn, true);
   try {
-    await loginParent(email, password);
+    const user = await loginParent(email, password);
 
     // Save or clear remembered email
     if (remember) {
@@ -196,6 +204,14 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
     }
 
     toast("Welcome back! 🌟", "success");
+
+    // Force navigation immediately — do not wait for onAuthChange
+    currentParent = { uid: user.uid, ...(await getParentProfile(user.uid)) };
+    document.getElementById("parent-name-display").textContent =
+      `Welcome, ${currentParent.name}! 👋`;
+    showScreen("screen-parent-dashboard");
+    loadKids();
+
   } catch (err) {
     toast(friendlyError(err), "error");
   } finally {

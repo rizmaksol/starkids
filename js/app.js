@@ -794,8 +794,57 @@ async function loadKidTasks(kid) {
 window.handleTaskDone = async (taskId) => {
   const btn=document.querySelector(`[onclick="handleTaskDone('${taskId}')"]`);
   if (btn) { btn.disabled=true; btn.textContent="Sending…"; }
-  try { await submitTask(taskId); toast("Sent to parent for approval! 🚀","success"); await loadKidTasks(currentKid); }
+  try {
+    await submitTask(taskId);
+    toast("🚀 Sent! Tap 🔄 Refresh after parent approves","success");
+    await loadKidTasks(currentKid);
+  }
   catch(err) { toast("Something went wrong.","error"); console.error(err); }
+};
+
+// ─ Refresh kid dashboard ────────────────────────────────────────────────────────────
+window.refreshKidDashboard = async () => {
+  if (!currentKid) return;
+  const btn = document.getElementById("btn-kid-refresh");
+  if (btn) { btn.textContent = "⏳ Checking…"; btn.disabled = true; }
+  try {
+    await resetRecurringTasks(currentKid.id);
+    const stars = await getStarBalance(currentKid.id);
+    const money = starsToMoney(stars, financeSettings);
+    document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
+    document.getElementById("kid-dashboard-money").textContent = `💰 ${money}`;
+    await loadKidTasks(currentKid);
+    await loadKidGoalsView(currentKid.id, stars);
+    // Check achievements
+    try {
+      const kidVals = familyValues.length ? familyValues : await getFamilyValues(currentKid.parentId).catch(()=>[]);
+      const stats   = await getKidStats(currentKid.id, kidVals);
+      const earned  = await checkAchievements(currentKid.id, stats);
+      if (earned.length > 0) {
+        await loadKidAchievements(currentKid.id);
+        earned.forEach((a, i) => setTimeout(() =>
+          celebrate(`🏆 Achievement Unlocked!
+${a.emoji} ${a.title}
+${a.desc}`, a.emoji+"🏆"+a.emoji)
+        , 900*(i+1)));
+        toast(`🏆 ${earned.length} new achievement${earned.length>1?"s":""}!`, "success");
+      } else {
+        toast("✅ All updated!", "success");
+      }
+    } catch(e) { console.error("achievement check:", e); toast("✅ Stars updated!", "success"); }
+    // Refresh praise badge
+    try {
+      const praises = await getPraiseForKid(currentKid.id);
+      const unread  = praises.filter(p=>!p.read).length;
+      const badge   = document.getElementById("kid-praise-badge");
+      if (badge && unread>0) { badge.textContent=unread; badge.style.display="inline-flex"; }
+      else if (badge) badge.style.display="none";
+    } catch(e) {}
+  } catch(e) {
+    toast("Refresh failed. Try again.","error"); console.error(e);
+  } finally {
+    if (btn) { btn.textContent = "🔄 Refresh"; btn.disabled = false; }
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════

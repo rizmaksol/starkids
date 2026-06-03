@@ -606,16 +606,54 @@ function goToParentDashboard() {
   showScreen("screen-parent-dashboard"); showTab("kids"); loadKids();
 }
 
+// ── Signup step navigation ───────────────────────────────────
+window.goToSignupStep2 = function() {
+  const name  = document.getElementById("signup-name")?.value.trim();
+  const email = document.getElementById("signup-email")?.value.trim();
+  const pw    = document.getElementById("signup-password")?.value;
+  if (!name || !email || !pw) { toast("Please fill in all fields.", "error"); return; }
+  document.getElementById("signup-step-1").style.display = "none";
+  document.getElementById("signup-step-2").style.display = "block";
+};
+
+window.goToSignupStep1 = function() {
+  document.getElementById("signup-step-2").style.display = "none";
+  document.getElementById("signup-step-1").style.display = "block";
+};
+
+window.selectFocus = function(focus) {
+  document.querySelectorAll(".focus-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector('[data-focus="' + focus + '"]')?.classList.add("active");
+  document.getElementById("signup-focus").value = focus;
+  const fs = document.getElementById("faith-selector-section");
+  if (fs) fs.style.display = focus === "faith" ? "block" : "none";
+};
+
+window.selectFaith = function(faith) {
+  document.querySelectorAll(".faith-grid-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector('[data-faith="' + faith + '"]')?.classList.add("active");
+  document.getElementById("signup-faith").value = faith;
+};
+
 document.getElementById("btn-signup")?.addEventListener("click", async () => {
-  const btn=document.getElementById("btn-signup"); const name=document.getElementById("signup-name").value.trim(); const email=document.getElementById("signup-email").value.trim(); const password=document.getElementById("signup-password").value;
-  if (!name||!email||!password) { toast("Please fill in all fields.","error"); return; } setLoading(btn,true);
+  const btn      = document.getElementById("btn-signup");
+  const name     = document.getElementById("signup-name")?.value.trim();
+  const email    = document.getElementById("signup-email")?.value.trim();
+  const password = document.getElementById("signup-password")?.value;
+  const focus    = document.getElementById("signup-focus")?.value || "faith";
+  const faith    = document.getElementById("signup-faith")?.value || "muslim";
+  if (!name||!email||!password) { toast("Please fill in all fields.","error"); return; }
+  setLoading(btn, true);
   try {
-    const user=await signUpParent(name,email,password); const profile=await getParentProfile(user.uid);
-    currentParent={uid:user.uid,name:profile?.name||name,email,...profile};
-    financeSettings=await getFinanceSettings(currentParent.uid);
+    const prefs = { focus, faith: focus === "faith" ? faith : null };
+    const user  = await signUpParent(name, email, password, prefs);
+    const profile = await getParentProfile(user.uid);
+    currentParent = { uid: user.uid, name: profile?.name||name, email, ...profile };
+    financeSettings = await getFinanceSettings(currentParent.uid);
     await seedDefaultRewards(currentParent.uid);
     familyValues = await seedDefaultValues(currentParent.uid);
-    toast("Account created! Welcome! 🌟","success"); goToParentDashboard();
+    toast("Account created! Welcome to StarKids! 🌟","success");
+    goToParentDashboard();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
 

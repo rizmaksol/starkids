@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StarKids — Sprint 1</title>
+  <title>StarKids — V10</title>
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>" />
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════ SCREEN 1: HOME ═══ -->
+<!-- ══════════════════════════════════ SCREEN: HOME ══════════ -->
 <section class="screen active" id="screen-home">
   <div class="home-hero">
     <span class="home-hero__star">⭐</span>
@@ -23,25 +23,23 @@
   </div>
   <p class="mt-24" style="color:var(--color-muted);font-size:0.8rem;text-align:center;">
     New parent?
-    <button class="btn btn--ghost" onclick="goToParentAuth('signup')"
-      style="display:inline;width:auto;padding:0;color:var(--color-primary);font-weight:700;">
+    <button onclick="goToParentAuth('signup')"
+      style="background:none;border:none;color:var(--color-primary);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">
       Create an account
     </button>
   </p>
 </section>
 
 
-<!-- ═══════════════════════════════════ SCREEN 2: SIGN UP ════ -->
+<!-- ═════════════════════════════════ SCREEN: SIGN UP ════════ -->
 <section class="screen" id="screen-signup">
   <div class="app-bar w-full">
     <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
     <span class="app-logo">Star<span>Kids</span></span>
     <div style="width:64px"></div>
   </div>
-
   <div class="card">
     <h2 class="card__title">Create Account 🌟</h2>
-
     <div class="form-group">
       <label for="signup-name">Your Name</label>
       <input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" />
@@ -54,28 +52,23 @@
       <label for="signup-password">Password</label>
       <input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" />
     </div>
-
     <button id="btn-signup" class="btn btn--primary mt-8">Create Account</button>
-
     <div class="auth-switch mt-12">
-      Already have an account?
-      <button onclick="goToParentAuth('login')">Log in</button>
+      Already have an account? <button onclick="goToParentAuth('login')">Log in</button>
     </div>
   </div>
 </section>
 
 
-<!-- ════════════════════════════════════ SCREEN 3: LOGIN ═════ -->
+<!-- ══════════════════════════════════ SCREEN: LOGIN ═════════ -->
 <section class="screen" id="screen-login">
   <div class="app-bar w-full">
     <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
     <span class="app-logo">Star<span>Kids</span></span>
     <div style="width:64px"></div>
   </div>
-
   <div class="card">
     <h2 class="card__title">Welcome Back 👋</h2>
-
     <div class="form-group">
       <label for="login-email">Email</label>
       <input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" />
@@ -84,29 +77,24 @@
       <label for="login-password">Password</label>
       <div class="password-wrap">
         <input id="login-password" type="password" placeholder="Your password" autocomplete="current-password" />
-        <button type="button" class="toggle-pw" onclick="togglePassword('login-password', this)" aria-label="Show password">👁</button>
+        <button type="button" class="toggle-pw" onclick="togglePassword('login-password',this)">👁</button>
       </div>
     </div>
-
-    <!-- ✅ REMEMBER ME -->
     <div class="remember-row">
       <label class="remember-label">
         <input type="checkbox" id="remember-me" />
         <span>Remember my email</span>
       </label>
     </div>
-
     <button id="btn-login" class="btn btn--primary mt-8">Log In</button>
-
     <div class="auth-switch mt-12">
-      No account yet?
-      <button onclick="goToParentAuth('signup')">Sign up free</button>
+      No account yet? <button onclick="goToParentAuth('signup')">Sign up free</button>
     </div>
   </div>
 </section>
 
 
-<!-- ═══════════════════════════ SCREEN 4: PARENT DASHBOARD ═══ -->
+<!-- ══════════════════════════ SCREEN: PARENT DASHBOARD ══════ -->
 <section class="screen" id="screen-parent-dashboard">
   <div class="app-bar w-full">
     <span class="app-logo">Star<span>Kids</span></span>
@@ -115,92 +103,91 @@
 
   <p class="dashboard-welcome w-full" id="parent-name-display">Welcome! 👋</p>
 
-  <!-- Kids List -->
-  <div class="card">
-    <h3 class="kids-list-header">My Kids 👨‍👩‍👧</h3>
-    <div id="kids-list"><p class="empty-state">Loading…</p></div>
+  <!-- Tab Bar -->
+  <div class="tab-bar w-full">
+    <button class="tab-btn active" id="tab-btn-kids" onclick="showTab('kids')">👨‍👩‍👧 My Kids</button>
+    <button class="tab-btn" id="tab-btn-approvals" onclick="showTab('approvals')">
+      ✅ Approvals
+      <span id="approvals-badge" class="badge" style="display:none;"></span>
+    </button>
   </div>
 
-  <!-- Add Kid Form -->
-  <div class="card">
-    <h3 class="card__title" style="font-size:1.2rem;margin-bottom:16px;">➕ Add a Kid</h3>
+  <!-- Tab: Kids -->
+  <div class="tab-panel active w-full" id="tab-kids">
+    <div class="card">
+      <h3 class="kids-list-header">My Kids 👨‍👩‍👧</h3>
+      <div id="kids-list"><p class="empty-state">Loading…</p></div>
+    </div>
 
-    <!-- 📸 PHOTO UPLOAD -->
-    <div class="form-group">
-      <label>Kid's Photo</label>
-      <div class="photo-upload-area" onclick="document.getElementById('kid-photo-input').click()">
-        <img id="kid-photo-preview" src="" alt="Preview" style="display:none;" />
-        <div id="kid-photo-placeholder" class="photo-placeholder">
-          <span class="photo-icon">📷</span>
-          <span class="photo-hint">Tap to choose photo<br><small>Gallery or Camera</small></span>
+    <!-- Add Kid Form -->
+    <div class="card">
+      <h3 class="card__title" style="font-size:1.1rem;margin-bottom:16px;">➕ Add a Kid</h3>
+      <div class="form-group">
+        <label>Kid's Photo</label>
+        <div class="photo-upload-area" onclick="document.getElementById('kid-photo-input').click()">
+          <img id="kid-photo-preview" src="" alt="Preview" style="display:none;" />
+          <div id="kid-photo-placeholder" class="photo-placeholder">
+            <span class="photo-icon">📷</span>
+            <span class="photo-hint">Tap to choose photo<br><small>Gallery or Camera</small></span>
+          </div>
+        </div>
+        <input id="kid-photo-input" type="file" accept="image/*" style="display:none;" />
+        <div class="photo-source-btns">
+          <button type="button" class="btn btn--sm btn--secondary" onclick="openPhotoSource('gallery')">🖼 Gallery</button>
+          <button type="button" class="btn btn--sm btn--secondary" onclick="openPhotoSource('camera')">📸 Camera</button>
         </div>
       </div>
-      <!-- accept="image/*" + capture="environment" gives gallery+camera on mobile -->
-      <input
-        id="kid-photo-input"
-        type="file"
-        accept="image/*"
-        style="display:none;"
-      />
-      <div class="photo-source-btns">
-        <button type="button" class="btn btn--sm btn--secondary"
-          onclick="openPhotoSource('gallery')">🖼 Gallery</button>
-        <button type="button" class="btn btn--sm btn--secondary"
-          onclick="openPhotoSource('camera')">📸 Camera</button>
+      <div class="form-group">
+        <label for="kid-name">Kid's Name</label>
+        <input id="kid-name" type="text" placeholder="e.g. Ahmed" />
       </div>
-    </div>
-
-    <div class="form-group">
-      <label for="kid-name">Kid's Name</label>
-      <input id="kid-name" type="text" placeholder="e.g. Ahmed" />
-    </div>
-    <div class="form-group">
-      <label for="kid-age">Age</label>
-      <input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" />
-    </div>
-    <div class="form-group">
-      <label>Fallback Emoji (if no photo)</label>
-      <div class="avatar-row">
-        <input id="kid-avatar" type="text" value="🌟" maxlength="2" />
-        <span class="avatar-preview" id="avatar-preview">🌟</span>
+      <div class="form-group">
+        <label for="kid-age">Age</label>
+        <input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" />
       </div>
+      <div class="form-group">
+        <label>Fallback Emoji</label>
+        <div class="avatar-row">
+          <input id="kid-avatar" type="text" value="🌟" maxlength="2" />
+          <span class="avatar-preview" id="avatar-preview">🌟</span>
+        </div>
+      </div>
+      <button id="btn-add-kid" class="btn btn--accent mt-8">Add Kid</button>
     </div>
+  </div>
 
-    <button id="btn-add-kid" class="btn btn--accent mt-8">Add Kid</button>
+  <!-- Tab: Approvals -->
+  <div class="tab-panel w-full" id="tab-approvals">
+    <div class="card">
+      <h3 class="kids-list-header">Pending Approvals ✅</h3>
+      <div id="approvals-list"><p class="empty-state">Loading…</p></div>
+    </div>
   </div>
 </section>
 
 
-<!-- ═══════════════════════════════ SCREEN 5: KID LOGIN ══════ -->
+<!-- ══════════════════════════════ SCREEN: KID LOGIN ═════════ -->
 <section class="screen" id="screen-kid-login">
   <div class="app-bar w-full">
     <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
     <span class="app-logo">Star<span>Kids</span></span>
     <div style="width:64px"></div>
   </div>
-
   <div class="card">
     <h2 class="card__title">Enter Your Code 🔑</h2>
     <p style="text-align:center;color:var(--color-muted);margin-bottom:20px;font-size:0.95rem;">
       Ask your parent for your 6-digit code
     </p>
     <div class="form-group code-input-wrap">
-      <input
-        id="kid-code-input"
-        type="number"
-        inputmode="numeric"
-        pattern="[0-9]{6}"
-        maxlength="6"
-        placeholder="000000"
-        autocomplete="off"
-      />
+      <input id="kid-code-input" type="number" inputmode="numeric"
+        pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" />
     </div>
     <button id="btn-kid-login" class="btn btn--kid mt-8">🚀 Start My Day!</button>
   </div>
 </section>
 
 
-<!-- ════════════════════════════ SCREEN 6: KID DASHBOARD ═════ -->
+<!-- ═════════════════════════ SCREEN: KID DASHBOARD ══════════ -->
 <section class="screen" id="screen-kid-dashboard">
   <div class="app-bar w-full">
     <span class="app-logo">Star<span>Kids</span></span>
@@ -209,59 +196,86 @@
 
   <div class="kid-dashboard-hero w-full">
     <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
-    <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi! 🌟</div>
+    <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
     <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ Stars: 0</div>
   </div>
 
-  <div class="kid-dashboard-placeholder w-full">
-    <span class="emoji">🚀</span>
-    <strong>You're all set!</strong>
-    <p class="mt-8">Tasks and rewards are coming in the next sprint.<br>Great job logging in! ⭐</p>
+  <!-- Kid Task List -->
+  <div class="card w-full">
+    <h3 class="kids-list-header">My Tasks 📋</h3>
+    <div id="kid-tasks-list"><p class="empty-state">Loading your tasks…</p></div>
   </div>
 </section>
 
 
-<!-- ════════════════════════════════════════════ TOAST ═══════ -->
+<!-- ════════════════════════ MODAL: ADD TASK ═════════════════ -->
+<div class="modal-overlay" id="modal-add-task" onclick="handleModalClick(event)">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modal-task-kid-name">Add Task</h3>
+
+    <div class="form-group">
+      <label for="task-title-input">Task Title *</label>
+      <input id="task-title-input" type="text" placeholder="e.g. Make your bed" />
+    </div>
+    <div class="form-group">
+      <label for="task-desc-input">Description (optional)</label>
+      <input id="task-desc-input" type="text" placeholder="e.g. Neatly fold the blanket too" />
+    </div>
+    <div class="form-group">
+      <label for="task-stars-input">⭐ Stars to earn</label>
+      <div class="stars-row">
+        <button type="button" class="stars-btn" onclick="adjustStars(-1)">−</button>
+        <input id="task-stars-input" type="number" value="1" min="1" max="10" readonly />
+        <button type="button" class="stars-btn" onclick="adjustStars(1)">+</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeAddTask()">Cancel</button>
+      <button class="btn btn--primary" id="btn-save-task">Save Task</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════ TOAST ═══════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
 
-<!-- ════════════════════════════════════════════ SCRIPTS ═════ -->
+<!-- ════════════════════════════════════════ SCRIPTS ═════════ -->
 <script type="module" src="js/app.js"></script>
-
 <script>
-  // ── Show/hide password ──────────────────────────────────────
-  function togglePassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (input.type === "password") {
-      input.type = "text";
-      btn.textContent = "🙈";
-    } else {
-      input.type = "password";
-      btn.textContent = "👁";
-    }
+  function togglePassword(id, btn) {
+    const el = document.getElementById(id);
+    el.type      = el.type === "password" ? "text" : "password";
+    btn.textContent = el.type === "password" ? "👁" : "🙈";
   }
 
-  // ── Photo source: gallery vs camera ───────────────────────
-  function openPhotoSource(source) {
+  function openPhotoSource(src) {
     const input = document.getElementById("kid-photo-input");
-    if (source === "camera") {
-      input.setAttribute("capture", "environment");
-    } else {
-      input.removeAttribute("capture");
-    }
+    src === "camera" ? input.setAttribute("capture","environment") : input.removeAttribute("capture");
     input.click();
   }
 
-  // ── Avatar emoji preview ────────────────────────────────────
-  const avatarInput   = document.getElementById("kid-avatar");
-  const avatarPreview = document.getElementById("avatar-preview");
+  function handleModalClick(e) {
+    if (e.target.id === "modal-add-task") closeAddTask();
+  }
+
+  function adjustStars(delta) {
+    const el  = document.getElementById("task-stars-input");
+    const val = Math.min(10, Math.max(1, parseInt(el.value || 1) + delta));
+    el.value  = val;
+  }
+
+  // Avatar emoji preview
+  const avatarInput = document.getElementById("kid-avatar");
   if (avatarInput) {
     avatarInput.addEventListener("input", () => {
-      avatarPreview.textContent = avatarInput.value || "🌟";
+      document.getElementById("avatar-preview").textContent = avatarInput.value || "🌟";
     });
   }
 
-  // ── Limit code to 6 digits ──────────────────────────────────
+  // Limit code input to 6 digits
   const codeInput = document.getElementById("kid-code-input");
   if (codeInput) {
     codeInput.addEventListener("input", () => {
@@ -269,6 +283,5 @@
     });
   }
 </script>
-
 </body>
 </html>

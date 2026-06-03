@@ -39,14 +39,18 @@ function weekStartStr() {
 
 // ── Should this task be reset? ────────────────────────────────
 function needsReset(task) {
-  if (task.status === STATUS.PENDING || task.status === STATUS.SUBMITTED) return false;
+  // Never reset pending, submitted or rejected tasks
+  // Rejected tasks should stay visible with their reason until kid resubmits
+  if (task.status === STATUS.PENDING ||
+      task.status === STATUS.SUBMITTED ||
+      task.status === STATUS.REJECTED) return false;
   if (task.taskType === TASK_TYPE.DAILY) {
     return (task.lastResetDate || "") < todayStr();
   }
   if (task.taskType === TASK_TYPE.WEEKLY) {
     return (task.lastResetDate || "") < weekStartStr();
   }
-  return false; // onetime never resets
+  return false;
 }
 
 // ── Reset overdue recurring tasks ────────────────────────────
@@ -58,10 +62,12 @@ export async function resetRecurringTasks(kidId) {
   tasks.forEach(t => {
     if (needsReset(t)) {
       batch.update(doc(db, "tasks", t.id), {
-        status:        STATUS.PENDING,
-        submittedAt:   null,
-        approvedAt:    null,
-        lastResetDate: t.taskType === TASK_TYPE.DAILY ? todayStr() : weekStartStr()
+        status:          STATUS.PENDING,
+        submittedAt:     null,
+        approvedAt:      null,
+        rejectionReason: null,
+        rejectionPhoto:  null,
+        lastResetDate:   t.taskType === TASK_TYPE.DAILY ? todayStr() : weekStartStr()
       });
       count++;
     }

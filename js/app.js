@@ -184,14 +184,18 @@ async function loadWalletsOverview() {
 // FINANCE SETTINGS TAB
 // ═══════════════════════════════════════════════════════════════
 async function loadFinanceSettings() {
-  financeSettings = await getFinanceSettings(currentParent.uid);
-  const rateEl     = document.getElementById("star-rate-input");
-  const currEl     = document.getElementById("currency-select");
-  const symEl      = document.getElementById("currency-symbol-input");
-  const previewEl  = document.getElementById("rate-preview");
-  if (rateEl) rateEl.value  = financeSettings.rate || 0.10;
-  if (currEl) currEl.value  = financeSettings.currency || "SAR";
-  if (symEl)  symEl.value   = financeSettings.symbol || "﷼";
+  if (!currentParent?.uid) return;
+  try {
+    financeSettings = await getFinanceSettings(currentParent.uid);
+  } catch(e) {
+    financeSettings = { rate: 0.10, currency: "SAR", symbol: "﷼" };
+  }
+  const rateEl = document.getElementById("star-rate-input");
+  const currEl = document.getElementById("currency-select");
+  const symEl  = document.getElementById("currency-symbol-input");
+  if (rateEl) rateEl.value = financeSettings.rate || 0.10;
+  if (currEl) currEl.value = financeSettings.currency || "SAR";
+  if (symEl)  symEl.value  = financeSettings.symbol || "﷼";
   updateRatePreview();
   await loadJobsCatalog();
 }
@@ -224,10 +228,12 @@ document.getElementById("btn-save-finance")?.addEventListener("click", async () 
 // ENTREPRENEUR JOBS CATALOG (parent)
 // ═══════════════════════════════════════════════════════════════
 async function loadJobsCatalog() {
-  const jobs = await getEntrepreneurJobs(currentParent.uid);
-  const el   = document.getElementById("jobs-catalog-list");
+  if (!currentParent?.uid) return;
+  const el = document.getElementById("jobs-catalog-list");
   if (!el) return;
-  if (!jobs.length) { el.innerHTML = `<p class="empty-state">No jobs yet.</p>`; return; }
+  let jobs = [];
+  try { jobs = await getEntrepreneurJobs(currentParent.uid); } catch(e) { console.error(e); }
+  if (!jobs.length) { el.innerHTML = `<p class="empty-state">No jobs yet. Add one above!</p>`; return; }
   el.innerHTML = jobs.map(j => `
     <div class="job-catalog-item">
       <span class="job-emoji">${j.emoji}</span>
@@ -343,11 +349,17 @@ window.showTab = (tab) => {
 // ═══════════════════════════════════════════════════════════════
 onAuthChange(async user => {
   if (user) {
-    const profile = await getParentProfile(user.uid);
-    currentParent = { uid: user.uid, name: profile?.name||"Parent", email: profile?.email||user.email, ...profile };
-    financeSettings = await getFinanceSettings(currentParent.uid);
-    await seedDefaultRewards(currentParent.uid);
-    await seedDefaultJobs(currentParent.uid);
+    try {
+      const profile = await getParentProfile(user.uid);
+      const name = profile?.name || user.displayName || user.email?.split("@")[0] || "Parent";
+      currentParent = { uid: user.uid, name, email: user.email, ...profile };
+      financeSettings = await getFinanceSettings(currentParent.uid);
+      await seedDefaultRewards(currentParent.uid);
+      await seedDefaultJobs(currentParent.uid);
+    } catch(e) {
+      currentParent = { uid: user.uid, name: "Parent", email: user.email };
+      console.error("Profile load error:", e);
+    }
     goToParentDashboard();
   } else { currentParent = null; showScreen("screen-home"); }
 });
@@ -375,7 +387,8 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
   try {
     const user=await loginParent(email,password); remember?saveEmail(email):clearEmail();
     const profile=await getParentProfile(user.uid);
-    currentParent={uid:user.uid,name:profile?.name||"Parent",email,...profile};
+    const name = profile?.name || user.displayName || email.split("@")[0] || "Parent";
+    currentParent={uid:user.uid, name, email, ...profile};
     financeSettings=await getFinanceSettings(currentParent.uid);
     await seedDefaultRewards(currentParent.uid); await seedDefaultJobs(currentParent.uid);
     toast("Welcome back! 🌟","success"); goToParentDashboard();

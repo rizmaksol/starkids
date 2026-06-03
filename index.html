@@ -128,6 +128,47 @@
       <div id="rewards-catalog-list"><p class="empty-state">Loading…</p></div>
     </div>
   </div>
+
+  <!-- Finance tab -->
+  <div class="tab-panel w-full" id="tab-finance">
+    <div class="card">
+      <h3 class="kids-list-header">💰 Finance Settings</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:16px;">Set how much each star is worth in real money. Kids see their balance in stars AND money.</p>
+      <div class="form-group">
+        <label>Currency</label>
+        <select id="currency-select" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;background:var(--color-bg);">
+          <option value="SAR">SAR — Saudi Riyal</option>
+          <option value="USD">USD — US Dollar</option>
+          <option value="AED">AED — UAE Dirham</option>
+          <option value="GBP">GBP — British Pound</option>
+          <option value="EUR">EUR — Euro</option>
+          <option value="PKR">PKR — Pakistani Rupee</option>
+          <option value="EGP">EGP — Egyptian Pound</option>
+          <option value="KWD">KWD — Kuwaiti Dinar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Currency Symbol</label>
+        <input id="currency-symbol-input" type="text" value="﷼" placeholder="e.g. ﷼ or $ or £" maxlength="3" oninput="updateRatePreview()" />
+      </div>
+      <div class="form-group">
+        <label>1 Star = how much money?</label>
+        <input id="star-rate-input" type="number" value="0.10" min="0.01" max="100" step="0.01" placeholder="e.g. 0.10" oninput="updateRatePreview()" />
+      </div>
+      <div class="rate-preview-box" id="rate-preview">10 ⭐ = ﷼ 1.00 · 50 ⭐ = ﷼ 5.00 · 100 ⭐ = ﷼ 10.00</div>
+      <button class="btn btn--primary mt-8" onclick="saveFinanceSettingsHandler()">Save Settings 💾</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 class="kids-list-header" style="margin:0;">💼 Entrepreneur Jobs</h3>
+        <button class="btn btn--sm btn--accent" onclick="openAddJob()">➕ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Extra jobs kids can take on to earn more stars. Teaches initiative!</p>
+      <div id="jobs-catalog-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ════════════════════════════ KID LOGIN ═══════════════════ -->

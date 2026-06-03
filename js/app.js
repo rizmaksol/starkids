@@ -380,7 +380,11 @@ document.getElementById("btn-kid-login")?.addEventListener("click", async () => 
     saveKidSession(kid);
     await showKidDashboard(kid);
     toast(`Hi ${kid.name}! Let's have a great day! 🌟`, "success");
-  } catch (err) { toast("Something went wrong. Try again.", "error"); console.error(err); }
+  } catch (err) {
+    const msg = err?.message || err?.code || "Unknown error";
+    toast("Error: " + msg.slice(0, 60), "error");
+    console.error("KID LOGIN ERROR:", err);
+  }
   finally { setLoading(btn, false); }
 });
 

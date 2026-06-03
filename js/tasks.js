@@ -6,7 +6,7 @@
 import { db } from "./firebase.js";
 import {
   collection, addDoc, getDocs, doc, updateDoc, setDoc,
-  query, where, orderBy, serverTimestamp, getDoc, writeBatch
+  query, where, serverTimestamp, getDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Task status constants ─────────────────────────────────────
@@ -95,8 +95,7 @@ export async function createTask(parentId, kidId, title, description = "", stars
 export async function getTasksForKid(kidId) {
   const q    = query(
     collection(db, "tasks"),
-    where("kidId", "==", kidId),
-    orderBy("createdAt", "asc")
+    where("kidId", "==", kidId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));

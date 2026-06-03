@@ -1062,3 +1062,22 @@ input:focus, select:focus {
 
 /* ── Modal scrollable fix ─────────────────────────────────── */
 .modal-box { max-height: 88vh; overflow-y: auto; }
+
+/* ── Goal card extra states ───────────────────────────────── */
+.goal-card--reached {
+  border-color: var(--color-success);
+  background: linear-gradient(135deg, #f0fff8, #e8f5ff);
+  animation: pulse-border 2s infinite;
+}
+@keyframes pulse-border {
+  0%,100% { border-color: var(--color-success); }
+  50%      { border-color: var(--color-primary); }
+}
+.goal-card--waiting {
+  border-color: var(--color-secondary);
+  background: #fffbf0;
+}
+.approval-card--redeem {
+  border-color: var(--color-secondary);
+  background: #fffbe6;
+}

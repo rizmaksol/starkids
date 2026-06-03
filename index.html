@@ -45,13 +45,68 @@
 <!-- ════════════════════════════ SIGN UP ═════════════════════ -->
 <section class="screen" id="screen-signup">
   <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
-  <div class="card">
-    <h2 class="card__title">Create Account 🌟</h2>
-    <div class="form-group"><label>Your Name</label><input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" /></div>
-    <div class="form-group"><label>Email</label><input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
-    <div class="form-group"><label>Password</label><input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" /></div>
-    <button id="btn-signup" class="btn btn--primary mt-8">Create Account</button>
-    <div class="auth-switch mt-12">Already have an account? <button onclick="goToParentAuth('login')">Log in</button></div>
+
+  <!-- Step 1: Account details -->
+  <div id="signup-step-1" class="w-full">
+    <div class="card">
+      <h2 class="card__title">Create Account 🌟</h2>
+      <div class="signup-step-indicator"><span class="step active">1</span><span class="step-line"></span><span class="step">2</span></div>
+      <div class="form-group"><label>Your Name</label><input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" /></div>
+      <div class="form-group"><label>Email</label><input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
+      <div class="form-group"><label>Password</label><input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" /></div>
+      <button class="btn btn--primary mt-8" onclick="goToSignupStep2()">Next → Family Setup</button>
+      <div class="auth-switch mt-12">Already have an account? <button onclick="goToParentAuth('login')">Log in</button></div>
+    </div>
+  </div>
+
+  <!-- Step 2: Family Preferences -->
+  <div id="signup-step-2" class="w-full" style="display:none;">
+    <div class="card">
+      <h2 class="card__title">Family Setup ❤️</h2>
+      <div class="signup-step-indicator"><span class="step done">✓</span><span class="step-line active"></span><span class="step active">2</span></div>
+      <p style="text-align:center;color:var(--color-muted);font-size:0.9rem;margin-bottom:20px;">This helps us personalise StarKids for your family.</p>
+
+      <!-- Family Focus -->
+      <div class="form-group">
+        <label>Family Focus</label>
+        <div class="focus-selector">
+          <button type="button" class="focus-btn active" data-focus="faith" onclick="selectFocus('faith')">
+            🙏 Faith-Based
+            <span>Habits guided by your faith tradition</span>
+          </button>
+          <button type="button" class="focus-btn" data-focus="values" onclick="selectFocus('values')">
+            ❤️ Values-Based
+            <span>Universal family values & character</span>
+          </button>
+          <button type="button" class="focus-btn" data-focus="custom" onclick="selectFocus('custom')">
+            ✨ Custom
+            <span>You decide everything</span>
+          </button>
+        </div>
+        <input type="hidden" id="signup-focus" value="faith" />
+      </div>
+
+      <!-- Faith selector (shown when faith-based selected) -->
+      <div id="faith-selector-section" class="form-group">
+        <label>Your Faith Tradition</label>
+        <div class="faith-grid">
+          <button type="button" class="faith-grid-btn active" data-faith="muslim"           onclick="selectFaith('muslim')">🕌 Muslim</button>
+          <button type="button" class="faith-grid-btn" data-faith="christian"              onclick="selectFaith('christian')">✝️ Christian</button>
+          <button type="button" class="faith-grid-btn" data-faith="christian_orthodox"     onclick="selectFaith('christian_orthodox')">☦️ Orthodox</button>
+          <button type="button" class="faith-grid-btn" data-faith="jewish"                 onclick="selectFaith('jewish')">✡️ Jewish</button>
+          <button type="button" class="faith-grid-btn" data-faith="hindu"                  onclick="selectFaith('hindu')">🪔 Hindu</button>
+          <button type="button" class="faith-grid-btn" data-faith="buddhist"               onclick="selectFaith('buddhist')">☸️ Buddhist</button>
+          <button type="button" class="faith-grid-btn" data-faith="sikh"                   onclick="selectFaith('sikh')">🪯 Sikh</button>
+          <button type="button" class="faith-grid-btn" data-faith="nonreligious"           onclick="selectFaith('nonreligious')">🌿 Mindfulness</button>
+        </div>
+        <input type="hidden" id="signup-faith" value="muslim" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn--secondary" onclick="goToSignupStep1()">← Back</button>
+        <button id="btn-signup" class="btn btn--primary">Create Account 🌟</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -373,9 +428,9 @@
 <!-- ═════════════════════ MODAL: FAITH TASKS ════════════════ -->
 <div class="modal-overlay" id="modal-faith-tasks" onclick="handleModalClick(event,'modal-faith-tasks')">
   <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
-    <h3 class="modal-title" id="modal-faith-kid-name">Add Faith Tasks 🕌</h3>
+    <h3 class="modal-title" id="modal-faith-kid-name">Add Faith Journey Tasks</h3>
     <input type="hidden" id="faith-modal-kid-id" />
-    <p style="text-align:center;color:var(--color-muted);font-size:0.85rem;margin-bottom:14px;">Select the faith tasks to add. All selected tasks will be added as Daily tasks.</p>
+    <p style="text-align:center;color:var(--color-muted);font-size:0.85rem;margin-bottom:14px;" id="faith-modal-subtitle">Select the tasks to add as Daily habits.</p>
     <div id="faith-tasks-list"></div>
     <div class="modal-actions" style="margin-top:16px;"><button class="btn btn--secondary" onclick="closeFaithTasks()">Cancel</button><button class="btn btn--primary" id="btn-save-faith-tasks">Add Selected 🕌</button></div>
   </div>

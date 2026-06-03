@@ -1,6 +1,5 @@
 // ============================================================
-// js/auth.js
-// Parent Authentication — StarKids V10
+// js/auth.js — StarKids V10
 // ============================================================
 
 import { auth, db } from "./firebase.js";
@@ -13,23 +12,25 @@ import {
   setPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  doc, setDoc, getDoc, serverTimestamp
+  doc, setDoc, getDoc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Force local persistence so auth survives page reloads on GitHub Pages
 await setPersistence(auth, browserLocalPersistence);
 
 // ── Sign Up ───────────────────────────────────────────────────
-export async function signUpParent(name, email, password) {
+export async function signUpParent(name, email, password, familyPrefs = {}) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   const uid = credential.user.uid;
-
   await setDoc(doc(db, "parents", uid), {
-    name,
-    email,
-    createdAt: serverTimestamp()
+    name, email,
+    familyFocus:  familyPrefs.focus    || "values",
+    faith:        familyPrefs.faith    || null,
+    currency:     familyPrefs.currency || "SAR",
+    currencySymbol: familyPrefs.symbol || "﷼",
+    starRate:     familyPrefs.rate     || 0.10,
+    setupComplete: true,
+    createdAt:    serverTimestamp()
   });
-
   return credential.user;
 }
 
@@ -44,10 +45,15 @@ export async function logoutParent() {
   await signOut(auth);
 }
 
-// ── Fetch parent profile ──────────────────────────────────────
+// ── Get parent profile ────────────────────────────────────────
 export async function getParentProfile(uid) {
   const snap = await getDoc(doc(db, "parents", uid));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// ── Update parent profile ─────────────────────────────────────
+export async function updateParentProfile(uid, fields) {
+  await updateDoc(doc(db, "parents", uid), fields);
 }
 
 // ── Auth State Observer ───────────────────────────────────────

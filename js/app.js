@@ -2,13 +2,13 @@
 // js/app.js — StarKids V10  Sprint 1+2+3+4+5+6
 // ============================================================
 
-import { signUpParent, loginParent, logoutParent, getParentProfile, onAuthChange } from "./auth.js";
+import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, approveTask, rejectTask, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js";
-import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, DEFAULT_FAITH_TASKS } from "./values.js";
+import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js";
 import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js";
 
 // ── State ─────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ function renderKids() {
       </div>
       <div class="kid-card__actions">
         <button class="btn btn--sm btn--accent"    onclick="openAddTask('${kid.id}','${kid.name}')">➕ Task</button>
-        <button class="btn btn--sm btn--faith"     onclick="openFaithTasks('${kid.id}','${kid.name}')">🕌 Faith</button>
+        <button class="btn btn--sm btn--faith"     onclick="openFaithTasks('${kid.id}','${kid.name}')">${getFaithEmoji(currentParent?.faith||"muslim")} Faith</button>
         <button class="btn btn--sm btn--praise"    onclick="openSendPraise('${kid.id}','${kid.name}')">💛 Praise</button>
         <button class="btn btn--sm btn--info"      onclick="openBonusStars('${kid.id}','${kid.name}')">⭐ Bonus</button>
         <button class="btn btn--sm btn--secondary" onclick="handleRegenCode('${kid.id}')">🔄</button>
@@ -430,27 +430,43 @@ function populateValueSelector() {
 
 // ── Faith tasks section ───────────────────────────────────────
 window.openFaithTasks = (kidId, kidName) => {
-  document.getElementById("modal-faith-kid-name").textContent = `Add Faith Tasks for ${kidName}`;
+  // Get faith from parent profile
+  const faith     = currentParent?.faith || "muslim";
+  const faithLabel= getFaithLabel(faith);
+  const faithEmoji= getFaithEmoji(faith);
+  const tasks     = getFaithTasks(faith);
+
+  document.getElementById("modal-faith-kid-name").textContent = `${faithEmoji} Faith Journey for ${kidName}`;
+  document.getElementById("faith-modal-subtitle").textContent =
+    `${faithLabel} tasks — added as daily habits. Select the ones you want.`;
   document.getElementById("faith-modal-kid-id").value = kidId;
+
   const list = document.getElementById("faith-tasks-list");
-  list.innerHTML = DEFAULT_FAITH_TASKS.map((t,i) => `
-    <label class="faith-task-item">
-      <input type="checkbox" value="${i}" checked />
-      <span class="faith-emoji">${t.emoji}</span>
-      <div class="faith-info">
-        <div class="faith-title">${t.title}</div>
-        <div class="faith-stars">⭐ ${t.stars} stars/day · ${starsToMoney(t.stars,financeSettings)}</div>
-      </div>
-    </label>`).join("");
+  if (!tasks.length) {
+    list.innerHTML = `<p class="empty-state">No preset tasks for your faith. Add custom tasks from the Kids tab instead.</p>`;
+  } else {
+    list.innerHTML = tasks.map((t,i) => `
+      <label class="faith-task-item">
+        <input type="checkbox" value="${i}" checked />
+        <span class="faith-emoji">${t.emoji}</span>
+        <div class="faith-info">
+          <div class="faith-title">${t.title}</div>
+          <div class="faith-desc" style="font-size:0.75rem;color:var(--color-muted);">${t.description}</div>
+          <div class="faith-stars">⭐ ${t.stars} stars/day · ${starsToMoney(t.stars,financeSettings)}</div>
+        </div>
+      </label>`).join("");
+  }
   document.getElementById("modal-faith-tasks").classList.add("open");
 };
 window.closeFaithTasks = () => document.getElementById("modal-faith-tasks").classList.remove("open");
 
 document.getElementById("btn-save-faith-tasks")?.addEventListener("click", async () => {
-  const btn   = document.getElementById("btn-save-faith-tasks");
-  const kidId = document.getElementById("faith-modal-kid-id").value;
-  const checks= document.querySelectorAll("#faith-tasks-list input[type=checkbox]:checked");
-  const selected = Array.from(checks).map(c => DEFAULT_FAITH_TASKS[parseInt(c.value)]);
+  const btn    = document.getElementById("btn-save-faith-tasks");
+  const kidId  = document.getElementById("faith-modal-kid-id").value;
+  const faith  = currentParent?.faith || "muslim";
+  const tasks  = getFaithTasks(faith);
+  const checks = document.querySelectorAll("#faith-tasks-list input[type=checkbox]:checked");
+  const selected = Array.from(checks).map(c => tasks[parseInt(c.value)]).filter(Boolean);
   if (!selected.length) { toast("Please select at least one task.","error"); return; }
   setLoading(btn,true);
   try {

@@ -1591,3 +1591,98 @@ input:focus, select:focus {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   FAMILY PREFERENCES — Multi-faith, Signup Steps
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Signup step indicator ────────────────────────────────── */
+.signup-step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.step {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-weight: 800; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.step.active { background: var(--color-primary); color: #fff; }
+.step.done   { background: var(--color-success);  color: #fff; }
+.step-line {
+  flex: 1; max-width: 60px; height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+}
+.step-line.active { background: var(--color-primary); }
+
+/* ── Family Focus selector ────────────────────────────────── */
+.focus-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.focus-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 14px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+}
+.focus-btn span {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+.focus-btn.active {
+  border-color: var(--color-primary);
+  background: #f4f2ff;
+  color: var(--color-primary);
+}
+.focus-btn.active span { color: var(--color-primary); opacity: 0.75; }
+
+/* ── Faith grid selector ──────────────────────────────────── */
+.faith-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+.faith-grid-btn {
+  padding: 12px 10px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+  color: var(--color-text);
+}
+.faith-grid-btn.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(108,99,255,0.3);
+}
+.faith-grid-btn:hover:not(.active) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}

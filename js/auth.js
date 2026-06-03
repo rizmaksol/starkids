@@ -14,27 +14,18 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Sign Up ──────────────────────────────────────────────────
+// Creates a Firebase Auth user + a /parents/{uid} Firestore doc
 export async function signUpParent(name, email, password) {
-  try {
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const uid = credential.user.uid;
 
-    const credential =
-      await createUserWithEmailAndPassword(auth, email, password);
+  await setDoc(doc(db, "parents", uid), {
+    name,
+    email,
+    createdAt: serverTimestamp()
+  });
 
-    const uid = credential.user.uid;
-
-    await setDoc(doc(db, "parents", uid), {
-      name,
-      email,
-      createdAt: serverTimestamp()
-    });
-
-    return credential.user;
-
-  } catch (error) {
-    console.error("FULL FIREBASE ERROR:", error);
-    alert(error.code + " | " + error.message);
-    throw error;
-  }
+  return credential.user;
 }
 
 // ── Login ────────────────────────────────────────────────────

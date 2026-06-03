@@ -9,6 +9,7 @@ import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, 
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js";
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, DEFAULT_FAITH_TASKS } from "./values.js";
+import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js";
 
 // ── State ─────────────────────────────────────────────────────
 let currentParent    = null;
@@ -561,6 +562,7 @@ window.showTab = (tab) => {
   if (tab==="rewards")   loadRewardsCatalog();
   if (tab==="finance")   loadFinanceSettings();
   if (tab==="values")    loadValuesTab();
+  if (tab==="report")    loadWeeklyReports();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -677,8 +679,15 @@ window.handleApprove = async (taskId,kidId,stars,title,currentStreak) => {
     const result=await approveTask(taskId,kidId,stars,currentStreak||0);
     toast(`✅ Approved! ${stars}⭐ = ${starsToMoney(stars,financeSettings)} for "${title}"`,"success");
     if (result.streakBonus) setTimeout(()=>toast(`🔥 ${result.streak}-task streak! Bonus +2⭐`,"success"),1500);
-    const newStars=await getStarBalance(kidId); const completed=await checkGoalCompletion(kidId,newStars);
+    const newStars=await getStarBalance(kidId);
+    const completed=await checkGoalCompletion(kidId,newStars);
     completed.forEach(g=>celebrate(`🎉 Goal Reached!\n"${g.title}"`));
+    // Check achievements
+    try {
+      const stats    = await getKidStats(kidId, familyValues);
+      const earned   = await checkAchievements(kidId, stats);
+      earned.forEach((a,i) => setTimeout(()=>celebrate(`🏆 Achievement Unlocked!\n${a.emoji} ${a.title}\n${a.desc}`, a.emoji+"🏆"+a.emoji), 1000*(i+1)));
+    } catch(e) { console.error("achievement check:",e); }
     loadPendingApprovals();
   } catch(err) { toast("Failed.","error"); console.error(err); }
 };
@@ -718,11 +727,20 @@ async function showKidDashboard(kid) {
 
   await loadKidTasks(kid);
   await loadKidGoalsView(kid.id, stars);
-  // Load family values for kid's parent (needed for value display + praise)
+  // Load family values
   try { familyValues = await getFamilyValues(kid.parentId); } catch(e) {}
   showKidTab("tasks");
-  // Load jobs in tasks tab
   await loadKidJobsSection(kid.id);
+  // Check for unread praise → show badge on Praise tab
+  try {
+    const praises = await getPraiseForKid(kid.id);
+    const unread  = praises.filter(p => !p.read).length;
+    const badge   = document.getElementById("kid-praise-badge");
+    if (badge && unread > 0) { badge.textContent = unread; badge.style.display = "inline-flex"; }
+    else if (badge) badge.style.display = "none";
+  } catch(e) {}
+  // Load achievements
+  await loadKidAchievements(kid.id);
   showScreen("screen-kid-dashboard");
 }
 
@@ -903,16 +921,117 @@ window.showKidTab=(tab)=>{
   document.querySelectorAll(".kid-tab-panel").forEach(p=>p.classList.remove("active"));
   document.getElementById(`kid-tab-btn-${tab}`)?.classList.add("active");
   document.getElementById(`kid-tab-${tab}`)?.classList.add("active");
+  // Load achievements tab
+  if (tab==="achievements" && currentKid) {
+    loadKidAchievements(currentKid.id);
+  }
   // Load praise & values when praise tab is opened
   if (tab==="praise" && currentKid) {
     loadKidPraise(currentKid.id);
     loadKidValuesProgress(currentKid.id);
+    // Clear praise badge
+    const badge = document.getElementById("kid-praise-badge");
+    if (badge) badge.style.display = "none";
   }
   // Load entrepreneur jobs when tasks tab is opened
   if (tab==="tasks" && currentKid) {
     loadKidJobsSection(currentKid.id);
   }
 };
+
+// ═══════════════════════════════════════════════════════════════
+// ACHIEVEMENTS (Sprint 8)
+// ═══════════════════════════════════════════════════════════════
+
+async function loadKidAchievements(kidId) {
+  const el = document.getElementById("kid-achievements-list");
+  if (!el) return;
+
+  try {
+    const earned = await getAchievements(kidId);
+    const earnedIds = new Set(earned.map(a => a.achievementId));
+
+    let html = `<div class="achievements-grid">`;
+    ACHIEVEMENTS.forEach(a => {
+      const isEarned = earnedIds.has(a.id);
+      html += `
+        <div class="achievement-badge ${isEarned ? "achievement-badge--earned" : "achievement-badge--locked"}"
+             style="${isEarned ? `border-color:${a.color};background:${a.color}18` : ""}"
+             title="${a.title}: ${a.desc}">
+          <div class="achievement-emoji">${isEarned ? a.emoji : "🔒"}</div>
+          <div class="achievement-title">${a.title}</div>
+          ${isEarned ? "" : `<div class="achievement-locked-desc">${a.desc}</div>`}
+        </div>`;
+    });
+    html += `</div>`;
+
+    if (earned.length > 0) {
+      html = `<div class="achievement-summary">🏆 ${earned.length} / ${ACHIEVEMENTS.length} Achievements Earned!</div>` + html;
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<p class="empty-state">Could not load achievements.</p>`; console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEEKLY REPORT (Sprint 8) — Parent view
+// ═══════════════════════════════════════════════════════════════
+
+async function loadWeeklyReports() {
+  const el = document.getElementById("weekly-reports-list");
+  if (!el || !kidsList.length) {
+    if (el) el.innerHTML = `<p class="empty-state">Add kids to see their weekly reports.</p>`;
+    return;
+  }
+
+  const rows = await Promise.all(kidsList.map(async kid => {
+    const report = await getWeeklyReport(kid.id);
+    const money  = starsToMoney(report.starsEarned, financeSettings);
+    const av     = kid.photoURL
+      ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />`
+      : `<span class="wallet-avatar-emoji">${kid.avatarEmoji||"🌟"}</span>`;
+
+    return `
+      <div class="report-card">
+        <div class="report-header">
+          <div class="wallet-avatar">${av}</div>
+          <div>
+            <div class="wallet-name">${kid.name}</div>
+            <div style="font-size:0.78rem;color:var(--color-muted);">This week's summary</div>
+          </div>
+        </div>
+        <div class="report-stats">
+          <div class="report-stat">
+            <div class="report-stat__value">${report.tasksCompleted}</div>
+            <div class="report-stat__label">Tasks Done</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__value">⭐ ${report.starsEarned}</div>
+            <div class="report-stat__label">Stars Earned</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__value">💰 ${money}</div>
+            <div class="report-stat__label">Money Value</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__value">${report.faithTasks}</div>
+            <div class="report-stat__label">🕌 Prayers</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__value">${report.jobsDone}</div>
+            <div class="report-stat__label">💼 Jobs Done</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat__value">⭐ ${report.totalStars}</div>
+            <div class="report-stat__label">Total Stars</div>
+          </div>
+        </div>
+        ${report.topTask ? `<div class="report-top-task">⭐ Best task this week: <strong>${report.topTask}</strong></div>` : ""}
+        ${report.pendingTasks > 0 ? `<div class="report-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} still pending approval</div>` : ""}
+      </div>`;
+  }));
+
+  el.innerHTML = rows.join("");
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SESSION / NAVIGATION / BOOT

@@ -82,6 +82,7 @@
     <button class="tab-btn"        id="tab-btn-rewards"   onclick="showTab('rewards')">🎁 Rewards</button>
     <button class="tab-btn"        id="tab-btn-finance"   onclick="showTab('finance')">💰 Finance</button>
     <button class="tab-btn"        id="tab-btn-values"    onclick="showTab('values')">❤️ Values</button>
+    <button class="tab-btn"        id="tab-btn-report"    onclick="showTab('report')">📊 Report</button>
   </div>
 
   <!-- Kids tab -->
@@ -182,6 +183,15 @@
     </div>
   </div>
 
+  <!-- Report tab -->
+  <div class="tab-panel w-full" id="tab-report">
+    <div class="card">
+      <h3 class="kids-list-header">📊 Weekly Report</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:16px;">Last 7 days performance for each kid.</p>
+      <div id="weekly-reports-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ════════════════════════════ KID LOGIN ═══════════════════ -->
@@ -211,7 +221,8 @@
   <div class="tab-bar w-full" style="max-width:480px;">
     <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks"  onclick="showKidTab('tasks')">📋 Tasks</button>
     <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals"  onclick="showKidTab('goals')">🎯 My Goal</button>
-    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-praise" onclick="showKidTab('praise')">💛 Praise</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-praise"        onclick="showKidTab('praise')">💛 Praise <span id="kid-praise-badge" class="badge" style="display:none;"></span></button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-achievements" onclick="showKidTab('achievements')">🏆 Awards</button>
   </div>
 
   <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
@@ -224,6 +235,13 @@
   </div>
   <div class="kid-tab-panel w-full" id="kid-tab-goals">
     <div class="card"><h3 class="kids-list-header">My Goal 🎯</h3><div id="kid-goals-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+  <div class="kid-tab-panel w-full" id="kid-tab-achievements">
+    <div class="card">
+      <h3 class="kids-list-header">🏆 My Achievements</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:14px;">Earn achievements by building great habits!</p>
+      <div id="kid-achievements-list"><p class="empty-state">Loading…</p></div>
+    </div>
   </div>
   <div class="kid-tab-panel w-full" id="kid-tab-praise">
     <div class="card">

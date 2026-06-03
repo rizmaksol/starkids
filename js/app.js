@@ -4,7 +4,7 @@
 
 import { signUpParent, loginParent, logoutParent, getParentProfile, onAuthChange } from "./auth.js";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js";
-import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, approveTask, rejectTask, getStarBalance, STATUS } from "./tasks.js";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, approveTask, rejectTask, getStarBalance, resetRecurringTasks, deleteTask, STATUS, TASK_TYPE } from "./tasks.js";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js";
 
@@ -116,15 +116,17 @@ async function loadPendingApprovals() {
     html += pending.map(task => {
       const kid = kidsList.find(k => k.id === task.kidId);
       const av  = kid?.photoURL ? `<img src="${kid.photoURL}" class="approval-avatar-img" />` : `<span>${kid?.avatarEmoji||"🌟"}</span>`;
-      return `<div class="approval-card">
+      const typeLabel = task.taskType === "daily" ? "🔄" : task.taskType === "weekly" ? "📅" : "1️⃣";
+    const streakInfo = task.streak ? ` · 🔥 ${task.streak} streak` : "";
+    return `<div class="approval-card">
         <div class="approval-avatar">${av}</div>
         <div class="approval-info">
           <div class="approval-kid">${kid?.name||"?"}</div>
-          <div class="approval-task">${task.title}</div>
+          <div class="approval-task">${typeLabel} ${task.title}${streakInfo}</div>
           <div class="approval-stars">⭐ ${task.stars} star${task.stars>1?"s":""}</div>
         </div>
         <div class="approval-actions">
-          <button class="btn btn--sm btn--success" onclick="handleApprove('${task.id}','${task.kidId}',${task.stars},'${task.title}')">✅ Approve</button>
+          <button class="btn btn--sm btn--success" onclick="handleApprove('${task.id}','${task.kidId}',${task.stars},'${task.title}',${task.streak||0})">✅ Approve</button>
           <button class="btn btn--sm btn--danger"  onclick="handleReject('${task.id}','${task.title}')">❌ Reject</button>
         </div></div>`;
     }).join("");
@@ -399,7 +401,8 @@ document.getElementById("btn-save-task")?.addEventListener("click", async () => 
   const stars = parseInt(document.getElementById("task-stars-input").value)||1;
   if (!title) { toast("Please enter a task title.", "error"); return; }
   setLoading(btn,true);
-  try { await createTask(currentParent.uid, taskKidId, title, desc, stars); closeAddTask(); toast(`Task added for ${taskKidName}! ⭐`, "success"); }
+  const taskType = document.getElementById("task-type-input")?.value || "daily";
+  try { await createTask(currentParent.uid, taskKidId, title, desc, stars, taskType); closeAddTask(); toast(`Task added for ${taskKidName}! ⭐`, "success"); }
   catch(err) { toast("Failed.", "error"); } finally { setLoading(btn,false); }
 });
 
@@ -444,6 +447,10 @@ async function showKidDashboard(kid) {
   const av = document.getElementById("kid-dashboard-avatar");
   av.innerHTML = kid.photoURL ? `<img src="${kid.photoURL}" class="kid-dash-photo" />` : kid.avatarEmoji||"🌟";
   document.getElementById("kid-dashboard-name").textContent = `Hi, ${kid.name}!`;
+  // Reset recurring tasks if needed (daily/weekly)
+  const resetCount = await resetRecurringTasks(kid.id);
+  if (resetCount > 0) console.log(`Reset ${resetCount} recurring tasks for ${kid.name}`);
+
   const stars = await getStarBalance(kid.id);
   document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
   await loadKidTasks(kid);
@@ -464,15 +471,22 @@ async function loadKidTasks(kid) {
   if (!tasks.length) html = `<p class="empty-state">No tasks yet! Ask your parent. 🌟</p>`;
   if (active.length) {
     html += `<div class="task-section-title">📋 My Tasks</div>`;
-    html += active.map(t => `<div class="task-card task-card--pending">
-      <div class="task-card__info">
-        <div class="task-card__title">${t.title}</div>
-        ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
-        <div class="task-card__stars">⭐ ${t.stars} star${t.stars>1?"s":""}</div>
-        ${t.status===STATUS.REJECTED?`<div class="task-card__rejected">❌ Try again!</div>`:""}
-      </div>
-      <button class="btn btn--sm btn--success" onclick="handleTaskDone('${t.id}')">✅ Done!</button>
-    </div>`).join("");
+    html += active.map(t => {
+      const typeBadge = t.taskType === "daily" ? `<span class="type-badge type-badge--daily">🔄 Daily</span>`
+                      : t.taskType === "weekly" ? `<span class="type-badge type-badge--weekly">📅 Weekly</span>`
+                      : `<span class="type-badge type-badge--onetime">1️⃣ One-time</span>`;
+      const streakBadge = (t.streak && t.streak > 1) ? `<span class="streak-badge">🔥 ${t.streak} streak</span>` : "";
+      return `<div class="task-card task-card--pending">
+        <div class="task-card__info">
+          <div class="task-card__title-row">${typeBadge}${streakBadge}</div>
+          <div class="task-card__title">${t.title}</div>
+          ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
+          <div class="task-card__stars">⭐ ${t.stars} star${t.stars>1?"s":""}</div>
+          ${t.status===STATUS.REJECTED?`<div class="task-card__rejected">❌ Try again!</div>`:""}
+        </div>
+        <button class="btn btn--sm btn--success" onclick="handleTaskDone('${t.id}')">✅ Done!</button>
+      </div>`;
+    }).join("");
   }
   if (waiting.length) {
     html += `<div class="task-section-title">⏳ Waiting Approval</div>`;

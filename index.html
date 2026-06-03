@@ -3,18 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StarKids — V10</title>
+  <title>StarKids</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6c63ff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="StarKids" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>" />
+  <link rel="icon" href="icons/icon-192.png" />
 </head>
 <body>
 
 <!-- ════════════════════════════════ HOME ════════════════════ -->
 <section class="screen active" id="screen-home">
   <div class="home-hero">
-    <span class="home-hero__star">⭐</span>
+    <img src="icons/icon-192.png" class="home-app-icon" alt="StarKids" />
     <h1 class="home-hero__title">Star<span>Kids</span></h1>
-    <p class="home-hero__tagline">Build great habits. Earn your stars. 🚀</p>
+    <p class="home-hero__tagline">Build habits. Earn stars. Grow together. 🚀</p>
   </div>
   <div class="home-buttons">
     <button class="btn btn--primary" onclick="goToParentAuth('login')">👨‍👩‍👧 I'm a Parent</button>
@@ -24,6 +34,12 @@
   <p class="mt-24" style="color:var(--color-muted);font-size:0.8rem;text-align:center;">
     New parent? <button onclick="goToParentAuth('signup')" style="background:none;border:none;color:var(--color-primary);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">Create an account</button>
   </p>
+  <!-- PWA install prompt -->
+  <div id="pwa-install-bar" class="pwa-install-bar" style="display:none;">
+    <span>📲 Install StarKids on your phone!</span>
+    <button onclick="installPWA()" class="btn btn--sm btn--primary" style="width:auto;">Install</button>
+    <button onclick="dismissInstall()" class="pwa-dismiss">✕</button>
+  </div>
 </section>
 
 <!-- ════════════════════════════ SIGN UP ═════════════════════ -->
@@ -100,14 +116,14 @@
     <div class="card"><h3 class="kids-list-header">Kids Wallets ⭐</h3><div id="wallets-list"><p class="empty-state">Loading…</p></div></div>
   </div>
 
-  <!-- Rewards Catalog tab -->
+  <!-- Rewards tab -->
   <div class="tab-panel w-full" id="tab-rewards">
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <h3 class="kids-list-header" style="margin:0;">Rewards Catalog 🎁</h3>
         <button class="btn btn--sm btn--accent" onclick="openAddReward()">➕ Add</button>
       </div>
-      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Kids pick from this list as their savings goal. Set star prices you think are fair!</p>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Kids pick from this list as their savings goal.</p>
       <div id="rewards-catalog-list"><p class="empty-state">Loading…</p></div>
     </div>
   </div>
@@ -127,15 +143,20 @@
 <!-- ══════════════════════════ KID DASHBOARD ═════════════════ -->
 <section class="screen" id="screen-kid-dashboard">
   <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">Exit</button></div>
+
   <div class="kid-dashboard-hero w-full">
     <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
     <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
     <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ 0 Stars</div>
+    <!-- Streak display -->
+    <div id="kid-streak-bar" class="streak-bar" style="display:none;"></div>
   </div>
+
   <div class="tab-bar w-full" style="max-width:480px;">
     <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks" onclick="showKidTab('tasks')">📋 Tasks</button>
     <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals" onclick="showKidTab('goals')">🎯 My Goal</button>
   </div>
+
   <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
     <div class="card"><h3 class="kids-list-header">My Tasks 📋</h3><div id="kid-tasks-list"><p class="empty-state">Loading…</p></div></div>
   </div>
@@ -144,12 +165,20 @@
   </div>
 </section>
 
-<!-- ════════════════════ MODAL: ADD TASK ════════════════════ -->
+<!-- ════════════════════════ MODAL: ADD TASK ════════════════ -->
 <div class="modal-overlay" id="modal-add-task" onclick="handleModalClick(event,'modal-add-task')">
   <div class="modal-box">
     <h3 class="modal-title" id="modal-task-kid-name">Add Task</h3>
     <div class="form-group"><label>Task Title *</label><input id="task-title-input" type="text" placeholder="e.g. Make your bed" /></div>
     <div class="form-group"><label>Description (optional)</label><input id="task-desc-input" type="text" placeholder="e.g. Fold the blanket too" /></div>
+    <div class="form-group"><label>Task Type</label>
+      <div class="task-type-row">
+        <button type="button" class="type-btn active" data-type="daily"   onclick="selectTaskType('daily')">🔄 Daily</button>
+        <button type="button" class="type-btn"        data-type="weekly"  onclick="selectTaskType('weekly')">📅 Weekly</button>
+        <button type="button" class="type-btn"        data-type="onetime" onclick="selectTaskType('onetime')">1️⃣ One-time</button>
+      </div>
+      <input type="hidden" id="task-type-input" value="daily" />
+    </div>
     <div class="form-group"><label>⭐ Stars to earn</label>
       <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',-1)">−</button><input id="task-stars-input" type="number" value="1" min="1" max="10" readonly /><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',1)">+</button></div>
     </div>
@@ -157,7 +186,7 @@
   </div>
 </div>
 
-<!-- ═══════════════════ MODAL: BONUS STARS ══════════════════ -->
+<!-- ═══════════════════════ MODAL: BONUS ════════════════════ -->
 <div class="modal-overlay" id="modal-bonus" onclick="handleModalClick(event,'modal-bonus')">
   <div class="modal-box">
     <h3 class="modal-title" id="modal-bonus-kid-name">Bonus Stars</h3>
@@ -169,7 +198,7 @@
   </div>
 </div>
 
-<!-- ════════════════════ MODAL: ADD REWARD ══════════════════ -->
+<!-- ═══════════════════ MODAL: ADD REWARD ═══════════════════ -->
 <div class="modal-overlay" id="modal-add-reward" onclick="handleModalClick(event,'modal-add-reward')">
   <div class="modal-box">
     <h3 class="modal-title">Add Custom Reward 🎁</h3>
@@ -182,7 +211,7 @@
   </div>
 </div>
 
-<!-- ═══════════════════ MODAL: EDIT REWARD ══════════════════ -->
+<!-- ══════════════════ MODAL: EDIT REWARD ═══════════════════ -->
 <div class="modal-overlay" id="modal-edit-reward" onclick="handleModalClick(event,'modal-edit-reward')">
   <div class="modal-box">
     <h3 class="modal-title">Edit Reward ✏️</h3>
@@ -195,7 +224,7 @@
   </div>
 </div>
 
-<!-- ══════════════════ MODAL: PICK GOAL (kid) ═══════════════ -->
+<!-- ════════════════ MODAL: PICK GOAL (kid) ═════════════════ -->
 <div class="modal-overlay" id="modal-pick-goal" onclick="handleModalClick(event,'modal-pick-goal')">
   <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
     <h3 class="modal-title">Pick a Goal 🎯</h3>
@@ -205,20 +234,56 @@
   </div>
 </div>
 
-<!-- ══════════════════════ CELEBRATION ══════════════════════ -->
+<!-- ═══════════════════════ STREAK POPUP ════════════════════ -->
 <div class="celebration" id="celebration">
   <div class="celebration-inner">
-    <div class="celebration-stars">⭐🎉⭐</div>
+    <div class="celebration-stars" id="celebration-icon">⭐🎉⭐</div>
     <div class="celebration-text" id="celebration-text">Goal Reached!</div>
   </div>
 </div>
 
-<!-- ═══════════════════════════ TOAST ═══════════════════════ -->
+<!-- ═════════════════════════════ TOAST ═════════════════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
 <!-- ══════════════════════════ SCRIPTS ══════════════════════ -->
 <script type="module" src="js/app.js"></script>
 <script>
+  // Service Worker registration
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/starkids/sw.js")
+        .then(r => console.log("SW registered"))
+        .catch(e => console.log("SW failed:", e));
+    });
+  }
+
+  // PWA install prompt
+  let deferredPrompt = null;
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const bar = document.getElementById("pwa-install-bar");
+    if (bar && !localStorage.getItem("sk_pwa_dismissed")) bar.style.display = "flex";
+  });
+  window.installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById("pwa-install-bar").style.display = "none";
+  };
+  window.dismissInstall = () => {
+    document.getElementById("pwa-install-bar").style.display = "none";
+    localStorage.setItem("sk_pwa_dismissed", "1");
+  };
+
+  // Task type selector
+  window.selectTaskType = (type) => {
+    document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("active"));
+    document.querySelector(`[data-type="${type}"]`)?.classList.add("active");
+    document.getElementById("task-type-input").value = type;
+  };
+
   function togglePassword(id, btn) {
     const el = document.getElementById(id);
     el.type = el.type === "password" ? "text" : "password";
@@ -231,21 +296,17 @@
   }
   function handleModalClick(e, id) {
     if (e.target.id !== id) return;
-    const actions = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal };
-    actions[id]?.();
+    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal };
+    map[id]?.();
   }
   function adjustStars(inputId, delta) {
-    const el  = document.getElementById(inputId);
-    const min = parseInt(el.min) || 1;
-    const max = parseInt(el.max) || 1000;
-    el.value  = Math.min(max, Math.max(min, parseInt(el.value || min) + delta));
+    const el = document.getElementById(inputId);
+    el.value = Math.min(parseInt(el.max)||1000, Math.max(parseInt(el.min)||1, parseInt(el.value||1) + delta));
   }
-  // Live emoji previews
-  document.getElementById("kid-avatar")?.addEventListener("input", e => document.getElementById("avatar-preview").textContent = e.target.value || "🌟");
-  document.getElementById("new-reward-emoji")?.addEventListener("input", e => document.getElementById("new-reward-emoji-preview").textContent = e.target.value || "🎁");
-  document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value || "🎁");
-  // Code limit
-  document.getElementById("kid-code-input")?.addEventListener("input", e => { if (e.target.value.length > 6) e.target.value = e.target.value.slice(0,6); });
+  document.getElementById("kid-avatar")?.addEventListener("input", e => document.getElementById("avatar-preview").textContent = e.target.value||"🌟");
+  document.getElementById("new-reward-emoji")?.addEventListener("input", e => document.getElementById("new-reward-emoji-preview").textContent = e.target.value||"🎁");
+  document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value||"🎁");
+  document.getElementById("kid-code-input")?.addEventListener("input", e => { if(e.target.value.length>6) e.target.value=e.target.value.slice(0,6); });
 </script>
 </body>
 </html>

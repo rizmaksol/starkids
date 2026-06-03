@@ -1742,3 +1742,13 @@ input:focus, select:focus {
 .photo-upload-area[style*="height:80px"] .photo-icon { font-size: 1.5rem; }
 .photo-upload-area[style*="height:80px"] .photo-hint { font-size: 0.72rem; }
 .photo-upload-area[style*="height:80px"] .photo-placeholder { gap: 4px; flex-direction: row; }
+
+/* ── Home emoji icon (replaces broken img) ────────────────── */
+.home-app-icon-emoji {
+  font-size: 5rem;
+  line-height: 1;
+  margin-bottom: 12px;
+  animation: float 3s ease-in-out infinite;
+  display: block;
+  text-align: center;
+}

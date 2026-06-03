@@ -4,7 +4,7 @@
 
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js";
-import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, approveTask, rejectTask, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js";
@@ -46,6 +46,28 @@ function setLoading(btn, loading) {
   btn.textContent = loading ? "Please wait…" : btn.dataset.orig;
 }
 function fmt(n) { return parseFloat(n).toFixed(2); }
+
+// ── Compress image before upload ─────────────────────────────
+// Resizes to max 800px and compresses to ~70% JPEG quality
+function compressImage(file, maxWidth = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => resolve(new File([blob], file.name, { type: "image/jpeg" })),
+          "image/jpeg", quality);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // ── Remember Me ───────────────────────────────────────────────
 const LS_EMAIL = "sk_remembered_email";
@@ -579,6 +601,7 @@ window.showTab = (tab) => {
   if (tab==="finance")   loadFinanceSettings();
   if (tab==="values")    loadValuesTab();
   if (tab==="report")    loadWeeklyReports();
+  if (tab==="profile")   loadProfileTab();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -739,7 +762,32 @@ window.handleApprove = async (taskId,kidId,stars,title,currentStreak) => {
     loadPendingApprovals();
   } catch(err) { toast("Failed.","error"); console.error(err); }
 };
-window.handleReject = async (taskId,title) => { try { await rejectTask(taskId); toast(`❌ "${title}" sent back.`,"info"); loadPendingApprovals(); } catch(err) { toast("Failed.","error"); } };
+// ── Reject with reason modal ──────────────────────────────────
+let rejectTaskId = null, rejectTaskTitle = null;
+window.openRejectModal = (taskId, title) => {
+  rejectTaskId    = taskId;
+  rejectTaskTitle = title;
+  document.getElementById("reject-reason-input").value = "";
+  document.getElementById("reject-modal-task-title").textContent = `Reject: "${title}"`;
+  document.getElementById("modal-reject-task").classList.add("open");
+};
+window.closeRejectModal = () => document.getElementById("modal-reject-task").classList.remove("open");
+
+document.getElementById("btn-confirm-reject")?.addEventListener("click", async () => {
+  const btn    = document.getElementById("btn-confirm-reject");
+  const reason = document.getElementById("reject-reason-input").value.trim();
+  if (!reason) { toast("Please give a reason so the kid knows what to fix.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await rejectTaskWithReason(rejectTaskId, reason);
+    closeRejectModal();
+    toast(`❌ Task sent back with feedback.`, "info");
+    loadPendingApprovals();
+  } catch(err) { toast("Failed.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+});
+
+window.handleReject = (taskId, title) => openRejectModal(taskId, title);
 
 // ═══════════════════════════════════════════════════════════════
 // KID LOGIN
@@ -808,17 +856,21 @@ async function loadKidTasks(kid) {
     if (regular.length) {
       html += `<div class="task-section-title">📋 My Tasks</div>`;
       html += regular.map(t => {
-        const typeBadge = t.taskType==="daily"?`<span class="type-badge type-badge--daily">🔄 Daily</span>`:t.taskType==="weekly"?`<span class="type-badge type-badge--weekly">📅 Weekly</span>`:`<span class="type-badge type-badge--onetime">1️⃣ One-time</span>`;
+        const typeBadge   = t.taskType==="daily"?`<span class="type-badge type-badge--daily">🔄 Daily</span>`:t.taskType==="weekly"?`<span class="type-badge type-badge--weekly">📅 Weekly</span>`:`<span class="type-badge type-badge--onetime">1️⃣ One-time</span>`;
         const streakBadge = (t.streak&&t.streak>1)?`<span class="streak-badge">🔥 ${t.streak}</span>`:"";
-        return `<div class="task-card task-card--pending">
+        const rejReason   = t.status===STATUS.REJECTED && t.rejectionReason
+          ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
+        const rejPhoto    = t.status===STATUS.REJECTED && t.rejectionPhoto
+          ? `<img src="${t.rejectionPhoto}" class="rejection-photo" />` : "";
+        return `<div class="task-card task-card--pending ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
           <div class="task-card__info">
             <div class="task-card__title-row">${typeBadge}${streakBadge}</div>
             <div class="task-card__title">${t.title}</div>
             ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
             <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
-            ${t.status===STATUS.REJECTED?`<div class="task-card__rejected">❌ Try again!</div>`:""}
+            ${rejReason}${rejPhoto}
           </div>
-          <button class="btn btn--sm btn--success" onclick="handleTaskDone('${t.id}')">✅ Done!</button>
+          <button class="btn btn--sm btn--success" onclick="openSubmitTaskModal('${t.id}','${t.title}')">✅ Done!</button>
         </div>`;
       }).join("");
     }
@@ -845,16 +897,48 @@ async function loadKidTasks(kid) {
   el.innerHTML=html;
 }
 
-window.handleTaskDone = async (taskId) => {
-  const btn=document.querySelector(`[onclick="handleTaskDone('${taskId}')"]`);
-  if (btn) { btn.disabled=true; btn.textContent="Sending…"; }
-  try {
-    await submitTask(taskId);
-    toast("🚀 Sent! Tap 🔄 Refresh after parent approves","success");
-    await loadKidTasks(currentKid);
-  }
-  catch(err) { toast("Something went wrong.","error"); console.error(err); }
+// ── Submit task modal (with optional photo) ──────────────────
+let submitTaskId = null;
+window.openSubmitTaskModal = (taskId, title) => {
+  submitTaskId = taskId;
+  document.getElementById("submit-task-title").textContent = `✅ "${title}"`;
+  document.getElementById("submit-task-photo-preview").style.display = "none";
+  document.getElementById("submit-task-photo-placeholder").style.display = "flex";
+  document.getElementById("submit-task-photo-input").value = "";
+  document.getElementById("modal-submit-task").classList.add("open");
 };
+window.closeSubmitTaskModal = () => document.getElementById("modal-submit-task").classList.remove("open");
+
+// photo preview for submission
+document.getElementById("submit-task-photo-input")?.addEventListener("change", e => {
+  const file = e.target.files[0]; if (!file) return;
+  const prev = document.getElementById("submit-task-photo-preview");
+  prev.src = URL.createObjectURL(file);
+  prev.style.display = "block";
+  document.getElementById("submit-task-photo-placeholder").style.display = "none";
+});
+
+document.getElementById("btn-confirm-submit-task")?.addEventListener("click", async () => {
+  const btn   = document.getElementById("btn-confirm-submit-task");
+  const file  = document.getElementById("submit-task-photo-input")?.files[0];
+  setLoading(btn, true);
+  try {
+    let photoURL = null;
+    if (file) {
+      toast("Uploading photo… 📸", "info");
+      const compressed = await compressImage(file);
+      photoURL = await uploadTaskPhoto(currentKid.id, submitTaskId, compressed);
+    }
+    await submitTaskWithPhoto(submitTaskId, photoURL);
+    closeSubmitTaskModal();
+    toast("🚀 Sent! Tap 🔄 Refresh after parent approves", "success");
+    await loadKidTasks(currentKid);
+  } catch(err) { toast("Something went wrong.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+});
+
+// Keep old handleTaskDone for backward compat (no photo)
+window.handleTaskDone = (taskId) => openSubmitTaskModal(taskId, "Task");
 
 // ─ Refresh kid dashboard ────────────────────────────────────────────────────────────
 window.refreshKidDashboard = async () => {
@@ -1131,6 +1215,70 @@ async function loadWeeklyReports() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PROFILE SETTINGS (parent)
+// ═══════════════════════════════════════════════════════════════
+
+async function loadProfileTab() {
+  if (!currentParent?.uid) return;
+
+  // Pre-fill name
+  const nameEl = document.getElementById("profile-name-input");
+  if (nameEl) nameEl.value = currentParent.name || "";
+
+  // Pre-fill focus
+  const focus = currentParent.familyFocus || "faith";
+  document.querySelectorAll(".profile-focus-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-pfocus="${focus}"]`)?.classList.add("active");
+  document.getElementById("profile-focus-hidden").value = focus;
+
+  // Pre-fill faith
+  const faith = currentParent.faith || "muslim";
+  document.querySelectorAll(".profile-faith-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-pfaith="${faith}"]`)?.classList.add("active");
+  document.getElementById("profile-faith-hidden").value = faith;
+
+  // Show/hide faith selector
+  const faithSec = document.getElementById("profile-faith-section");
+  if (faithSec) faithSec.style.display = focus === "faith" ? "block" : "none";
+}
+
+window.selectProfileFocus = function(focus) {
+  document.querySelectorAll(".profile-focus-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector('[data-pfocus="' + focus + '"]')?.classList.add("active");
+  document.getElementById("profile-focus-hidden").value = focus;
+  const fs = document.getElementById("profile-faith-section");
+  if (fs) fs.style.display = focus === "faith" ? "block" : "none";
+};
+
+window.selectProfileFaith = function(faith) {
+  document.querySelectorAll(".profile-faith-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector('[data-pfaith="' + faith + '"]')?.classList.add("active");
+  document.getElementById("profile-faith-hidden").value = faith;
+};
+
+window.saveProfileSettings = async () => {
+  const btn   = document.getElementById("btn-save-profile");
+  const name  = document.getElementById("profile-name-input")?.value.trim();
+  const focus = document.getElementById("profile-focus-hidden")?.value || "faith";
+  const faith = document.getElementById("profile-faith-hidden")?.value || "muslim";
+  if (!name) { toast("Please enter your name.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await updateParentProfile(currentParent.uid, {
+      name,
+      familyFocus: focus,
+      faith: focus === "faith" ? faith : null
+    });
+    currentParent.name        = name;
+    currentParent.familyFocus = focus;
+    currentParent.faith       = focus === "faith" ? faith : null;
+    document.getElementById("parent-name-display").textContent = `Welcome, ${name}! 👋`;
+    toast("✅ Profile saved!", "success");
+  } catch(err) { toast("Failed to save.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+};
+
+// ═══════════════════════════════════════════════════════════════
 // SESSION / NAVIGATION / BOOT
 // ═══════════════════════════════════════════════════════════════
 function saveKidSession(kid)  { sessionStorage.setItem("sk_kid",JSON.stringify(kid)); }
@@ -1138,6 +1286,14 @@ function loadKidSession()     { const d=sessionStorage.getItem("sk_kid"); return
 function clearKidSession()    { sessionStorage.removeItem("sk_kid"); }
 
 document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{ clearKidSession(); currentKid=null; document.getElementById("kid-code-input").value=""; showScreen("screen-home"); toast("See you soon! 👋","info"); });
+
+// Photo fullscreen
+window.showPhotoFull = (url) => {
+  const el = document.getElementById("photo-fullscreen");
+  document.getElementById("photo-fullscreen-img").src = url;
+  el.style.display = "flex";
+};
+window.closePhotoFull = () => { document.getElementById("photo-fullscreen").style.display = "none"; };
 
 window.goToScreen     = id   => showScreen(id);
 window.goToKidLogin   = ()   => showScreen("screen-kid-login");

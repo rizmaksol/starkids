@@ -138,6 +138,7 @@
     <button class="tab-btn"        id="tab-btn-finance"   onclick="showTab('finance')">💰 Finance</button>
     <button class="tab-btn"        id="tab-btn-values"    onclick="showTab('values')">❤️ Values</button>
     <button class="tab-btn"        id="tab-btn-report"    onclick="showTab('report')">📊 Report</button>
+    <button class="tab-btn"        id="tab-btn-profile"   onclick="showTab('profile')">👤 Profile</button>
   </div>
 
   <!-- Kids tab -->
@@ -244,6 +245,51 @@
       <h3 class="kids-list-header">📊 Weekly Report</h3>
       <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:16px;">Last 7 days performance for each kid.</p>
       <div id="weekly-reports-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Profile tab -->
+  <div class="tab-panel w-full" id="tab-profile">
+    <div class="card">
+      <h3 class="kids-list-header">👤 Profile Settings</h3>
+
+      <div class="form-group">
+        <label>Your Name</label>
+        <input id="profile-name-input" type="text" placeholder="Your name" />
+      </div>
+
+      <div class="form-group">
+        <label>Family Focus</label>
+        <div class="focus-selector">
+          <button type="button" class="focus-btn profile-focus-btn active" data-pfocus="faith" onclick="selectProfileFocus('faith')">
+            🙏 Faith-Based <span>Habits guided by your faith tradition</span>
+          </button>
+          <button type="button" class="focus-btn profile-focus-btn" data-pfocus="values" onclick="selectProfileFocus('values')">
+            ❤️ Values-Based <span>Universal family values & character</span>
+          </button>
+          <button type="button" class="focus-btn profile-focus-btn" data-pfocus="custom" onclick="selectProfileFocus('custom')">
+            ✨ Custom <span>You decide everything</span>
+          </button>
+        </div>
+        <input type="hidden" id="profile-focus-hidden" value="faith" />
+      </div>
+
+      <div id="profile-faith-section" class="form-group">
+        <label>Faith Tradition</label>
+        <div class="faith-grid">
+          <button type="button" class="faith-grid-btn profile-faith-btn active" data-pfaith="muslim"           onclick="selectProfileFaith('muslim')">🕌 Muslim</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="christian"              onclick="selectProfileFaith('christian')">✝️ Christian</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="christian_orthodox"     onclick="selectProfileFaith('christian_orthodox')">☦️ Orthodox</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="jewish"                 onclick="selectProfileFaith('jewish')">✡️ Jewish</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="hindu"                  onclick="selectProfileFaith('hindu')">🪔 Hindu</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="buddhist"               onclick="selectProfileFaith('buddhist')">☸️ Buddhist</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="sikh"                   onclick="selectProfileFaith('sikh')">🪯 Sikh</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="nonreligious"           onclick="selectProfileFaith('nonreligious')">🌿 Mindfulness</button>
+        </div>
+        <input type="hidden" id="profile-faith-hidden" value="muslim" />
+      </div>
+
+      <button id="btn-save-profile" class="btn btn--primary mt-8" onclick="saveProfileSettings()">Save Changes ✅</button>
     </div>
   </div>
 
@@ -399,6 +445,52 @@
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: REJECT TASK ══════════════════ -->
+<div class="modal-overlay" id="modal-reject-task" onclick="handleModalClick(event,'modal-reject-task')">
+  <div class="modal-box">
+    <h3 class="modal-title">❌ Send Back with Feedback</h3>
+    <p class="modal-subtitle" id="reject-modal-task-title">Task</p>
+    <div class="form-group">
+      <label>What does the kid need to fix? *</label>
+      <textarea id="reject-reason-input"
+        placeholder="e.g. Good effort! But please make sure the blanket is fully tucked in next time. Take a photo to show me! 📸"
+        style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.95rem;min-height:100px;resize:vertical;background:var(--color-bg);"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeRejectModal()">Cancel</button>
+      <button class="btn btn--danger" id="btn-confirm-reject">Send Feedback ❌</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: SUBMIT TASK ═══════════════════ -->
+<div class="modal-overlay" id="modal-submit-task" onclick="handleModalClick(event,'modal-submit-task')">
+  <div class="modal-box">
+    <h3 class="modal-title">✅ Mark as Done!</h3>
+    <p class="modal-subtitle" id="submit-task-title">Task</p>
+    <div class="form-group">
+      <label>Add a photo (optional) 📸</label>
+      <p style="font-size:0.78rem;color:var(--color-muted);margin-bottom:8px;">Show your parent what you did!</p>
+      <div class="photo-upload-area" onclick="document.getElementById('submit-task-photo-input').click()" style="height:80px;">
+        <img id="submit-task-photo-preview" src="" alt="" style="display:none;width:100%;height:80px;object-fit:cover;border-radius:var(--radius-sm);" />
+        <div id="submit-task-photo-placeholder" class="photo-placeholder">
+          <span class="photo-icon">📷</span>
+          <span class="photo-hint">Tap to add a photo<br><small>Gallery or Camera</small></span>
+        </div>
+      </div>
+      <input id="submit-task-photo-input" type="file" accept="image/*" style="display:none;" />
+      <div class="photo-source-btns" style="margin-top:8px;">
+        <button type="button" class="btn btn--sm btn--secondary" onclick="openSubmitPhotoSource('gallery')">🖼 Gallery</button>
+        <button type="button" class="btn btn--sm btn--secondary" onclick="openSubmitPhotoSource('camera')">📸 Camera</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeSubmitTaskModal()">Cancel</button>
+      <button class="btn btn--success" id="btn-confirm-submit-task">🚀 Send to Parent!</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════ MODAL: ADD JOB ════════════════════ -->
 <div class="modal-overlay" id="modal-add-job" onclick="handleModalClick(event,'modal-add-job')">
   <div class="modal-box">
@@ -461,6 +553,14 @@
   </div>
 </div>
 
+<!-- ═══════════════════════ PHOTO FULLSCREEN ════════════════ -->
+<div id="photo-fullscreen" onclick="closePhotoFull()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;cursor:pointer;">
+  <img id="photo-fullscreen-img" src="" alt=""
+    style="max-width:95vw;max-height:90vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,0.5);" />
+  <div style="position:absolute;top:16px;right:20px;color:#fff;font-size:1.5rem;cursor:pointer;" onclick="closePhotoFull()">✕</div>
+</div>
+
 <!-- ═════════════════════════════ TOAST ═════════════════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
@@ -515,7 +615,7 @@
   }
   function handleModalClick(e, id) {
     if (e.target.id !== id) return;
-    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob, "modal-add-value": closeAddValue, "modal-faith-tasks": closeFaithTasks, "modal-send-praise": closeSendPraise };
+    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob, "modal-add-value": closeAddValue, "modal-faith-tasks": closeFaithTasks, "modal-send-praise": closeSendPraise, "modal-reject-task": closeRejectModal, "modal-submit-task": closeSubmitTaskModal };
     map[id]?.();
   }
   function adjustStars(inputId, delta) {
@@ -527,6 +627,11 @@
   document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value||"🎁");
   document.getElementById("new-job-emoji")?.addEventListener("input", e => document.getElementById("new-job-emoji-preview").textContent = e.target.value||"💼");
 
+  window.openSubmitPhotoSource = (src) => {
+    const input = document.getElementById("submit-task-photo-input");
+    src === "camera" ? input.setAttribute("capture","environment") : input.removeAttribute("capture");
+    input.click();
+  };
   window.selectPraiseEmoji = (emoji, btn) => {
     document.querySelectorAll(".praise-emoji-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");

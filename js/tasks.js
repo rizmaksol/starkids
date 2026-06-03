@@ -202,3 +202,36 @@ export async function getStarBalance(kidId) {
   const snap = await getDoc(doc(db, "wallets", kidId));
   return snap.exists() ? (snap.data().stars || 0) : 0;
 }
+
+// ── Reject task with reason ───────────────────────────────────
+export async function rejectTaskWithReason(taskId, reason, photoURL = null) {
+  await updateDoc(doc(db, "tasks", taskId), {
+    status:         STATUS.REJECTED,
+    submittedAt:    null,
+    rejectionReason: reason || null,
+    rejectionPhoto:  photoURL || null,
+    rejectedAt:     serverTimestamp()
+  });
+}
+
+// ── Upload task submission photo ──────────────────────────────
+export async function uploadTaskPhoto(kidId, taskId, file) {
+  const { ref, uploadBytes, getDownloadURL } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"
+  );
+  const { storage } = await import("./firebase.js");
+  const ext      = file.name.split(".").pop() || "jpg";
+  const path     = `task-submissions/${kidId}/${taskId}.${ext}`;
+  const photoRef = ref(storage, path);
+  await uploadBytes(photoRef, file);
+  return await getDownloadURL(photoRef);
+}
+
+// ── Submit task with optional photo ──────────────────────────
+export async function submitTaskWithPhoto(taskId, photoURL = null) {
+  await updateDoc(doc(db, "tasks", taskId), {
+    status:           STATUS.SUBMITTED,
+    submittedAt:      serverTimestamp(),
+    submissionPhoto:  photoURL || null
+  });
+}

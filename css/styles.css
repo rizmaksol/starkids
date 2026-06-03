@@ -1686,3 +1686,59 @@ input:focus, select:focus {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Profile Settings + Rejection + Task Photo Submission
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Modal subtitle ───────────────────────────────────────── */
+.modal-subtitle {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+/* ── Rejection reason on task card ───────────────────────── */
+.task-card--rejected {
+  border-color: var(--color-danger) !important;
+  background: #fff5f5;
+}
+.rejection-reason {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: #ffe8e8;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-danger);
+  line-height: 1.4;
+}
+.rejection-photo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  cursor: pointer;
+  display: block;
+}
+
+/* ── Submission photo on approval card ────────────────────── */
+.submission-photo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  cursor: pointer;
+  border: 2px solid var(--color-border);
+  display: block;
+}
+
+/* ── Compact photo upload area (submit task) ──────────────── */
+.photo-upload-area[style*="height:80px"] .photo-icon { font-size: 1.5rem; }
+.photo-upload-area[style*="height:80px"] .photo-hint { font-size: 0.72rem; }
+.photo-upload-area[style*="height:80px"] .photo-placeholder { gap: 4px; flex-direction: row; }

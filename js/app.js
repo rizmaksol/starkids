@@ -892,7 +892,7 @@ async function loadKidTasks(kid) {
             <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
             ${rejReason}${rejPhoto}
           </div>
-          <button class="btn btn--sm btn--success" onclick="openSubmitTaskModal('${t.id}','${(t.title||'').replace(/'/g,'')}')">✅ Done!</button>
+          <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
         </div>`;
       }).join("");
     }
@@ -904,7 +904,7 @@ async function loadKidTasks(kid) {
           ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
           <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
         </div>
-        <button class="btn btn--sm btn--success" onclick="openSubmitTaskModal('${t.id}','${t.title.replace(/'/g,\"\")}')">✅ Done!</button>
+        <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
       </div>`).join("");
     }
   }
@@ -980,8 +980,9 @@ document.getElementById("btn-confirm-submit-task")?.addEventListener("click", as
   }
 });
 
-// Keep old handleTaskDone for backward compat (no photo)
-window.handleTaskDone = (taskId) => openSubmitTaskModal(taskId, "Task");
+// Clean handler for Done buttons — avoids quote issues in onclick
+window.handleJobDone = (taskId) => openSubmitTaskModal(taskId, "");
+window.handleTaskDone = (taskId) => openSubmitTaskModal(taskId, "");
 
 // ─ Refresh kid dashboard ────────────────────────────────────────────────────────────
 window.refreshKidDashboard = async () => {

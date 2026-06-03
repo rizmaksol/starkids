@@ -8,7 +8,7 @@ import {
   loginKidByCode, uploadKidPhoto, updateKidPhoto
 } from "./kid.js";
 import {
-  createTask, getTasksForKid, getTasksForParent,
+  createTask, createDefaultTasks, getTasksForKid,
   getPendingApprovals, submitTask, approveTask, rejectTask,
   getStarBalance, STATUS
 } from "./tasks.js";
@@ -268,6 +268,8 @@ document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
       await updateKidPhoto(kid.id, url);
       kid.photoURL = url;
     }
+    // Create default age-appropriate tasks for this kid
+    await createDefaultTasks(currentParent.uid, kid.id, age);
     kidsList.push(kid);
     renderKids();
     document.getElementById("kid-name").value  = "";

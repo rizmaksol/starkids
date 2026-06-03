@@ -1,34 +1,92 @@
 // ============================================================
 // js/tasks.js — StarKids V10 Sprint 2
-// Handles: Create Task · Get Tasks · Submit · Approve · Reject
+// Handles: Create Task · Default Tasks · Submit · Approve · Reject
 // ============================================================
 
 import { db } from "./firebase.js";
 import {
-  collection, addDoc, getDocs, doc, updateDoc,
-  query, where, orderBy, serverTimestamp, getDoc
+  collection, addDoc, getDocs, doc, updateDoc, setDoc,
+  query, where, orderBy, serverTimestamp, getDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Task status constants ─────────────────────────────────────
 export const STATUS = {
-  PENDING:   "pending",    // assigned, kid hasn't done it yet
-  SUBMITTED: "submitted",  // kid marked done, waiting parent approval
-  APPROVED:  "approved",   // parent approved → stars awarded
-  REJECTED:  "rejected"    // parent rejected → kid tries again
+  PENDING:   "pending",
+  SUBMITTED: "submitted",
+  APPROVED:  "approved",
+  REJECTED:  "rejected"
 };
 
-// ── Create a task (parent) ────────────────────────────────────
+// ── Default tasks by age group ────────────────────────────────
+// These are created automatically when a new kid is added
+function getDefaultTasks(age) {
+  const all = [
+    // Daily habits (all ages)
+    { title: "Brush teeth 🦷",        description: "Morning and night — 2 minutes each!", stars: 1, minAge: 3 },
+    { title: "Make your bed 🛏",       description: "Straighten the blanket and pillow",   stars: 1, minAge: 4 },
+    { title: "Tidy your room 🧹",      description: "Put toys and clothes in their place",  stars: 2, minAge: 4 },
+    { title: "Wash your hands 🤲",     description: "Before meals and after the bathroom",  stars: 1, minAge: 3 },
+    { title: "Read a book 📚",         description: "Read for at least 15 minutes",         stars: 2, minAge: 5 },
+    { title: "Drink 6 glasses of water 💧", description: "Stay hydrated all day!",         stars: 1, minAge: 4 },
+
+    // Home & Family
+    { title: "Help set the table 🍽",  description: "Place plates, cups, and utensils",     stars: 1, minAge: 5 },
+    { title: "Clear your plate 🧼",    description: "Take your dishes to the kitchen",      stars: 1, minAge: 4 },
+    { title: "Help with groceries 🛒", description: "Help carry or put away groceries",     stars: 2, minAge: 6 },
+    { title: "Feed the pet 🐾",        description: "Give food and fresh water",            stars: 2, minAge: 5 },
+
+    // Older kids
+    { title: "Do homework ✏️",         description: "Finish all school assignments",        stars: 3, minAge: 6 },
+    { title: "Practice an instrument 🎵", description: "Practice for at least 20 minutes", stars: 3, minAge: 7 },
+    { title: "Exercise 🏃",            description: "30 minutes of physical activity",      stars: 2, minAge: 6 },
+    { title: "No screen time before homework 📵", description: "Homework first, screens after!", stars: 2, minAge: 7 },
+
+    // Values
+    { title: "Say something kind 💛",  description: "Give someone a genuine compliment",    stars: 1, minAge: 3 },
+    { title: "Help a family member ❤️", description: "Do something helpful without being asked", stars: 2, minAge: 5 },
+  ];
+
+  // Return tasks appropriate for this age (max 8 to avoid overwhelming)
+  return all.filter(t => age >= t.minAge).slice(0, 8);
+}
+
+// ── Create default tasks for a new kid ───────────────────────
+export async function createDefaultTasks(parentId, kidId, age) {
+  const defaults = getDefaultTasks(age);
+  const batch    = writeBatch(db);
+
+  defaults.forEach(t => {
+    const ref = doc(collection(db, "tasks"));
+    batch.set(ref, {
+      parentId,
+      kidId,
+      title:       t.title,
+      description: t.description,
+      stars:       t.stars,
+      status:      STATUS.PENDING,
+      isDefault:   true,
+      createdAt:   serverTimestamp(),
+      submittedAt: null,
+      approvedAt:  null
+    });
+  });
+
+  await batch.commit();
+}
+
+// ── Create a single task (parent) ────────────────────────────
 export async function createTask(parentId, kidId, title, description = "", stars = 1) {
   const ref = await addDoc(collection(db, "tasks"), {
     parentId,
     kidId,
     title,
     description,
-    stars,            // how many stars this task is worth
-    status: STATUS.PENDING,
-    createdAt: serverTimestamp(),
+    stars,
+    status:      STATUS.PENDING,
+    isDefault:   false,
+    createdAt:   serverTimestamp(),
     submittedAt: null,
-    approvedAt: null
+    approvedAt:  null
   });
   return { id: ref.id, parentId, kidId, title, description, stars, status: STATUS.PENDING };
 }
@@ -38,18 +96,7 @@ export async function getTasksForKid(kidId) {
   const q    = query(
     collection(db, "tasks"),
     where("kidId", "==", kidId),
-    orderBy("createdAt", "desc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-
-// ── Get all tasks for a parent (all kids) ────────────────────
-export async function getTasksForParent(parentId) {
-  const q    = query(
-    collection(db, "tasks"),
-    where("parentId", "==", parentId),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "asc")
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -69,7 +116,7 @@ export async function getPendingApprovals(parentId) {
 // ── Kid marks task as done ────────────────────────────────────
 export async function submitTask(taskId) {
   await updateDoc(doc(db, "tasks", taskId), {
-    status: STATUS.SUBMITTED,
+    status:      STATUS.SUBMITTED,
     submittedAt: serverTimestamp()
   });
 }
@@ -77,35 +124,31 @@ export async function submitTask(taskId) {
 // ── Parent approves task → add stars to wallet ────────────────
 export async function approveTask(taskId, kidId, stars) {
   await updateDoc(doc(db, "tasks", taskId), {
-    status: STATUS.APPROVED,
+    status:     STATUS.APPROVED,
     approvedAt: serverTimestamp()
   });
-  await addStarsToWallet(kidId, stars, taskId);
+  await addStarsToWallet(kidId, stars);
 }
 
 // ── Parent rejects task ───────────────────────────────────────
 export async function rejectTask(taskId) {
   await updateDoc(doc(db, "tasks", taskId), {
-    status: STATUS.PENDING,   // back to pending so kid can try again
+    status:      STATUS.REJECTED,
     submittedAt: null
   });
 }
 
 // ── Wallet: add stars ─────────────────────────────────────────
-async function addStarsToWallet(kidId, stars, taskId) {
+async function addStarsToWallet(kidId, stars) {
   const walletRef = doc(db, "wallets", kidId);
   const snap      = await getDoc(walletRef);
 
   if (snap.exists()) {
-    const current = snap.data().stars || 0;
     await updateDoc(walletRef, {
-      stars: current + stars,
+      stars:       (snap.data().stars || 0) + stars,
       lastUpdated: serverTimestamp()
     });
   } else {
-    const { setDoc } = await import(
-      "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-    );
     await setDoc(walletRef, {
       kidId,
       stars,

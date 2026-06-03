@@ -3,7 +3,7 @@
 // Enables: Install to home screen · Basic offline shell
 // ============================================================
 
-const CACHE    = "starkids-v10-cache-v1";
+const CACHE    = "starkids-v10-cache-v5";
 const PRECACHE = [
   "/starkids/",
   "/starkids/index.html",

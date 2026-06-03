@@ -715,7 +715,19 @@ document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
   if (!name||!age||age<1||age>18) { toast("Please enter a valid name and age.","error"); return; } setLoading(btn,true);
   try {
     const kid=await addKid(currentParent.uid,name,age,emoji,null);
-    if (selectedPhoto) { toast("Uploading photo… 📸","info"); const url=await uploadKidPhoto(currentParent.uid,kid.id,selectedPhoto); await updateKidPhoto(kid.id,url); kid.photoURL=url; }
+    if (selectedPhoto) {
+      toast("Processing photo… 📸","info");
+      try {
+        const compressed = await compressImage(selectedPhoto, 400, 0.65);
+        const b64 = await fileToBase64(compressed);
+        if (b64.length <= 700000) {
+          await updateKidPhoto(kid.id, b64);
+          kid.photoURL = b64;
+        } else {
+          toast("Photo too large — try a smaller image.","info");
+        }
+      } catch(e) { console.error("Kid photo failed:", e); toast("Photo failed — kid added without photo.","info"); }
+    }
     await createDefaultTasks(currentParent.uid,kid.id,age);
     kidsList.push(kid); renderKids();
     document.getElementById("kid-name").value=""; document.getElementById("kid-age").value=""; document.getElementById("kid-avatar").value="🌟";

@@ -682,12 +682,6 @@ window.handleApprove = async (taskId,kidId,stars,title,currentStreak) => {
     const newStars=await getStarBalance(kidId);
     const completed=await checkGoalCompletion(kidId,newStars);
     completed.forEach(g=>celebrate(`🎉 Goal Reached!\n"${g.title}"`));
-    // Check achievements
-    try {
-      const stats    = await getKidStats(kidId, familyValues);
-      const earned   = await checkAchievements(kidId, stats);
-      earned.forEach((a,i) => setTimeout(()=>celebrate(`🏆 Achievement Unlocked!\n${a.emoji} ${a.title}\n${a.desc}`, a.emoji+"🏆"+a.emoji), 1000*(i+1)));
-    } catch(e) { console.error("achievement check:",e); }
     loadPendingApprovals();
   } catch(err) { toast("Failed.","error"); console.error(err); }
 };
@@ -724,6 +718,24 @@ async function showKidDashboard(kid) {
   const money = starsToMoney(stars, financeSettings);
   document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
   document.getElementById("kid-dashboard-money").textContent = `💰 ${money}`;
+
+  // Only check achievements if a task was submitted this session
+  const shouldCheck = sessionStorage.getItem("sk_check_achievements");
+  if (shouldCheck) {
+    sessionStorage.removeItem("sk_check_achievements"); // clear flag immediately
+    try {
+      const kidFamilyValues = familyValues.length ? familyValues : await getFamilyValues(kid.parentId).catch(()=>[]);
+      const stats  = await getKidStats(kid.id, kidFamilyValues);
+      const earned = await checkAchievements(kid.id, stats);
+      if (earned.length > 0) {
+        earned.forEach((a, i) => {
+          setTimeout(() => {
+            celebrate(`🏆 Achievement Unlocked!\n${a.emoji} ${a.title}\n${a.desc}`, a.emoji + "🏆" + a.emoji);
+          }, 900 * (i + 1));
+        });
+      }
+    } catch(e) { console.error("achievement check:", e); }
+  }
 
   await loadKidTasks(kid);
   await loadKidGoalsView(kid.id, stars);

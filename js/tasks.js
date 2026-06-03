@@ -119,12 +119,14 @@ export async function createDefaultTasks(parentId, kidId, age) {
 }
 
 // ── Create a task ─────────────────────────────────────────────
-export async function createTask(parentId, kidId, title, description = "", stars = 1, taskType = TASK_TYPE.DAILY) {
+export async function createTask(parentId, kidId, title, description = "", stars = 1, taskType = TASK_TYPE.DAILY, valueId = null) {
   const ref = await addDoc(collection(db, "tasks"), {
     parentId, kidId, title, description, stars,
     taskType,
+    valueId:       valueId || null,
     status:        STATUS.PENDING,
     isDefault:     false,
+    isFaith:       false,
     streak:        0,
     lastResetDate: taskType === TASK_TYPE.DAILY ? todayStr() : (taskType === TASK_TYPE.WEEKLY ? weekStartStr() : null),
     createdAt:     serverTimestamp(),

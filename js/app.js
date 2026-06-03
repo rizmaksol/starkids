@@ -8,12 +8,14 @@ import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, su
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js";
+import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, DEFAULT_FAITH_TASKS } from "./values.js";
 
 // ── State ─────────────────────────────────────────────────────
 let currentParent    = null;
 let currentKid       = null;
 let kidsList         = [];
 let rewardsCatalog   = [];
+let familyValues     = [];
 let financeSettings  = { rate: 0.10, currency: "SAR", symbol: "﷼" };
 let selectedPhoto    = null;
 
@@ -81,6 +83,8 @@ function renderKids() {
       </div>
       <div class="kid-card__actions">
         <button class="btn btn--sm btn--accent"    onclick="openAddTask('${kid.id}','${kid.name}')">➕ Task</button>
+        <button class="btn btn--sm btn--faith"     onclick="openFaithTasks('${kid.id}','${kid.name}')">🕌 Faith</button>
+        <button class="btn btn--sm btn--praise"    onclick="openSendPraise('${kid.id}','${kid.name}')">💛 Praise</button>
         <button class="btn btn--sm btn--info"      onclick="openBonusStars('${kid.id}','${kid.name}')">⭐ Bonus</button>
         <button class="btn btn--sm btn--secondary" onclick="handleRegenCode('${kid.id}')">🔄</button>
         <button class="btn btn--sm btn--danger"    onclick="handleDeleteKid('${kid.id}','${kid.name}')">🗑</button>
@@ -355,6 +359,196 @@ window.handleRejectRedemption = async (goalId,title) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// VALUES & FAITH ENGINE (Sprint 7)
+// ═══════════════════════════════════════════════════════════════
+
+// ── Load values management tab ────────────────────────────────
+async function loadValuesTab() {
+  if (!currentParent?.uid) return;
+  try {
+    familyValues = await getFamilyValues(currentParent.uid);
+    if (!familyValues.length) familyValues = await seedDefaultValues(currentParent.uid);
+  } catch(e) { console.error("loadValuesTab:", e); return; }
+  renderValuesTab();
+}
+
+function renderValuesTab() {
+  const el = document.getElementById("values-list");
+  if (!el) return;
+  if (!familyValues.length) { el.innerHTML = `<p class="empty-state">No values yet.</p>`; return; }
+  el.innerHTML = familyValues.map(v => `
+    <div class="value-card" style="border-left: 4px solid ${v.color||"#6c63ff"}">
+      <span class="value-emoji">${v.emoji}</span>
+      <div class="value-info">
+        <div class="value-name">${v.name}</div>
+        <div class="value-desc">${v.description||""}</div>
+      </div>
+      <button class="goal-delete-btn" onclick="handleDeleteValue('${v.id}','${v.name}')">×</button>
+    </div>`).join("");
+}
+
+window.handleDeleteValue = async (id, name) => {
+  if (!confirm(`Remove "${name}" from family values?`)) return;
+  try { await deleteFamilyValue(id); familyValues=familyValues.filter(v=>v.id!==id); renderValuesTab(); toast(`"${name}" removed.`,"info"); }
+  catch(e) { toast("Failed.","error"); }
+};
+
+// ── Add custom value modal ────────────────────────────────────
+window.openAddValue  = () => {
+  document.getElementById("new-value-name").value="";
+  document.getElementById("new-value-desc").value="";
+  document.getElementById("new-value-emoji").value="💫";
+  document.getElementById("new-value-emoji-preview").textContent="💫";
+  document.getElementById("new-value-color").value="#6c63ff";
+  document.getElementById("modal-add-value").classList.add("open");
+};
+window.closeAddValue = () => document.getElementById("modal-add-value").classList.remove("open");
+
+document.getElementById("btn-save-new-value")?.addEventListener("click", async () => {
+  const btn  = document.getElementById("btn-save-new-value");
+  const name = document.getElementById("new-value-name").value.trim();
+  const desc = document.getElementById("new-value-desc").value.trim();
+  const emoji= document.getElementById("new-value-emoji").value||"💫";
+  const color= document.getElementById("new-value-color").value||"#6c63ff";
+  if (!name) { toast("Please enter a value name.","error"); return; }
+  setLoading(btn,true);
+  try {
+    const v = await addFamilyValue(currentParent.uid, name, emoji, color, desc);
+    familyValues.push(v); closeAddValue(); renderValuesTab();
+    toast(`"${name}" added to family values! 💛`,"success");
+  } catch(e) { toast("Failed.","error"); console.error(e); } finally { setLoading(btn,false); }
+});
+
+// ── Populate value selector in Add Task modal ─────────────────
+function populateValueSelector() {
+  const sel = document.getElementById("task-value-select");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">— No value tag —</option>` +
+    familyValues.map(v => `<option value="${v.id}">${v.emoji} ${v.name}</option>`).join("");
+}
+
+// ── Faith tasks section ───────────────────────────────────────
+window.openFaithTasks = (kidId, kidName) => {
+  document.getElementById("modal-faith-kid-name").textContent = `Add Faith Tasks for ${kidName}`;
+  document.getElementById("faith-modal-kid-id").value = kidId;
+  const list = document.getElementById("faith-tasks-list");
+  list.innerHTML = DEFAULT_FAITH_TASKS.map((t,i) => `
+    <label class="faith-task-item">
+      <input type="checkbox" value="${i}" checked />
+      <span class="faith-emoji">${t.emoji}</span>
+      <div class="faith-info">
+        <div class="faith-title">${t.title}</div>
+        <div class="faith-stars">⭐ ${t.stars} stars/day · ${starsToMoney(t.stars,financeSettings)}</div>
+      </div>
+    </label>`).join("");
+  document.getElementById("modal-faith-tasks").classList.add("open");
+};
+window.closeFaithTasks = () => document.getElementById("modal-faith-tasks").classList.remove("open");
+
+document.getElementById("btn-save-faith-tasks")?.addEventListener("click", async () => {
+  const btn   = document.getElementById("btn-save-faith-tasks");
+  const kidId = document.getElementById("faith-modal-kid-id").value;
+  const checks= document.querySelectorAll("#faith-tasks-list input[type=checkbox]:checked");
+  const selected = Array.from(checks).map(c => DEFAULT_FAITH_TASKS[parseInt(c.value)]);
+  if (!selected.length) { toast("Please select at least one task.","error"); return; }
+  setLoading(btn,true);
+  try {
+    await addFaithTasksForKid(currentParent.uid, kidId, selected);
+    closeFaithTasks();
+    toast(`${selected.length} faith task${selected.length>1?"s":""} added! 🕌`,"success");
+  } catch(e) { toast("Failed.","error"); console.error(e); } finally { setLoading(btn,false); }
+});
+
+// ── Praise: parent sends praise to kid ───────────────────────
+let praiseKidId=null, praiseKidName=null;
+window.openSendPraise = (kidId, kidName) => {
+  praiseKidId=kidId; praiseKidName=kidName;
+  document.getElementById("modal-praise-kid-name").textContent=`Praise ${kidName} 💛`;
+  document.getElementById("praise-message-input").value="";
+  document.getElementById("praise-value-select").innerHTML=
+    `<option value="">— General praise —</option>` +
+    familyValues.map(v=>`<option value="${v.id}">${v.emoji} ${v.name}</option>`).join("");
+  document.getElementById("praise-emoji-select").value="💛";
+  document.getElementById("modal-send-praise").classList.add("open");
+};
+window.closeSendPraise=()=>document.getElementById("modal-send-praise").classList.remove("open");
+
+document.getElementById("btn-send-praise")?.addEventListener("click", async () => {
+  const btn     = document.getElementById("btn-send-praise");
+  const message = document.getElementById("praise-message-input").value.trim();
+  const valueId = document.getElementById("praise-value-select").value||null;
+  const emoji   = document.getElementById("praise-emoji-select").value||"💛";
+  if (!message) { toast("Please write a praise message.","error"); return; }
+  setLoading(btn,true);
+  try {
+    await sendPraise(currentParent.uid, praiseKidId, message, valueId, emoji);
+    closeSendPraise();
+    toast(`💛 Praise sent to ${praiseKidName}!`,"success");
+  } catch(e) { toast("Failed.","error"); console.error(e); } finally { setLoading(btn,false); }
+});
+
+// ── Kid: load values progress ─────────────────────────────────
+async function loadKidValuesProgress(kidId) {
+  const el    = document.getElementById("kid-values-list");
+  const tabEl = document.getElementById("kid-values-tab-list");
+  try {
+    const values   = await getFamilyValues(currentKid.parentId);
+    if (!values.length) {
+      const msg = `<p class="empty-state">Your family hasn't set values yet.</p>`;
+      if (el) el.innerHTML = msg; if (tabEl) tabEl.innerHTML = msg; return;
+    }
+    const progress = await getValuesProgress(kidId, values);
+    const valHTML  = values.map(v => {
+      const count = progress[v.id]||0;
+      return `<div class="value-progress-card" style="border-left:4px solid ${v.color||"#6c63ff"}">
+        <span class="value-emoji" style="font-size:2rem;">${v.emoji}</span>
+        <div class="value-info">
+          <div class="value-name">${v.name}</div>
+          <div class="value-desc">${v.description||""}</div>
+          <div class="value-count">${count > 0 ? `✅ ${count} task${count>1?"s":""} completed` : "No tasks yet"}</div>
+        </div>
+        ${count>0?`<div class="value-badge" style="background:${v.color||"#6c63ff"}">${count}</div>`:""}
+      </div>`;
+    }).join("");
+    if (el) el.innerHTML = valHTML;
+    if (tabEl) tabEl.innerHTML = valHTML;
+  } catch(e) {
+    const msg = `<p class="empty-state">Could not load values.</p>`;
+    if (el) el.innerHTML = msg; if (tabEl) tabEl.innerHTML = msg;
+    console.error(e);
+  }
+}
+
+// ── Kid: load praise messages ─────────────────────────────────
+async function loadKidPraise(kidId) {
+  // Update both the goals-tab inline list AND the dedicated praise tab
+  const el     = document.getElementById("kid-praise-list");
+  const tabEl  = document.getElementById("kid-praise-tab-list");
+  try {
+    const praises = await getPraiseForKid(kidId);
+    if (!praises.length) {
+      const emptyMsg = `<p class="empty-state">No praise messages yet. Keep working hard! 💪</p>`;
+      if (el) el.innerHTML = emptyMsg;
+      if (tabEl) tabEl.innerHTML = emptyMsg;
+      return;
+    }
+    const sorted = praises.sort((a,b) => (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const praiseHTML = sorted.map(p => `
+      <div class="praise-card ${p.read?"praise-card--read":"praise-card--new"}">
+        <div class="praise-emoji">${p.emoji||"💛"}</div>
+        <div class="praise-body">
+          <div class="praise-message">${p.message}</div>
+          ${p.valueId ? (() => { const v=familyValues.find(fv=>fv.id===p.valueId); return v?`<div class="praise-value">${v.emoji} ${v.name}</div>`:""; })() : ""}
+        </div>
+        ${!p.read?`<div class="praise-new-dot"></div>`:""}
+      </div>`).join("");
+    if (el) el.innerHTML = praiseHTML;
+    if (tabEl) tabEl.innerHTML = praiseHTML;
+    praises.filter(p=>!p.read).forEach(p=>markPraiseRead(p.id).catch(()=>{}));
+  } catch(e) { el.innerHTML=`<p class="empty-state">Could not load praise.</p>`; console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════════════════
 window.showTab = (tab) => {
@@ -366,6 +560,7 @@ window.showTab = (tab) => {
   if (tab==="wallets")   loadWalletsOverview();
   if (tab==="rewards")   loadRewardsCatalog();
   if (tab==="finance")   loadFinanceSettings();
+  if (tab==="values")    loadValuesTab();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -401,6 +596,7 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
     currentParent={uid:user.uid,name:profile?.name||name,email,...profile};
     financeSettings=await getFinanceSettings(currentParent.uid);
     await seedDefaultRewards(currentParent.uid);
+    familyValues = await seedDefaultValues(currentParent.uid);
     toast("Account created! Welcome! 🌟","success"); goToParentDashboard();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
@@ -415,6 +611,7 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
     currentParent={uid:user.uid, name, email, ...profile};
     financeSettings=await getFinanceSettings(currentParent.uid);
     await seedDefaultRewards(currentParent.uid);
+    familyValues = await seedDefaultValues(currentParent.uid);
     toast("Welcome back! 🌟","success"); goToParentDashboard();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
@@ -456,7 +653,16 @@ document.getElementById("btn-save-bonus")?.addEventListener("click", async () =>
 
 // ── Add Task ──────────────────────────────────────────────────
 let taskKidId=null,taskKidName=null;
-window.openAddTask  = (id,name) => { taskKidId=id; taskKidName=name; document.getElementById("modal-task-kid-name").textContent=`Task for ${name}`; document.getElementById("task-title-input").value=""; document.getElementById("task-desc-input").value=""; document.getElementById("task-stars-input").value="1"; selectTaskType("daily"); document.getElementById("modal-add-task").classList.add("open"); };
+window.openAddTask  = (id,name) => {
+  taskKidId=id; taskKidName=name;
+  document.getElementById("modal-task-kid-name").textContent=`Task for ${name}`;
+  document.getElementById("task-title-input").value="";
+  document.getElementById("task-desc-input").value="";
+  document.getElementById("task-stars-input").value="1";
+  selectTaskType("daily");
+  populateValueSelector();
+  document.getElementById("modal-add-task").classList.add("open");
+};
 window.closeAddTask = () => document.getElementById("modal-add-task").classList.remove("open");
 document.getElementById("btn-save-task")?.addEventListener("click", async () => {
   const btn=document.getElementById("btn-save-task"); const title=document.getElementById("task-title-input").value.trim(); const desc=document.getElementById("task-desc-input").value.trim(); const stars=parseInt(document.getElementById("task-stars-input").value)||1; const taskType=document.getElementById("task-type-input")?.value||"daily";
@@ -512,6 +718,8 @@ async function showKidDashboard(kid) {
 
   await loadKidTasks(kid);
   await loadKidGoalsView(kid.id, stars);
+  // Load family values for kid's parent (needed for value display)
+  try { familyValues = await getFamilyValues(kid.parentId); } catch(e) {}
   showKidTab("tasks");
   showScreen("screen-kid-dashboard");
 }
@@ -617,6 +825,14 @@ async function loadKidGoalsView(kidId, currentStars) {
     html+=`<div class="task-section-title">🎁 Past Rewards</div>`;
     html+=redeemed.map(g=>`<div class="goal-card goal-card--redeemed"><div class="goal-emoji">${g.emoji}</div><div class="goal-info"><div class="goal-title">${g.title}</div><div class="goal-target">🎉 Enjoyed!</div></div></div>`).join("");
   }
+  // Values section (before jobs)
+  html += `<div class="task-section-title" style="margin-top:20px;">❤️ My Values</div>
+  <div id="kid-values-list"><p class="empty-state">Loading…</p></div>`;
+
+  // Praise section
+  html += `<div class="task-section-title" style="margin-top:20px;">💛 Praise from Parent</div>
+  <div id="kid-praise-list"><p class="empty-state">Loading…</p></div>`;
+
   // Jobs section
   html += `<div class="task-section-title" style="margin-top:20px;">💼 Entrepreneur Jobs</div>
   <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:10px;">Pick up extra jobs to earn more stars!</p>
@@ -625,6 +841,8 @@ async function loadKidGoalsView(kidId, currentStars) {
   html+=`<div style="margin-top:16px;"><button class="btn btn--${active?"secondary":"kid"}" onclick="openPickGoal()">${active?"🔄 Browse & Change Goal":"🎯 Pick a Goal"}</button></div>`;
   el.innerHTML=html;
   loadKidJobs(kidId);
+  loadKidValuesProgress(kidId);
+  loadKidPraise(kidId);
 }
 
 // ── Kid entrepreneur jobs ─────────────────────────────────────

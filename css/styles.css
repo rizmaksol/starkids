@@ -1239,3 +1239,145 @@ input:focus, select:focus {
   border-color: var(--color-secondary);
   background: linear-gradient(135deg, #fffbf0, #fff);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SPRINT 7 — Values, Faith, Praise
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Faith + Praise buttons ───────────────────────────────── */
+.btn--faith {
+  background: linear-gradient(135deg, #1a936f, #114b5f);
+  color: #fff;
+}
+.btn--faith:hover:not(:disabled) { background: #114b5f; }
+
+.btn--praise {
+  background: linear-gradient(135deg, #f4a261, #e76f51);
+  color: #fff;
+}
+.btn--praise:hover:not(:disabled) { background: #e76f51; }
+
+/* ── Value card (parent list) ─────────────────────────────── */
+.value-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.value-emoji { font-size: 1.8rem; flex-shrink: 0; }
+.value-info  { flex: 1; min-width: 0; }
+.value-name  { font-weight: 800; font-size: 0.95rem; color: var(--color-text); }
+.value-desc  { font-size: 0.78rem; color: var(--color-muted); margin-top: 2px; }
+
+/* ── Value progress card (kid view) ───────────────────────── */
+.value-progress-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.value-count { font-size: 0.78rem; color: var(--color-muted); margin-top: 4px; font-weight: 600; }
+.value-badge {
+  min-width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* ── Faith task item (in modal) ───────────────────────────── */
+.faith-task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.faith-task-item:hover { border-color: #1a936f; }
+.faith-task-item input[type="checkbox"] {
+  width: 18px; height: 18px;
+  accent-color: #1a936f;
+  cursor: pointer; flex-shrink: 0;
+}
+.faith-emoji { font-size: 1.5rem; flex-shrink: 0; }
+.faith-info  { flex: 1; }
+.faith-title { font-weight: 700; font-size: 0.9rem; color: var(--color-text); }
+.faith-stars { font-size: 0.75rem; color: var(--color-secondary); font-weight: 700; }
+
+/* ── Faith task card (kid view) ───────────────────────────── */
+.task-card--faith {
+  border-color: #1a936f;
+  background: linear-gradient(135deg, #f0fff8, #fff);
+}
+
+/* ── Praise card ──────────────────────────────────────────── */
+.praise-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.praise-card--new {
+  background: linear-gradient(135deg, #fffbe6, #fff9f0);
+  border: 2px solid var(--color-secondary);
+  box-shadow: var(--shadow-sm);
+}
+.praise-card--read {
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  opacity: 0.8;
+}
+.praise-emoji   { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+.praise-body    { flex: 1; min-width: 0; }
+.praise-message { font-weight: 600; font-size: 0.95rem; color: var(--color-text); line-height: 1.5; }
+.praise-value   { font-size: 0.78rem; color: var(--color-primary); font-weight: 700; margin-top: 4px; }
+.praise-new-dot {
+  position: absolute; top: 10px; right: 10px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--color-danger);
+}
+
+/* ── Praise emoji selector ────────────────────────────────── */
+.praise-emoji-row {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;
+}
+.praise-emoji-btn {
+  width: 40px; height: 40px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1.3rem;
+  cursor: pointer; background: var(--color-bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.praise-emoji-btn.active {
+  border-color: var(--color-primary);
+  background: #f4f2ff;
+  transform: scale(1.15);
+}
+
+/* ── Value tag badge on task cards ───────────────────────── */
+.value-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.68rem; font-weight: 800;
+  padding: 2px 8px; border-radius: var(--radius-full);
+  background: #f4f2ff; color: var(--color-primary);
+  margin-top: 3px;
+}

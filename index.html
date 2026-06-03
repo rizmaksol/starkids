@@ -81,6 +81,7 @@
     <button class="tab-btn"        id="tab-btn-wallets"   onclick="showTab('wallets')">⭐ Wallets</button>
     <button class="tab-btn"        id="tab-btn-rewards"   onclick="showTab('rewards')">🎁 Rewards</button>
     <button class="tab-btn"        id="tab-btn-finance"   onclick="showTab('finance')">💰 Finance</button>
+    <button class="tab-btn"        id="tab-btn-values"    onclick="showTab('values')">❤️ Values</button>
   </div>
 
   <!-- Kids tab -->
@@ -169,6 +170,18 @@
     </div>
   </div>
 
+  <!-- Values tab -->
+  <div class="tab-panel w-full" id="tab-values">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 class="kids-list-header" style="margin:0;">❤️ Family Values</h3>
+        <button class="btn btn--sm btn--accent" onclick="openAddValue()">➕ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:14px;">These values guide your family. Tag tasks to values so kids see what they're building.</p>
+      <div id="values-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ════════════════════════════ KID LOGIN ═══════════════════ -->
@@ -196,8 +209,9 @@
   </div>
 
   <div class="tab-bar w-full" style="max-width:480px;">
-    <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks" onclick="showKidTab('tasks')">📋 Tasks</button>
-    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals" onclick="showKidTab('goals')">🎯 My Goal</button>
+    <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks"  onclick="showKidTab('tasks')">📋 Tasks</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals"  onclick="showKidTab('goals')">🎯 My Goal</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-praise" onclick="showKidTab('praise')">💛 Praise</button>
   </div>
 
   <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
@@ -205,6 +219,16 @@
   </div>
   <div class="kid-tab-panel w-full" id="kid-tab-goals">
     <div class="card"><h3 class="kids-list-header">My Goal 🎯</h3><div id="kid-goals-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+  <div class="kid-tab-panel w-full" id="kid-tab-praise">
+    <div class="card">
+      <h3 class="kids-list-header">💛 Praise from Parent</h3>
+      <div id="kid-praise-tab-list"><p class="empty-state">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h3 class="kids-list-header">❤️ My Values</h3>
+      <div id="kid-values-tab-list"><p class="empty-state">Loading…</p></div>
+    </div>
   </div>
 </section>
 
@@ -224,6 +248,12 @@
     </div>
     <div class="form-group"><label>⭐ Stars to earn</label>
       <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',-1)">−</button><input id="task-stars-input" type="number" value="1" min="1" max="10" readonly /><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',1)">+</button></div>
+    </div>
+    <div class="form-group">
+      <label>Tag to a Family Value (optional)</label>
+      <select id="task-value-select" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;background:var(--color-bg);">
+        <option value="">— No value tag —</option>
+      </select>
     </div>
     <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddTask()">Cancel</button><button class="btn btn--primary" id="btn-save-task">Save Task</button></div>
   </div>
@@ -299,6 +329,54 @@
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: ADD VALUE ════════════════════ -->
+<div class="modal-overlay" id="modal-add-value" onclick="handleModalClick(event,'modal-add-value')">
+  <div class="modal-box">
+    <h3 class="modal-title">Add Family Value ❤️</h3>
+    <div class="form-group"><label>Value Name *</label><input id="new-value-name" type="text" placeholder="e.g. Patience" /></div>
+    <div class="form-group"><label>Description</label><input id="new-value-desc" type="text" placeholder="e.g. Waiting calmly when things are hard" /></div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="new-value-emoji" type="text" value="💫" maxlength="2" oninput="document.getElementById('new-value-emoji-preview').textContent=this.value||'💫'" /><span id="new-value-emoji-preview" class="avatar-preview">💫</span></div></div>
+    <div class="form-group"><label>Colour</label><input id="new-value-color" type="color" value="#6c63ff" style="width:100%;height:44px;border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;" /></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddValue()">Cancel</button><button class="btn btn--primary" id="btn-save-new-value">Add Value</button></div>
+  </div>
+</div>
+
+<!-- ═════════════════════ MODAL: FAITH TASKS ════════════════ -->
+<div class="modal-overlay" id="modal-faith-tasks" onclick="handleModalClick(event,'modal-faith-tasks')">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
+    <h3 class="modal-title" id="modal-faith-kid-name">Add Faith Tasks 🕌</h3>
+    <input type="hidden" id="faith-modal-kid-id" />
+    <p style="text-align:center;color:var(--color-muted);font-size:0.85rem;margin-bottom:14px;">Select the faith tasks to add. All selected tasks will be added as Daily tasks.</p>
+    <div id="faith-tasks-list"></div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="btn btn--secondary" onclick="closeFaithTasks()">Cancel</button><button class="btn btn--primary" id="btn-save-faith-tasks">Add Selected 🕌</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL: SEND PRAISE ═══════════════ -->
+<div class="modal-overlay" id="modal-send-praise" onclick="handleModalClick(event,'modal-send-praise')">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modal-praise-kid-name">Send Praise 💛</h3>
+    <div class="form-group"><label>Your Message *</label><textarea id="praise-message-input" placeholder="e.g. I'm so proud of how kind you were to your sister today. You showed real kindness! 💛" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;min-height:100px;resize:vertical;background:var(--color-bg);"></textarea></div>
+    <div class="form-group"><label>Link to a Family Value (optional)</label>
+      <select id="praise-value-select" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;background:var(--color-bg);"></select>
+    </div>
+    <div class="form-group"><label>Praise Emoji</label>
+      <div class="praise-emoji-row">
+        <button type="button" class="praise-emoji-btn active" onclick="selectPraiseEmoji('💛',this)">💛</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('⭐',this)">⭐</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🏆',this)">🏆</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🌟',this)">🌟</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('💪',this)">💪</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🎉',this)">🎉</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('❤️',this)">❤️</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🙏',this)">🙏</button>
+      </div>
+      <input type="hidden" id="praise-emoji-select" value="💛" />
+    </div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeSendPraise()">Cancel</button><button class="btn btn--primary" id="btn-send-praise">Send Praise 💛</button></div>
+  </div>
+</div>
+
 <!-- ═════════════════════════════ TOAST ═════════════════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
@@ -353,7 +431,7 @@
   }
   function handleModalClick(e, id) {
     if (e.target.id !== id) return;
-    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob };
+    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob, "modal-add-value": closeAddValue, "modal-faith-tasks": closeFaithTasks, "modal-send-praise": closeSendPraise };
     map[id]?.();
   }
   function adjustStars(inputId, delta) {
@@ -364,6 +442,12 @@
   document.getElementById("new-reward-emoji")?.addEventListener("input", e => document.getElementById("new-reward-emoji-preview").textContent = e.target.value||"🎁");
   document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value||"🎁");
   document.getElementById("new-job-emoji")?.addEventListener("input", e => document.getElementById("new-job-emoji-preview").textContent = e.target.value||"💼");
+
+  window.selectPraiseEmoji = (emoji, btn) => {
+    document.querySelectorAll(".praise-emoji-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("praise-emoji-select").value = emoji;
+  };
   document.getElementById("kid-code-input")?.addEventListener("input", e => { if(e.target.value.length>6) e.target.value=e.target.value.slice(0,6); });
 </script>
 </body>

@@ -184,37 +184,61 @@ async function loadWalletsOverview() {
 // FINANCE SETTINGS TAB
 // ═══════════════════════════════════════════════════════════════
 async function loadFinanceSettings() {
-  if (!currentParent?.uid) return;
+  if (!currentParent?.uid) {
+    console.warn("loadFinanceSettings: no currentParent");
+    return;
+  }
+
+  // Fetch settings
   try {
     financeSettings = await getFinanceSettings(currentParent.uid);
   } catch(e) {
+    console.error("getFinanceSettings failed:", e);
     financeSettings = { rate: 0.10, currency: "SAR", symbol: "﷼" };
   }
+
+  // Populate form fields — they exist because the tab panel is now visible
   const rateEl = document.getElementById("star-rate-input");
   const currEl = document.getElementById("currency-select");
   const symEl  = document.getElementById("currency-symbol-input");
-  if (rateEl) rateEl.value = financeSettings.rate || 0.10;
+
+  if (rateEl) rateEl.value = financeSettings.rate    || 0.10;
   if (currEl) currEl.value = financeSettings.currency || "SAR";
-  if (symEl)  symEl.value  = financeSettings.symbol || "﷼";
+  if (symEl)  symEl.value  = financeSettings.symbol   || "﷼";
+
   updateRatePreview();
+
+  // Seed and load jobs
+  try {
+    await seedDefaultJobs(currentParent.uid);
+  } catch(e) {
+    console.error("seedDefaultJobs failed:", e);
+  }
   await loadJobsCatalog();
 }
 
 function updateRatePreview() {
-  const rate = parseFloat(document.getElementById("star-rate-input")?.value) || 0.10;
-  const sym  = document.getElementById("currency-symbol-input")?.value || "﷼";
-  const el   = document.getElementById("rate-preview");
-  if (el) el.textContent = `10 ⭐ = ${sym} ${fmt(rate * 10)}  ·  50 ⭐ = ${sym} ${fmt(rate * 50)}  ·  100 ⭐ = ${sym} ${fmt(rate * 100)}`;
+  const rateEl = document.getElementById("star-rate-input");
+  const symEl  = document.getElementById("currency-symbol-input");
+  const preEl  = document.getElementById("rate-preview");
+  if (!rateEl || !preEl) return;
+  const rate = parseFloat(rateEl.value) || 0.10;
+  const sym  = symEl?.value || "﷼";
+  preEl.textContent = `10 ⭐ = ${sym} ${fmt(rate * 10)}  ·  50 ⭐ = ${sym} ${fmt(rate * 50)}  ·  100 ⭐ = ${sym} ${fmt(rate * 100)}`;
 }
 
-document.getElementById("star-rate-input")?.addEventListener("input", updateRatePreview);
-document.getElementById("currency-symbol-input")?.addEventListener("input", updateRatePreview);
+// Attach listeners after DOM ready
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("star-rate-input")?.addEventListener("input", updateRatePreview);
+  document.getElementById("currency-symbol-input")?.addEventListener("input", updateRatePreview);
+});
 
-document.getElementById("btn-save-finance")?.addEventListener("click", async () => {
+window.saveFinanceSettingsHandler = async () => {
   const btn  = document.getElementById("btn-save-finance");
-  const rate = parseFloat(document.getElementById("star-rate-input").value) || 0.10;
-  const curr = document.getElementById("currency-select").value;
-  const sym  = document.getElementById("currency-symbol-input").value || "﷼";
+  const rate = parseFloat(document.getElementById("star-rate-input")?.value) || 0.10;
+  const curr = document.getElementById("currency-select")?.value || "SAR";
+  const sym  = document.getElementById("currency-symbol-input")?.value || "﷼";
+  if (!btn) return;
   setLoading(btn, true);
   try {
     await saveFinanceSettings(currentParent.uid, rate, curr, sym);
@@ -222,7 +246,7 @@ document.getElementById("btn-save-finance")?.addEventListener("click", async () 
     toast("✅ Finance settings saved!", "success");
   } catch(err) { toast("Failed to save.", "error"); console.error(err); }
   finally { setLoading(btn, false); }
-});
+};
 
 // ═══════════════════════════════════════════════════════════════
 // ENTREPRENEUR JOBS CATALOG (parent)
@@ -376,7 +400,7 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
     const user=await signUpParent(name,email,password); const profile=await getParentProfile(user.uid);
     currentParent={uid:user.uid,name:profile?.name||name,email,...profile};
     financeSettings=await getFinanceSettings(currentParent.uid);
-    await seedDefaultRewards(currentParent.uid); await seedDefaultJobs(currentParent.uid);
+    await seedDefaultRewards(currentParent.uid);
     toast("Account created! Welcome! 🌟","success"); goToParentDashboard();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
@@ -390,7 +414,7 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
     const name = profile?.name || user.displayName || email.split("@")[0] || "Parent";
     currentParent={uid:user.uid, name, email, ...profile};
     financeSettings=await getFinanceSettings(currentParent.uid);
-    await seedDefaultRewards(currentParent.uid); await seedDefaultJobs(currentParent.uid);
+    await seedDefaultRewards(currentParent.uid);
     toast("Welcome back! 🌟","success"); goToParentDashboard();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });

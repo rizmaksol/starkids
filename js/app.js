@@ -901,7 +901,8 @@ async function loadKidTasks(kid) {
 let submitTaskId = null;
 window.openSubmitTaskModal = (taskId, title) => {
   submitTaskId = taskId;
-  document.getElementById("submit-task-title").textContent = `✅ "${title}"`;
+  const displayTitle = (!title || title === "Task") ? "" : `"${title}"`;
+  document.getElementById("submit-task-title").textContent = displayTitle ? `✅ ${displayTitle}` : "✅ Mark as done!";
   document.getElementById("submit-task-photo-preview").style.display = "none";
   document.getElementById("submit-task-photo-placeholder").style.display = "flex";
   document.getElementById("submit-task-photo-input").value = "";
@@ -919,22 +920,38 @@ document.getElementById("submit-task-photo-input")?.addEventListener("change", e
 });
 
 document.getElementById("btn-confirm-submit-task")?.addEventListener("click", async () => {
-  const btn   = document.getElementById("btn-confirm-submit-task");
-  const file  = document.getElementById("submit-task-photo-input")?.files[0];
+  const btn  = document.getElementById("btn-confirm-submit-task");
+  const file = document.getElementById("submit-task-photo-input")?.files[0];
   setLoading(btn, true);
-  try {
-    let photoURL = null;
-    if (file) {
-      toast("Uploading photo… 📸", "info");
-      const compressed = await compressImage(file);
-      photoURL = await uploadTaskPhoto(currentKid.id, submitTaskId, compressed);
+  let photoURL = null;
+
+  // Upload photo with 15s timeout — if it fails, submit without photo
+  if (file) {
+    try {
+      toast("Compressing & uploading photo… 📸", "info");
+      const compressed = await compressImage(file, 400, 0.65);
+      const uploadPromise = uploadTaskPhoto(currentKid.id, submitTaskId, compressed);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Upload timeout")), 15000)
+      );
+      photoURL = await Promise.race([uploadPromise, timeoutPromise]);
+    } catch(e) {
+      console.warn("Photo upload failed, submitting without photo:", e);
+      toast("Photo upload failed — submitting without photo.", "info");
+      photoURL = null;
     }
+  }
+
+  try {
     await submitTaskWithPhoto(submitTaskId, photoURL);
     closeSubmitTaskModal();
     toast("🚀 Sent! Tap 🔄 Refresh after parent approves", "success");
     await loadKidTasks(currentKid);
-  } catch(err) { toast("Something went wrong.", "error"); console.error(err); }
-  finally { setLoading(btn, false); }
+  } catch(err) {
+    toast("Something went wrong.", "error"); console.error(err);
+  } finally {
+    setLoading(btn, false);
+  }
 });
 
 // Keep old handleTaskDone for backward compat (no photo)

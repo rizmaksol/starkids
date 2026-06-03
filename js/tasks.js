@@ -216,13 +216,15 @@ export async function rejectTaskWithReason(taskId, reason, photoURL = null) {
 
 // ── Upload task submission photo ──────────────────────────────
 export async function uploadTaskPhoto(kidId, taskId, file) {
+  // Use storage imported at top of file
   const { ref, uploadBytes, getDownloadURL } = await import(
     "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"
   );
-  const { storage } = await import("./firebase.js");
-  const ext      = file.name.split(".").pop() || "jpg";
-  const path     = `task-submissions/${kidId}/${taskId}.${ext}`;
-  const photoRef = ref(storage, path);
+  const storageModule = await import("./firebase.js");
+  const store = storageModule.storage;
+  const ext      = (file.name || "photo").split(".").pop() || "jpg";
+  const path     = `task-submissions/${kidId}/${taskId}_${Date.now()}.jpg`;
+  const photoRef = ref(store, path);
   await uploadBytes(photoRef, file);
   return await getDownloadURL(photoRef);
 }

@@ -1,5 +1,5 @@
 // ============================================================
-// js/app.js — StarKids V10  Sprint 1 + Sprint 2
+// js/app.js — StarKids V10  Sprint 1 + 2 + 3
 // ============================================================
 
 import { signUpParent, loginParent, logoutParent, getParentProfile, onAuthChange } from "./auth.js";
@@ -12,6 +12,10 @@ import {
   getPendingApprovals, submitTask, approveTask, rejectTask,
   getStarBalance, STATUS
 } from "./tasks.js";
+import {
+  createGoal, getGoalsForKid, deleteGoal,
+  checkGoalCompletion, addBonusStars, GOAL_STATUS
+} from "./goals.js";
 
 // ── State ─────────────────────────────────────────────────────
 let currentParent = null;
@@ -34,6 +38,15 @@ function toast(msg, type = "info") {
   setTimeout(() => t.classList.remove("toast--show"), 3500);
 }
 
+// ── Celebrate (goal completed) ────────────────────────────────
+function celebrate(goalTitle) {
+  const el = document.getElementById("celebration");
+  if (!el) return;
+  document.getElementById("celebration-text").textContent = `🎉 Goal Reached!\n"${goalTitle}"`;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 4000);
+}
+
 // ── Friendly errors ────────────────────────────────────────────
 function friendlyError(err) {
   const map = {
@@ -54,13 +67,6 @@ function setLoading(btn, loading) {
   btn.textContent  = loading ? "Please wait…" : btn.dataset.orig;
 }
 
-// ── Format Firestore timestamp ─────────────────────────────────
-function fmtDate(ts) {
-  if (!ts) return "";
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
 // ═══════════════════════════════════════════════════════════════
 // REMEMBER ME
 // ═══════════════════════════════════════════════════════════════
@@ -74,8 +80,8 @@ const getRememberedEmail   = () => localStorage.getItem(LS_EMAIL) || "";
   if (!saved) return;
   const el = document.getElementById("login-email");
   const cb = document.getElementById("remember-me");
-  if (el) el.value    = saved;
-  if (cb) cb.checked  = true;
+  if (el) el.value   = saved;
+  if (cb) cb.checked = true;
 })();
 
 // ═══════════════════════════════════════════════════════════════
@@ -92,7 +98,7 @@ document.getElementById("kid-photo-input")?.addEventListener("change", e => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// RENDER KIDS LIST (parent dashboard)
+// RENDER KIDS LIST
 // ═══════════════════════════════════════════════════════════════
 function renderKids() {
   const list = document.getElementById("kids-list");
@@ -114,9 +120,10 @@ function renderKids() {
           <div class="kid-card__code">Code: <strong class="code-display" id="code-${kid.id}">${kid.code}</strong></div>
         </div>
         <div class="kid-card__actions">
-          <button class="btn btn--sm btn--accent"     onclick="openAddTask('${kid.id}','${kid.name}')">➕ Task</button>
-          <button class="btn btn--sm btn--secondary"  onclick="handleRegenCode('${kid.id}')">🔄</button>
-          <button class="btn btn--sm btn--danger"     onclick="handleDeleteKid('${kid.id}','${kid.name}')">🗑</button>
+          <button class="btn btn--sm btn--accent"    onclick="openAddTask('${kid.id}','${kid.name}')">➕ Task</button>
+          <button class="btn btn--sm btn--info"      onclick="openBonusStars('${kid.id}','${kid.name}')">⭐ Bonus</button>
+          <button class="btn btn--sm btn--secondary" onclick="handleRegenCode('${kid.id}')">🔄</button>
+          <button class="btn btn--sm btn--danger"    onclick="handleDeleteKid('${kid.id}','${kid.name}')">🗑</button>
         </div>
       </div>`;
   }).join("");
@@ -129,17 +136,16 @@ async function loadKids() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// RENDER PENDING APPROVALS (parent dashboard)
+// RENDER APPROVALS
 // ═══════════════════════════════════════════════════════════════
 async function loadPendingApprovals() {
   const pending = await getPendingApprovals(currentParent.uid);
   const el      = document.getElementById("approvals-list");
   if (!el) return;
 
-  // Badge on tab
   const badge = document.getElementById("approvals-badge");
   if (badge) {
-    badge.textContent = pending.length > 0 ? pending.length : "";
+    badge.textContent   = pending.length > 0 ? pending.length : "";
     badge.style.display = pending.length > 0 ? "inline-flex" : "none";
   }
 
@@ -148,14 +154,12 @@ async function loadPendingApprovals() {
     return;
   }
 
-  // Build approval cards — look up kid name from kidsList
   el.innerHTML = pending.map(task => {
     const kid = kidsList.find(k => k.id === task.kidId);
-    const kidName = kid ? kid.name : "Unknown";
+    const kidName    = kid ? kid.name : "Unknown";
     const avatarHTML = kid?.photoURL
       ? `<img src="${kid.photoURL}" class="approval-avatar-img" />`
       : `<span>${kid?.avatarEmoji || "🌟"}</span>`;
-
     return `
       <div class="approval-card">
         <div class="approval-avatar">${avatarHTML}</div>
@@ -173,7 +177,50 @@ async function loadPendingApprovals() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT DASHBOARD TAB SWITCHING
+// RENDER KIDS WALLETS (parent overview tab)
+// ═══════════════════════════════════════════════════════════════
+async function loadWalletsOverview() {
+  const el = document.getElementById("wallets-list");
+  if (!el || kidsList.length === 0) {
+    if (el) el.innerHTML = `<p class="empty-state">Add kids first to see their wallets. 👶</p>`;
+    return;
+  }
+
+  const rows = await Promise.all(kidsList.map(async kid => {
+    const stars = await getStarBalance(kid.id);
+    const goals = await getGoalsForKid(kid.id);
+    const activeGoal = goals.find(g => g.status === GOAL_STATUS.ACTIVE);
+    const progressPct = activeGoal
+      ? Math.min(100, Math.round((stars / activeGoal.targetStars) * 100))
+      : null;
+
+    const avatarHTML = kid.photoURL
+      ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />`
+      : `<span class="wallet-avatar-emoji">${kid.avatarEmoji || "🌟"}</span>`;
+
+    return `
+      <div class="wallet-card">
+        <div class="wallet-avatar">${avatarHTML}</div>
+        <div class="wallet-info">
+          <div class="wallet-name">${kid.name}</div>
+          <div class="wallet-stars">⭐ ${stars} stars</div>
+          ${activeGoal ? `
+            <div class="wallet-goal">
+              <div class="wallet-goal-label">${activeGoal.emoji} ${activeGoal.title} — ${activeGoal.targetStars}⭐</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:${progressPct}%"></div>
+              </div>
+              <div class="progress-label">${progressPct}% there!</div>
+            </div>` : `<div class="wallet-no-goal">No active goal</div>`}
+        </div>
+      </div>`;
+  }));
+
+  el.innerHTML = rows.join("");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
 // ═══════════════════════════════════════════════════════════════
 window.showTab = (tab) => {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -181,6 +228,7 @@ window.showTab = (tab) => {
   document.getElementById(`tab-btn-${tab}`)?.classList.add("active");
   document.getElementById(`tab-${tab}`)?.classList.add("active");
   if (tab === "approvals") loadPendingApprovals();
+  if (tab === "wallets")   loadWalletsOverview();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -204,12 +252,12 @@ function goToParentDashboard() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: SIGN UP
+// PARENT: SIGN UP / LOGIN / LOGOUT
 // ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-signup")?.addEventListener("click", async () => {
-  const btn      = document.getElementById("btn-signup");
-  const name     = document.getElementById("signup-name").value.trim();
-  const email    = document.getElementById("signup-email").value.trim();
+  const btn = document.getElementById("btn-signup");
+  const name = document.getElementById("signup-name").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
   const password = document.getElementById("signup-password").value;
   if (!name || !email || !password) { toast("Please fill in all fields.", "error"); return; }
   setLoading(btn, true);
@@ -222,12 +270,9 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
   finally { setLoading(btn, false); }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// PARENT: LOGIN
-// ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-login")?.addEventListener("click", async () => {
-  const btn      = document.getElementById("btn-login");
-  const email    = document.getElementById("login-email").value.trim();
+  const btn = document.getElementById("btn-login");
+  const email = document.getElementById("login-email").value.trim();
   const password = document.getElementById("login-password").value;
   const remember = document.getElementById("remember-me")?.checked;
   if (!email || !password) { toast("Please enter email and password.", "error"); return; }
@@ -242,9 +287,6 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
   finally { setLoading(btn, false); }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// PARENT: LOGOUT
-// ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-logout")?.addEventListener("click", async () => {
   await logoutParent();
   toast("Logged out. See you soon!", "info");
@@ -268,15 +310,14 @@ document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
       await updateKidPhoto(kid.id, url);
       kid.photoURL = url;
     }
-    // Create default age-appropriate tasks for this kid
     await createDefaultTasks(currentParent.uid, kid.id, age);
     kidsList.push(kid);
     renderKids();
-    document.getElementById("kid-name").value  = "";
-    document.getElementById("kid-age").value   = "";
-    document.getElementById("kid-avatar").value = "🌟";
+    document.getElementById("kid-name").value    = "";
+    document.getElementById("kid-age").value     = "";
+    document.getElementById("kid-avatar").value  = "🌟";
     document.getElementById("kid-photo-input").value = "";
-    document.getElementById("kid-photo-preview").style.display   = "none";
+    document.getElementById("kid-photo-preview").style.display    = "none";
     document.getElementById("kid-photo-placeholder").style.display = "flex";
     selectedPhoto = null;
     toast(`${kid.name} added! Code: ${kid.code} 🎉`, "success");
@@ -285,7 +326,7 @@ document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: DELETE KID
+// PARENT: DELETE / REGEN CODE
 // ═══════════════════════════════════════════════════════════════
 window.handleDeleteKid = async (kidId, kidName) => {
   if (!confirm(`Delete ${kidName}? This cannot be undone.`)) return;
@@ -297,19 +338,45 @@ window.handleDeleteKid = async (kidId, kidName) => {
   } catch (err) { toast("Failed to delete.", "error"); }
 };
 
-// ═══════════════════════════════════════════════════════════════
-// PARENT: REGEN CODE
-// ═══════════════════════════════════════════════════════════════
 window.handleRegenCode = async (kidId) => {
   try {
     const newCode = await regenerateKidCode(kidId);
-    const idx     = kidsList.findIndex(k => k.id === kidId);
+    const idx = kidsList.findIndex(k => k.id === kidId);
     if (idx !== -1) kidsList[idx].code = newCode;
     const el = document.getElementById(`code-${kidId}`);
     if (el) { el.textContent = newCode; el.classList.add("code-flash"); setTimeout(() => el.classList.remove("code-flash"), 800); }
     toast(`New code: ${newCode}`, "success");
   } catch (err) { toast("Failed to regenerate code.", "error"); }
 };
+
+// ═══════════════════════════════════════════════════════════════
+// PARENT: BONUS STARS MODAL
+// ═══════════════════════════════════════════════════════════════
+let bonusKidId   = null;
+let bonusKidName = null;
+
+window.openBonusStars = (kidId, kidName) => {
+  bonusKidId   = kidId;
+  bonusKidName = kidName;
+  document.getElementById("modal-bonus-kid-name").textContent = `Bonus Stars for ${kidName}`;
+  document.getElementById("bonus-stars-input").value  = "1";
+  document.getElementById("bonus-reason-input").value = "";
+  document.getElementById("modal-bonus").classList.add("open");
+};
+window.closeBonusStars = () => document.getElementById("modal-bonus").classList.remove("open");
+
+document.getElementById("btn-save-bonus")?.addEventListener("click", async () => {
+  const btn    = document.getElementById("btn-save-bonus");
+  const stars  = parseInt(document.getElementById("bonus-stars-input").value, 10) || 1;
+  const reason = document.getElementById("bonus-reason-input").value.trim() || "Bonus";
+  setLoading(btn, true);
+  try {
+    const newTotal = await addBonusStars(bonusKidId, stars, reason);
+    closeBonusStars();
+    toast(`⭐ ${stars} bonus star${stars > 1 ? "s" : ""} given to ${bonusKidName}!`, "success");
+  } catch (err) { toast("Failed to give bonus.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // PARENT: ADD TASK MODAL
@@ -321,15 +388,12 @@ window.openAddTask = (kidId, kidName) => {
   taskTargetKidId   = kidId;
   taskTargetKidName = kidName;
   document.getElementById("modal-task-kid-name").textContent = `Task for ${kidName}`;
-  document.getElementById("task-title-input").value       = "";
-  document.getElementById("task-desc-input").value        = "";
-  document.getElementById("task-stars-input").value       = "1";
+  document.getElementById("task-title-input").value  = "";
+  document.getElementById("task-desc-input").value   = "";
+  document.getElementById("task-stars-input").value  = "1";
   document.getElementById("modal-add-task").classList.add("open");
 };
-
-window.closeAddTask = () => {
-  document.getElementById("modal-add-task").classList.remove("open");
-};
+window.closeAddTask = () => document.getElementById("modal-add-task").classList.remove("open");
 
 document.getElementById("btn-save-task")?.addEventListener("click", async () => {
   const btn   = document.getElementById("btn-save-task");
@@ -366,7 +430,7 @@ window.handleReject = async (taskId, taskTitle) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// KID: LOGIN WITH CODE
+// KID: LOGIN
 // ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-kid-login")?.addEventListener("click", async () => {
   const btn  = document.getElementById("btn-kid-login");
@@ -392,7 +456,6 @@ document.getElementById("btn-kid-login")?.addEventListener("click", async () => 
 // KID: DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 async function showKidDashboard(kid) {
-  // Avatar
   const avatarEl = document.getElementById("kid-dashboard-avatar");
   avatarEl.innerHTML = kid.photoURL
     ? `<img src="${kid.photoURL}" class="kid-dash-photo" alt="${kid.name}" />`
@@ -400,51 +463,54 @@ async function showKidDashboard(kid) {
 
   document.getElementById("kid-dashboard-name").textContent = `Hi, ${kid.name}!`;
 
-  // Star balance
-  const stars = await getStarBalance(kid.id);
-  document.getElementById("kid-dashboard-stars").textContent = `⭐ Stars: ${stars}`;
-
-  // Load tasks
+  await refreshKidStars(kid.id);
   await loadKidTasks(kid);
+  await loadKidGoals(kid.id);
 
   showScreen("screen-kid-dashboard");
 }
 
-// ── Render kid's task list ────────────────────────────────────
+async function refreshKidStars(kidId) {
+  const stars = await getStarBalance(kidId);
+  document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
+  return stars;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KID: TASKS
+// ═══════════════════════════════════════════════════════════════
 async function loadKidTasks(kid) {
-  const tasks = await getTasksForKid(kid.id);
-  const el    = document.getElementById("kid-tasks-list");
+  const tasks  = await getTasksForKid(kid.id);
+  const el     = document.getElementById("kid-tasks-list");
   if (!el) return;
 
   const active   = tasks.filter(t => t.status === STATUS.PENDING || t.status === STATUS.REJECTED);
-  const done     = tasks.filter(t => t.status === STATUS.SUBMITTED);
+  const waiting  = tasks.filter(t => t.status === STATUS.SUBMITTED);
   const approved = tasks.filter(t => t.status === STATUS.APPROVED);
 
   let html = "";
 
-  if (active.length === 0 && done.length === 0 && approved.length === 0) {
-    html = `<p class="empty-state">No tasks yet! Ask your parent to add some. 🌟</p>`;
+  if (!tasks.length) {
+    html = `<p class="empty-state">No tasks yet! Ask your parent. 🌟</p>`;
   }
 
-  if (active.length > 0) {
+  if (active.length) {
     html += `<div class="task-section-title">📋 My Tasks</div>`;
     html += active.map(t => `
-      <div class="task-card task-card--pending" data-id="${t.id}">
+      <div class="task-card task-card--pending">
         <div class="task-card__info">
           <div class="task-card__title">${t.title}</div>
           ${t.description ? `<div class="task-card__desc">${t.description}</div>` : ""}
           <div class="task-card__stars">⭐ ${t.stars} star${t.stars > 1 ? "s" : ""}</div>
           ${t.status === STATUS.REJECTED ? `<div class="task-card__rejected">❌ Try again!</div>` : ""}
         </div>
-        <button class="btn btn--sm btn--success task-done-btn" onclick="handleTaskDone('${t.id}')">
-          ✅ Done!
-        </button>
+        <button class="btn btn--sm btn--success task-done-btn" onclick="handleTaskDone('${t.id}')">✅ Done!</button>
       </div>`).join("");
   }
 
-  if (done.length > 0) {
+  if (waiting.length) {
     html += `<div class="task-section-title">⏳ Waiting for Approval</div>`;
-    html += done.map(t => `
+    html += waiting.map(t => `
       <div class="task-card task-card--submitted">
         <div class="task-card__info">
           <div class="task-card__title">${t.title}</div>
@@ -454,8 +520,8 @@ async function loadKidTasks(kid) {
       </div>`).join("");
   }
 
-  if (approved.length > 0) {
-    html += `<div class="task-section-title">✅ Completed</div>`;
+  if (approved.length) {
+    html += `<div class="task-section-title">✅ Completed Today</div>`;
     html += approved.map(t => `
       <div class="task-card task-card--approved">
         <div class="task-card__info">
@@ -469,7 +535,6 @@ async function loadKidTasks(kid) {
   el.innerHTML = html;
 }
 
-// ── Kid marks a task as done ──────────────────────────────────
 window.handleTaskDone = async (taskId) => {
   const btn = document.querySelector(`[onclick="handleTaskDone('${taskId}')"]`);
   if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
@@ -477,10 +542,108 @@ window.handleTaskDone = async (taskId) => {
     await submitTask(taskId);
     toast("Sent to parent for approval! 🚀", "success");
     await loadKidTasks(currentKid);
-    // Refresh star count
-    const stars = await getStarBalance(currentKid.id);
-    document.getElementById("kid-dashboard-stars").textContent = `⭐ Stars: ${stars}`;
   } catch (err) { toast("Something went wrong.", "error"); console.error(err); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// KID: GOALS
+// ═══════════════════════════════════════════════════════════════
+async function loadKidGoals(kidId) {
+  const el    = document.getElementById("kid-goals-list");
+  if (!el) return;
+
+  const stars = await getStarBalance(kidId);
+  const goals = await getGoalsForKid(kidId);
+  const active    = goals.filter(g => g.status === GOAL_STATUS.ACTIVE);
+  const completed = goals.filter(g => g.status === GOAL_STATUS.COMPLETED);
+
+  let html = "";
+
+  if (!active.length && !completed.length) {
+    html = `
+      <p class="empty-state">No goals yet!</p>
+      <button class="btn btn--accent mt-8" onclick="openAddGoal()">🎯 Set a Goal</button>`;
+  } else {
+    html += `<button class="btn btn--sm btn--accent" style="margin-bottom:12px;" onclick="openAddGoal()">➕ New Goal</button>`;
+  }
+
+  if (active.length) {
+    html += `<div class="task-section-title">🎯 My Goals</div>`;
+    html += active.map(g => {
+      const pct = Math.min(100, Math.round((stars / g.targetStars) * 100));
+      return `
+        <div class="goal-card">
+          <div class="goal-emoji">${g.emoji}</div>
+          <div class="goal-info">
+            <div class="goal-title">${g.title}</div>
+            <div class="goal-target">Target: ⭐ ${g.targetStars} stars</div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${pct}%"></div>
+            </div>
+            <div class="progress-label">⭐ ${stars} / ${g.targetStars} — ${pct}%</div>
+          </div>
+          <button class="goal-delete-btn" onclick="handleDeleteGoal('${g.id}')">×</button>
+        </div>`;
+    }).join("");
+  }
+
+  if (completed.length) {
+    html += `<div class="task-section-title">🏆 Achieved!</div>`;
+    html += completed.map(g => `
+      <div class="goal-card goal-card--done">
+        <div class="goal-emoji">${g.emoji}</div>
+        <div class="goal-info">
+          <div class="goal-title">${g.title}</div>
+          <div class="goal-target">⭐ ${g.targetStars} stars — Achieved! 🎉</div>
+        </div>
+        <button class="goal-delete-btn" onclick="handleDeleteGoal('${g.id}')">×</button>
+      </div>`).join("");
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Add Goal Modal ────────────────────────────────────────────
+window.openAddGoal = () => {
+  document.getElementById("goal-title-input").value  = "";
+  document.getElementById("goal-stars-input").value  = "10";
+  document.getElementById("goal-emoji-input").value  = "🎯";
+  document.getElementById("goal-emoji-preview").textContent = "🎯";
+  document.getElementById("modal-add-goal").classList.add("open");
+};
+window.closeAddGoal = () => document.getElementById("modal-add-goal").classList.remove("open");
+
+document.getElementById("btn-save-goal")?.addEventListener("click", async () => {
+  const btn   = document.getElementById("btn-save-goal");
+  const title = document.getElementById("goal-title-input").value.trim();
+  const stars = parseInt(document.getElementById("goal-stars-input").value, 10) || 10;
+  const emoji = document.getElementById("goal-emoji-input").value || "🎯";
+  if (!title) { toast("Please enter a goal name.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await createGoal(currentKid.id, title, stars, emoji);
+    closeAddGoal();
+    toast(`Goal set: "${title}" 🎯`, "success");
+    await loadKidGoals(currentKid.id);
+  } catch (err) { toast("Failed to save goal.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+});
+
+window.handleDeleteGoal = async (goalId) => {
+  if (!confirm("Remove this goal?")) return;
+  try {
+    await deleteGoal(goalId);
+    await loadKidGoals(currentKid.id);
+    toast("Goal removed.", "info");
+  } catch (err) { toast("Failed to remove goal.", "error"); }
+};
+
+// ── Kid tabs ──────────────────────────────────────────────────
+window.showKidTab = (tab) => {
+  document.querySelectorAll(".kid-tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".kid-tab-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById(`kid-tab-btn-${tab}`)?.classList.add("active");
+  document.getElementById(`kid-tab-${tab}`)?.classList.add("active");
 };
 
 // ═══════════════════════════════════════════════════════════════

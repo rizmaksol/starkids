@@ -806,3 +806,155 @@ input:focus, select:focus {
   flex-shrink: 0;
 }
 .stars-btn:hover { background: var(--color-border); }
+
+/* ══════════════════════════════════════════════════════════════
+   SPRINT 3 — Wallets, Goals, Progress, Celebration
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Info button ──────────────────────────────────────────── */
+.btn--info {
+  background: #e0f0ff;
+  color: #1a6fc4;
+  border: 2px solid #b3d6f7;
+}
+.btn--info:hover:not(:disabled) { background: #c8e4ff; }
+
+/* ── Wallet Cards (parent view) ───────────────────────────── */
+.wallet-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.wallet-avatar {
+  font-size: 2.2rem;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wallet-avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.wallet-avatar-emoji { font-size: 2.2rem; line-height: 1; }
+.wallet-info   { flex: 1; min-width: 0; }
+.wallet-name   { font-weight: 800; font-size: 1rem; color: var(--color-text); }
+.wallet-stars  { font-size: 1rem; color: var(--color-secondary); font-weight: 700; margin: 2px 0 8px; }
+.wallet-goal   { }
+.wallet-goal-label { font-size: 0.82rem; color: var(--color-muted); margin-bottom: 6px; }
+.wallet-no-goal{ font-size: 0.82rem; color: var(--color-muted); font-style: italic; }
+
+/* ── Progress Bar ─────────────────────────────────────────── */
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+  min-width: 4px;
+}
+.progress-label {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+/* ── Goal Cards (kid view) ────────────────────────────────── */
+.goal-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.goal-card--done {
+  border-color: var(--color-success);
+  background: #f0fff8;
+  opacity: 0.85;
+}
+.goal-emoji  { font-size: 2rem; flex-shrink: 0; line-height: 1.2; }
+.goal-info   { flex: 1; min-width: 0; }
+.goal-title  { font-weight: 800; font-size: 0.95rem; color: var(--color-text); }
+.goal-target { font-size: 0.8rem; color: var(--color-muted); margin: 2px 0 6px; }
+.goal-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--color-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.goal-delete-btn:hover { color: var(--color-danger); }
+
+/* ── Kid Tabs ─────────────────────────────────────────────── */
+.kid-tab-panel { display: none; width: 100%; }
+.kid-tab-panel.active { display: block; }
+
+/* ── Celebration Overlay ──────────────────────────────────── */
+.celebration {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  z-index: 9000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.celebration.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.celebration-inner {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: popIn 0.4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.celebration-stars {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0); }
+  to   { transform: rotate(360deg); }
+}
+.celebration-text {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-primary);
+  white-space: pre-line;
+}

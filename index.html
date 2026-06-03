@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════ SCREEN: HOME ══════════ -->
+<!-- ══════════════════════════════════════ HOME ══════════════ -->
 <section class="screen active" id="screen-home">
   <div class="home-hero">
     <span class="home-hero__star">⭐</span>
@@ -22,16 +22,11 @@
     <button class="btn btn--kid" onclick="goToKidLogin()">🌟 I'm a Kid!</button>
   </div>
   <p class="mt-24" style="color:var(--color-muted);font-size:0.8rem;text-align:center;">
-    New parent?
-    <button onclick="goToParentAuth('signup')"
-      style="background:none;border:none;color:var(--color-primary);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">
-      Create an account
-    </button>
+    New parent? <button onclick="goToParentAuth('signup')" style="background:none;border:none;color:var(--color-primary);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">Create an account</button>
   </p>
 </section>
 
-
-<!-- ═════════════════════════════════ SCREEN: SIGN UP ════════ -->
+<!-- ═══════════════════════════════════ SIGN UP ══════════════ -->
 <section class="screen" id="screen-signup">
   <div class="app-bar w-full">
     <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
@@ -40,27 +35,15 @@
   </div>
   <div class="card">
     <h2 class="card__title">Create Account 🌟</h2>
-    <div class="form-group">
-      <label for="signup-name">Your Name</label>
-      <input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" />
-    </div>
-    <div class="form-group">
-      <label for="signup-email">Email</label>
-      <input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" />
-    </div>
-    <div class="form-group">
-      <label for="signup-password">Password</label>
-      <input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" />
-    </div>
+    <div class="form-group"><label for="signup-name">Your Name</label><input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" /></div>
+    <div class="form-group"><label for="signup-email">Email</label><input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
+    <div class="form-group"><label for="signup-password">Password</label><input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" /></div>
     <button id="btn-signup" class="btn btn--primary mt-8">Create Account</button>
-    <div class="auth-switch mt-12">
-      Already have an account? <button onclick="goToParentAuth('login')">Log in</button>
-    </div>
+    <div class="auth-switch mt-12">Already have an account? <button onclick="goToParentAuth('login')">Log in</button></div>
   </div>
 </section>
 
-
-<!-- ══════════════════════════════════ SCREEN: LOGIN ═════════ -->
+<!-- ════════════════════════════════════ LOGIN ═══════════════ -->
 <section class="screen" id="screen-login">
   <div class="app-bar w-full">
     <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
@@ -69,10 +52,7 @@
   </div>
   <div class="card">
     <h2 class="card__title">Welcome Back 👋</h2>
-    <div class="form-group">
-      <label for="login-email">Email</label>
-      <input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" />
-    </div>
+    <div class="form-group"><label for="login-email">Email</label><input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
     <div class="form-group">
       <label for="login-password">Password</label>
       <div class="password-wrap">
@@ -80,36 +60,27 @@
         <button type="button" class="toggle-pw" onclick="togglePassword('login-password',this)">👁</button>
       </div>
     </div>
-    <div class="remember-row">
-      <label class="remember-label">
-        <input type="checkbox" id="remember-me" />
-        <span>Remember my email</span>
-      </label>
-    </div>
+    <div class="remember-row"><label class="remember-label"><input type="checkbox" id="remember-me" /><span>Remember my email</span></label></div>
     <button id="btn-login" class="btn btn--primary mt-8">Log In</button>
-    <div class="auth-switch mt-12">
-      No account yet? <button onclick="goToParentAuth('signup')">Sign up free</button>
-    </div>
+    <div class="auth-switch mt-12">No account yet? <button onclick="goToParentAuth('signup')">Sign up free</button></div>
   </div>
 </section>
 
-
-<!-- ══════════════════════════ SCREEN: PARENT DASHBOARD ══════ -->
+<!-- ══════════════════════════ PARENT DASHBOARD ══════════════ -->
 <section class="screen" id="screen-parent-dashboard">
   <div class="app-bar w-full">
     <span class="app-logo">Star<span>Kids</span></span>
     <button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button>
   </div>
-
   <p class="dashboard-welcome w-full" id="parent-name-display">Welcome! 👋</p>
 
-  <!-- Tab Bar -->
+  <!-- Tabs -->
   <div class="tab-bar w-full">
-    <button class="tab-btn active" id="tab-btn-kids" onclick="showTab('kids')">👨‍👩‍👧 My Kids</button>
-    <button class="tab-btn" id="tab-btn-approvals" onclick="showTab('approvals')">
-      ✅ Approvals
-      <span id="approvals-badge" class="badge" style="display:none;"></span>
+    <button class="tab-btn active" id="tab-btn-kids"      onclick="showTab('kids')">👨‍👩‍👧 Kids</button>
+    <button class="tab-btn"        id="tab-btn-approvals" onclick="showTab('approvals')">
+      ✅ Approve <span id="approvals-badge" class="badge" style="display:none;"></span>
     </button>
+    <button class="tab-btn"        id="tab-btn-wallets"   onclick="showTab('wallets')">⭐ Wallets</button>
   </div>
 
   <!-- Tab: Kids -->
@@ -118,8 +89,6 @@
       <h3 class="kids-list-header">My Kids 👨‍👩‍👧</h3>
       <div id="kids-list"><p class="empty-state">Loading…</p></div>
     </div>
-
-    <!-- Add Kid Form -->
     <div class="card">
       <h3 class="card__title" style="font-size:1.1rem;margin-bottom:16px;">➕ Add a Kid</h3>
       <div class="form-group">
@@ -137,14 +106,8 @@
           <button type="button" class="btn btn--sm btn--secondary" onclick="openPhotoSource('camera')">📸 Camera</button>
         </div>
       </div>
-      <div class="form-group">
-        <label for="kid-name">Kid's Name</label>
-        <input id="kid-name" type="text" placeholder="e.g. Ahmed" />
-      </div>
-      <div class="form-group">
-        <label for="kid-age">Age</label>
-        <input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" />
-      </div>
+      <div class="form-group"><label for="kid-name">Kid's Name</label><input id="kid-name" type="text" placeholder="e.g. Ahmed" /></div>
+      <div class="form-group"><label for="kid-age">Age</label><input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" /></div>
       <div class="form-group">
         <label>Fallback Emoji</label>
         <div class="avatar-row">
@@ -163,10 +126,17 @@
       <div id="approvals-list"><p class="empty-state">Loading…</p></div>
     </div>
   </div>
+
+  <!-- Tab: Wallets -->
+  <div class="tab-panel w-full" id="tab-wallets">
+    <div class="card">
+      <h3 class="kids-list-header">Kids Wallets ⭐</h3>
+      <div id="wallets-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
 </section>
 
-
-<!-- ══════════════════════════════ SCREEN: KID LOGIN ═════════ -->
+<!-- ═══════════════════════════════ KID LOGIN ════════════════ -->
 <section class="screen" id="screen-kid-login">
   <div class="app-bar w-full">
     <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
@@ -175,19 +145,15 @@
   </div>
   <div class="card">
     <h2 class="card__title">Enter Your Code 🔑</h2>
-    <p style="text-align:center;color:var(--color-muted);margin-bottom:20px;font-size:0.95rem;">
-      Ask your parent for your 6-digit code
-    </p>
+    <p style="text-align:center;color:var(--color-muted);margin-bottom:20px;font-size:0.95rem;">Ask your parent for your 6-digit code</p>
     <div class="form-group code-input-wrap">
-      <input id="kid-code-input" type="number" inputmode="numeric"
-        pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" />
+      <input id="kid-code-input" type="number" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" />
     </div>
     <button id="btn-kid-login" class="btn btn--kid mt-8">🚀 Start My Day!</button>
   </div>
 </section>
 
-
-<!-- ═════════════════════════ SCREEN: KID DASHBOARD ══════════ -->
+<!-- ══════════════════════════ KID DASHBOARD ═════════════════ -->
 <section class="screen" id="screen-kid-dashboard">
   <div class="app-bar w-full">
     <span class="app-logo">Star<span>Kids</span></span>
@@ -197,39 +163,46 @@
   <div class="kid-dashboard-hero w-full">
     <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
     <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
-    <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ Stars: 0</div>
+    <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ 0 Stars</div>
   </div>
 
-  <!-- Kid Task List -->
-  <div class="card w-full">
-    <h3 class="kids-list-header">My Tasks 📋</h3>
-    <div id="kid-tasks-list"><p class="empty-state">Loading your tasks…</p></div>
+  <!-- Kid Tabs -->
+  <div class="tab-bar w-full" style="max-width:480px;">
+    <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks" onclick="showKidTab('tasks')">📋 Tasks</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals" onclick="showKidTab('goals')">🎯 Goals</button>
+  </div>
+
+  <!-- Kid Tab: Tasks -->
+  <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
+    <div class="card">
+      <h3 class="kids-list-header">My Tasks 📋</h3>
+      <div id="kid-tasks-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Kid Tab: Goals -->
+  <div class="kid-tab-panel w-full" id="kid-tab-goals">
+    <div class="card">
+      <h3 class="kids-list-header">My Goals 🎯</h3>
+      <div id="kid-goals-list"><p class="empty-state">Loading…</p></div>
+    </div>
   </div>
 </section>
 
-
 <!-- ════════════════════════ MODAL: ADD TASK ═════════════════ -->
-<div class="modal-overlay" id="modal-add-task" onclick="handleModalClick(event)">
+<div class="modal-overlay" id="modal-add-task" onclick="handleModalClick(event,'modal-add-task')">
   <div class="modal-box">
     <h3 class="modal-title" id="modal-task-kid-name">Add Task</h3>
-
+    <div class="form-group"><label>Task Title *</label><input id="task-title-input" type="text" placeholder="e.g. Make your bed" /></div>
+    <div class="form-group"><label>Description (optional)</label><input id="task-desc-input" type="text" placeholder="e.g. Fold the blanket too" /></div>
     <div class="form-group">
-      <label for="task-title-input">Task Title *</label>
-      <input id="task-title-input" type="text" placeholder="e.g. Make your bed" />
-    </div>
-    <div class="form-group">
-      <label for="task-desc-input">Description (optional)</label>
-      <input id="task-desc-input" type="text" placeholder="e.g. Neatly fold the blanket too" />
-    </div>
-    <div class="form-group">
-      <label for="task-stars-input">⭐ Stars to earn</label>
+      <label>⭐ Stars to earn</label>
       <div class="stars-row">
-        <button type="button" class="stars-btn" onclick="adjustStars(-1)">−</button>
+        <button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',-1)">−</button>
         <input id="task-stars-input" type="number" value="1" min="1" max="10" readonly />
-        <button type="button" class="stars-btn" onclick="adjustStars(1)">+</button>
+        <button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',1)">+</button>
       </div>
     </div>
-
     <div class="modal-actions">
       <button class="btn btn--secondary" onclick="closeAddTask()">Cancel</button>
       <button class="btn btn--primary" id="btn-save-task">Save Task</button>
@@ -237,51 +210,99 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL: BONUS STARS ════════════════ -->
+<div class="modal-overlay" id="modal-bonus" onclick="handleModalClick(event,'modal-bonus')">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modal-bonus-kid-name">Bonus Stars</h3>
+    <div class="form-group">
+      <label>⭐ Stars to give</label>
+      <div class="stars-row">
+        <button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',-1)">−</button>
+        <input id="bonus-stars-input" type="number" value="1" min="1" max="20" readonly />
+        <button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',1)">+</button>
+      </div>
+    </div>
+    <div class="form-group"><label>Reason (optional)</label><input id="bonus-reason-input" type="text" placeholder="e.g. Helped without being asked 💛" /></div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeBonusStars()">Cancel</button>
+      <button class="btn btn--primary" id="btn-save-bonus">Give Stars ⭐</button>
+    </div>
+  </div>
+</div>
 
-<!-- ════════════════════════════════════════ TOAST ═══════════ -->
+<!-- ══════════════════════ MODAL: ADD GOAL ═══════════════════ -->
+<div class="modal-overlay" id="modal-add-goal" onclick="handleModalClick(event,'modal-add-goal')">
+  <div class="modal-box">
+    <h3 class="modal-title">Set a Goal 🎯</h3>
+    <div class="form-group"><label>What are you saving for? *</label><input id="goal-title-input" type="text" placeholder="e.g. New LEGO set" /></div>
+    <div class="form-group">
+      <label>⭐ Stars needed</label>
+      <div class="stars-row">
+        <button type="button" class="stars-btn" onclick="adjustStars('goal-stars-input',-5)">−</button>
+        <input id="goal-stars-input" type="number" value="10" min="1" max="500" readonly />
+        <button type="button" class="stars-btn" onclick="adjustStars('goal-stars-input',5)">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Pick an Emoji</label>
+      <div class="avatar-row">
+        <input id="goal-emoji-input" type="text" value="🎯" maxlength="2" />
+        <span id="goal-emoji-preview" class="avatar-preview">🎯</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeAddGoal()">Cancel</button>
+      <button class="btn btn--primary" id="btn-save-goal">Save Goal 🎯</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ CELEBRATION ═══════════════════ -->
+<div class="celebration" id="celebration">
+  <div class="celebration-inner">
+    <div class="celebration-stars">⭐🎉⭐</div>
+    <div class="celebration-text" id="celebration-text">Goal Reached!</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ TOAST ═══════════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
-
-<!-- ════════════════════════════════════════ SCRIPTS ═════════ -->
+<!-- ══════════════════════════════════ SCRIPTS ═══════════════ -->
 <script type="module" src="js/app.js"></script>
 <script>
   function togglePassword(id, btn) {
     const el = document.getElementById(id);
-    el.type      = el.type === "password" ? "text" : "password";
+    el.type = el.type === "password" ? "text" : "password";
     btn.textContent = el.type === "password" ? "👁" : "🙈";
   }
-
   function openPhotoSource(src) {
     const input = document.getElementById("kid-photo-input");
     src === "camera" ? input.setAttribute("capture","environment") : input.removeAttribute("capture");
     input.click();
   }
-
-  function handleModalClick(e) {
-    if (e.target.id === "modal-add-task") closeAddTask();
+  function handleModalClick(e, modalId) {
+    if (e.target.id === modalId) {
+      if (modalId === "modal-add-task") closeAddTask();
+      if (modalId === "modal-bonus")    closeBonusStars();
+      if (modalId === "modal-add-goal") closeAddGoal();
+    }
   }
-
-  function adjustStars(delta) {
-    const el  = document.getElementById("task-stars-input");
-    const val = Math.min(10, Math.max(1, parseInt(el.value || 1) + delta));
-    el.value  = val;
+  function adjustStars(inputId, delta) {
+    const el  = document.getElementById(inputId);
+    const min = parseInt(el.min) || 1;
+    const max = parseInt(el.max) || 500;
+    el.value  = Math.min(max, Math.max(min, parseInt(el.value || min) + delta));
   }
-
-  // Avatar emoji preview
-  const avatarInput = document.getElementById("kid-avatar");
-  if (avatarInput) {
-    avatarInput.addEventListener("input", () => {
-      document.getElementById("avatar-preview").textContent = avatarInput.value || "🌟";
-    });
-  }
-
-  // Limit code input to 6 digits
-  const codeInput = document.getElementById("kid-code-input");
-  if (codeInput) {
-    codeInput.addEventListener("input", () => {
-      if (codeInput.value.length > 6) codeInput.value = codeInput.value.slice(0, 6);
-    });
-  }
+  // Avatar/emoji live preview
+  document.getElementById("kid-avatar")?.addEventListener("input", e =>
+    document.getElementById("avatar-preview").textContent = e.target.value || "🌟");
+  document.getElementById("goal-emoji-input")?.addEventListener("input", e =>
+    document.getElementById("goal-emoji-preview").textContent = e.target.value || "🎯");
+  // Code input limit
+  document.getElementById("kid-code-input")?.addEventListener("input", e => {
+    if (e.target.value.length > 6) e.target.value = e.target.value.slice(0,6);
+  });
 </script>
 </body>
 </html>

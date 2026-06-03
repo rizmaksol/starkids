@@ -3,11 +3,14 @@
 // New: taskType (daily/weekly/onetime) · streak tracking · reset
 // ============================================================
 
-import { db } from "./firebase.js";
+import { db, storage } from "./firebase.js";
 import {
   collection, addDoc, getDocs, doc, updateDoc, setDoc,
   query, where, serverTimestamp, getDoc, writeBatch, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── Constants ─────────────────────────────────────────────────
 export const STATUS = {
@@ -216,15 +219,8 @@ export async function rejectTaskWithReason(taskId, reason, photoURL = null) {
 
 // ── Upload task submission photo ──────────────────────────────
 export async function uploadTaskPhoto(kidId, taskId, file) {
-  // Use storage imported at top of file
-  const { ref, uploadBytes, getDownloadURL } = await import(
-    "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"
-  );
-  const storageModule = await import("./firebase.js");
-  const store = storageModule.storage;
-  const ext      = (file.name || "photo").split(".").pop() || "jpg";
   const path     = `task-submissions/${kidId}/${taskId}_${Date.now()}.jpg`;
-  const photoRef = ref(store, path);
+  const photoRef = ref(storage, path);
   await uploadBytes(photoRef, file);
   return await getDownloadURL(photoRef);
 }

@@ -1,6 +1,6 @@
 // ============================================================
-// js/goals.js — StarKids V10 Sprint 3
-// Handles: Create Goal · Get Goals · Update Progress · Complete
+// js/goals.js — StarKids V10 Sprint 4
+// Goals are now always linked to a reward from the catalog
 // ============================================================
 
 import { db } from "./firebase.js";
@@ -9,24 +9,26 @@ import {
   query, where, serverTimestamp, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── Goal status ───────────────────────────────────────────────
 export const GOAL_STATUS = {
   ACTIVE:    "active",
-  COMPLETED: "completed"
+  COMPLETED: "completed",
+  REDEEMED:  "redeemed"
 };
 
-// ── Create a goal ─────────────────────────────────────────────
-export async function createGoal(kidId, title, targetStars, emoji = "🎯") {
+// ── Create goal from a reward ─────────────────────────────────
+export async function createGoalFromReward(kidId, reward) {
   const ref = await addDoc(collection(db, "goals"), {
     kidId,
-    title,
-    targetStars,
-    emoji,
-    status:    GOAL_STATUS.ACTIVE,
-    createdAt: serverTimestamp(),
-    completedAt: null
+    rewardId:    reward.id,
+    title:       reward.title,
+    targetStars: reward.stars,
+    emoji:       reward.emoji,
+    status:      GOAL_STATUS.ACTIVE,
+    createdAt:   serverTimestamp(),
+    completedAt: null,
+    redeemedAt:  null
   });
-  return { id: ref.id, kidId, title, targetStars, emoji, status: GOAL_STATUS.ACTIVE };
+  return { id: ref.id, kidId, title: reward.title, targetStars: reward.stars, emoji: reward.emoji, status: GOAL_STATUS.ACTIVE };
 }
 
 // ── Get all goals for a kid ───────────────────────────────────
@@ -41,47 +43,37 @@ export async function deleteGoal(goalId) {
   await deleteDoc(doc(db, "goals", goalId));
 }
 
-// ── Check and complete goals when stars change ────────────────
+// ── Check if any active goals are now completed ───────────────
 export async function checkGoalCompletion(kidId, currentStars) {
   const goals   = await getGoalsForKid(kidId);
-  const active  = goals.filter(g => g.status === GOAL_STATUS.ACTIVE);
   const completed = [];
-
-  for (const goal of active) {
-    if (currentStars >= goal.targetStars) {
-      await updateDoc(doc(db, "goals", goal.id), {
-        status:      GOAL_STATUS.COMPLETED,
-        completedAt: serverTimestamp()
+  for (const g of goals.filter(g => g.status === GOAL_STATUS.ACTIVE)) {
+    if (currentStars >= g.targetStars) {
+      await updateDoc(doc(db, "goals", g.id), {
+        status: GOAL_STATUS.COMPLETED, completedAt: serverTimestamp()
       });
-      completed.push(goal);
+      completed.push(g);
     }
   }
-  return completed; // returns newly completed goals so UI can celebrate
+  return completed;
 }
 
-// ── Get wallet (star balance + history) ──────────────────────
+// ── Get wallet balance ────────────────────────────────────────
 export async function getWallet(kidId) {
   const snap = await getDoc(doc(db, "wallets", kidId));
   return snap.exists() ? snap.data() : { kidId, stars: 0 };
 }
 
-// ── Parent: bonus stars ───────────────────────────────────────
-export async function addBonusStars(kidId, stars, reason) {
+// ── Bonus stars ───────────────────────────────────────────────
+export async function addBonusStars(kidId, stars) {
   const walletRef = doc(db, "wallets", kidId);
   const snap      = await getDoc(walletRef);
   const current   = snap.exists() ? (snap.data().stars || 0) : 0;
-
+  const newTotal  = current + stars;
   if (snap.exists()) {
-    await updateDoc(walletRef, {
-      stars:       current + stars,
-      lastUpdated: serverTimestamp()
-    });
+    await updateDoc(walletRef, { stars: newTotal, lastUpdated: serverTimestamp() });
   } else {
-    await setDoc(walletRef, {
-      kidId,
-      stars:       current + stars,
-      lastUpdated: serverTimestamp()
-    });
+    await setDoc(walletRef, { kidId, stars: newTotal, lastUpdated: serverTimestamp() });
   }
-  return current + stars;
+  return newTotal;
 }

@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════════ HOME ══════════════ -->
+<!-- ════════════════════════════════ HOME ════════════════════ -->
 <section class="screen active" id="screen-home">
   <div class="home-hero">
     <span class="home-hero__star">⭐</span>
@@ -26,39 +26,27 @@
   </p>
 </section>
 
-<!-- ═══════════════════════════════════ SIGN UP ══════════════ -->
+<!-- ════════════════════════════ SIGN UP ═════════════════════ -->
 <section class="screen" id="screen-signup">
-  <div class="app-bar w-full">
-    <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
-    <span class="app-logo">Star<span>Kids</span></span>
-    <div style="width:64px"></div>
-  </div>
+  <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
   <div class="card">
     <h2 class="card__title">Create Account 🌟</h2>
-    <div class="form-group"><label for="signup-name">Your Name</label><input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" /></div>
-    <div class="form-group"><label for="signup-email">Email</label><input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
-    <div class="form-group"><label for="signup-password">Password</label><input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" /></div>
+    <div class="form-group"><label>Your Name</label><input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" /></div>
+    <div class="form-group"><label>Email</label><input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
+    <div class="form-group"><label>Password</label><input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" /></div>
     <button id="btn-signup" class="btn btn--primary mt-8">Create Account</button>
     <div class="auth-switch mt-12">Already have an account? <button onclick="goToParentAuth('login')">Log in</button></div>
   </div>
 </section>
 
-<!-- ════════════════════════════════════ LOGIN ═══════════════ -->
+<!-- ═════════════════════════════ LOGIN ══════════════════════ -->
 <section class="screen" id="screen-login">
-  <div class="app-bar w-full">
-    <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
-    <span class="app-logo">Star<span>Kids</span></span>
-    <div style="width:64px"></div>
-  </div>
+  <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
   <div class="card">
     <h2 class="card__title">Welcome Back 👋</h2>
-    <div class="form-group"><label for="login-email">Email</label><input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
-    <div class="form-group">
-      <label for="login-password">Password</label>
-      <div class="password-wrap">
-        <input id="login-password" type="password" placeholder="Your password" autocomplete="current-password" />
-        <button type="button" class="toggle-pw" onclick="togglePassword('login-password',this)">👁</button>
-      </div>
+    <div class="form-group"><label>Email</label><input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
+    <div class="form-group"><label>Password</label>
+      <div class="password-wrap"><input id="login-password" type="password" placeholder="Your password" autocomplete="current-password" /><button type="button" class="toggle-pw" onclick="togglePassword('login-password',this)">👁</button></div>
     </div>
     <div class="remember-row"><label class="remember-label"><input type="checkbox" id="remember-me" /><span>Remember my email</span></label></div>
     <button id="btn-login" class="btn btn--primary mt-8">Log In</button>
@@ -66,39 +54,28 @@
   </div>
 </section>
 
-<!-- ══════════════════════════ PARENT DASHBOARD ══════════════ -->
+<!-- ══════════════════════ PARENT DASHBOARD ══════════════════ -->
 <section class="screen" id="screen-parent-dashboard">
-  <div class="app-bar w-full">
-    <span class="app-logo">Star<span>Kids</span></span>
-    <button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button>
-  </div>
+  <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button></div>
   <p class="dashboard-welcome w-full" id="parent-name-display">Welcome! 👋</p>
 
-  <!-- Tabs -->
   <div class="tab-bar w-full">
     <button class="tab-btn active" id="tab-btn-kids"      onclick="showTab('kids')">👨‍👩‍👧 Kids</button>
-    <button class="tab-btn"        id="tab-btn-approvals" onclick="showTab('approvals')">
-      ✅ Approve <span id="approvals-badge" class="badge" style="display:none;"></span>
-    </button>
+    <button class="tab-btn"        id="tab-btn-approvals" onclick="showTab('approvals')">✅ Approve <span id="approvals-badge" class="badge" style="display:none;"></span></button>
     <button class="tab-btn"        id="tab-btn-wallets"   onclick="showTab('wallets')">⭐ Wallets</button>
+    <button class="tab-btn"        id="tab-btn-rewards"   onclick="showTab('rewards')">🎁 Rewards</button>
   </div>
 
-  <!-- Tab: Kids -->
+  <!-- Kids tab -->
   <div class="tab-panel active w-full" id="tab-kids">
-    <div class="card">
-      <h3 class="kids-list-header">My Kids 👨‍👩‍👧</h3>
-      <div id="kids-list"><p class="empty-state">Loading…</p></div>
-    </div>
+    <div class="card"><h3 class="kids-list-header">My Kids 👨‍👩‍👧</h3><div id="kids-list"><p class="empty-state">Loading…</p></div></div>
     <div class="card">
       <h3 class="card__title" style="font-size:1.1rem;margin-bottom:16px;">➕ Add a Kid</h3>
       <div class="form-group">
         <label>Kid's Photo</label>
         <div class="photo-upload-area" onclick="document.getElementById('kid-photo-input').click()">
-          <img id="kid-photo-preview" src="" alt="Preview" style="display:none;" />
-          <div id="kid-photo-placeholder" class="photo-placeholder">
-            <span class="photo-icon">📷</span>
-            <span class="photo-hint">Tap to choose photo<br><small>Gallery or Camera</small></span>
-          </div>
+          <img id="kid-photo-preview" src="" alt="" style="display:none;" />
+          <div id="kid-photo-placeholder" class="photo-placeholder"><span class="photo-icon">📷</span><span class="photo-hint">Tap to choose<br><small>Gallery or Camera</small></span></div>
         </div>
         <input id="kid-photo-input" type="file" accept="image/*" style="display:none;" />
         <div class="photo-source-btns">
@@ -106,158 +83,129 @@
           <button type="button" class="btn btn--sm btn--secondary" onclick="openPhotoSource('camera')">📸 Camera</button>
         </div>
       </div>
-      <div class="form-group"><label for="kid-name">Kid's Name</label><input id="kid-name" type="text" placeholder="e.g. Ahmed" /></div>
-      <div class="form-group"><label for="kid-age">Age</label><input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" /></div>
-      <div class="form-group">
-        <label>Fallback Emoji</label>
-        <div class="avatar-row">
-          <input id="kid-avatar" type="text" value="🌟" maxlength="2" />
-          <span class="avatar-preview" id="avatar-preview">🌟</span>
-        </div>
-      </div>
+      <div class="form-group"><label>Kid's Name</label><input id="kid-name" type="text" placeholder="e.g. Ahmed" /></div>
+      <div class="form-group"><label>Age</label><input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" /></div>
+      <div class="form-group"><label>Fallback Emoji</label><div class="avatar-row"><input id="kid-avatar" type="text" value="🌟" maxlength="2" /><span class="avatar-preview" id="avatar-preview">🌟</span></div></div>
       <button id="btn-add-kid" class="btn btn--accent mt-8">Add Kid</button>
     </div>
   </div>
 
-  <!-- Tab: Approvals -->
+  <!-- Approvals tab -->
   <div class="tab-panel w-full" id="tab-approvals">
-    <div class="card">
-      <h3 class="kids-list-header">Pending Approvals ✅</h3>
-      <div id="approvals-list"><p class="empty-state">Loading…</p></div>
-    </div>
+    <div class="card"><h3 class="kids-list-header">Pending Approvals ✅</h3><div id="approvals-list"><p class="empty-state">Loading…</p></div></div>
   </div>
 
-  <!-- Tab: Wallets -->
+  <!-- Wallets tab -->
   <div class="tab-panel w-full" id="tab-wallets">
+    <div class="card"><h3 class="kids-list-header">Kids Wallets ⭐</h3><div id="wallets-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+
+  <!-- Rewards Catalog tab -->
+  <div class="tab-panel w-full" id="tab-rewards">
     <div class="card">
-      <h3 class="kids-list-header">Kids Wallets ⭐</h3>
-      <div id="wallets-list"><p class="empty-state">Loading…</p></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 class="kids-list-header" style="margin:0;">Rewards Catalog 🎁</h3>
+        <button class="btn btn--sm btn--accent" onclick="openAddReward()">➕ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Kids pick from this list as their savings goal. Set star prices you think are fair!</p>
+      <div id="rewards-catalog-list"><p class="empty-state">Loading…</p></div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════ KID LOGIN ════════════════ -->
+<!-- ════════════════════════════ KID LOGIN ═══════════════════ -->
 <section class="screen" id="screen-kid-login">
-  <div class="app-bar w-full">
-    <button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button>
-    <span class="app-logo">Star<span>Kids</span></span>
-    <div style="width:64px"></div>
-  </div>
+  <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
   <div class="card">
     <h2 class="card__title">Enter Your Code 🔑</h2>
-    <p style="text-align:center;color:var(--color-muted);margin-bottom:20px;font-size:0.95rem;">Ask your parent for your 6-digit code</p>
-    <div class="form-group code-input-wrap">
-      <input id="kid-code-input" type="number" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" />
-    </div>
+    <p style="text-align:center;color:var(--color-muted);margin-bottom:20px;">Ask your parent for your 6-digit code</p>
+    <div class="form-group code-input-wrap"><input id="kid-code-input" type="number" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" /></div>
     <button id="btn-kid-login" class="btn btn--kid mt-8">🚀 Start My Day!</button>
   </div>
 </section>
 
 <!-- ══════════════════════════ KID DASHBOARD ═════════════════ -->
 <section class="screen" id="screen-kid-dashboard">
-  <div class="app-bar w-full">
-    <span class="app-logo">Star<span>Kids</span></span>
-    <button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">Exit</button>
-  </div>
-
+  <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">Exit</button></div>
   <div class="kid-dashboard-hero w-full">
     <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
     <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
     <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ 0 Stars</div>
   </div>
-
-  <!-- Kid Tabs -->
   <div class="tab-bar w-full" style="max-width:480px;">
     <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks" onclick="showKidTab('tasks')">📋 Tasks</button>
-    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals" onclick="showKidTab('goals')">🎯 Goals</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals" onclick="showKidTab('goals')">🎯 My Goal</button>
   </div>
-
-  <!-- Kid Tab: Tasks -->
   <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
-    <div class="card">
-      <h3 class="kids-list-header">My Tasks 📋</h3>
-      <div id="kid-tasks-list"><p class="empty-state">Loading…</p></div>
-    </div>
+    <div class="card"><h3 class="kids-list-header">My Tasks 📋</h3><div id="kid-tasks-list"><p class="empty-state">Loading…</p></div></div>
   </div>
-
-  <!-- Kid Tab: Goals -->
   <div class="kid-tab-panel w-full" id="kid-tab-goals">
-    <div class="card">
-      <h3 class="kids-list-header">My Goals 🎯</h3>
-      <div id="kid-goals-list"><p class="empty-state">Loading…</p></div>
-    </div>
+    <div class="card"><h3 class="kids-list-header">My Goal 🎯</h3><div id="kid-goals-list"><p class="empty-state">Loading…</p></div></div>
   </div>
 </section>
 
-<!-- ════════════════════════ MODAL: ADD TASK ═════════════════ -->
+<!-- ════════════════════ MODAL: ADD TASK ════════════════════ -->
 <div class="modal-overlay" id="modal-add-task" onclick="handleModalClick(event,'modal-add-task')">
   <div class="modal-box">
     <h3 class="modal-title" id="modal-task-kid-name">Add Task</h3>
     <div class="form-group"><label>Task Title *</label><input id="task-title-input" type="text" placeholder="e.g. Make your bed" /></div>
     <div class="form-group"><label>Description (optional)</label><input id="task-desc-input" type="text" placeholder="e.g. Fold the blanket too" /></div>
-    <div class="form-group">
-      <label>⭐ Stars to earn</label>
-      <div class="stars-row">
-        <button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',-1)">−</button>
-        <input id="task-stars-input" type="number" value="1" min="1" max="10" readonly />
-        <button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',1)">+</button>
-      </div>
+    <div class="form-group"><label>⭐ Stars to earn</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',-1)">−</button><input id="task-stars-input" type="number" value="1" min="1" max="10" readonly /><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',1)">+</button></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn--secondary" onclick="closeAddTask()">Cancel</button>
-      <button class="btn btn--primary" id="btn-save-task">Save Task</button>
-    </div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddTask()">Cancel</button><button class="btn btn--primary" id="btn-save-task">Save Task</button></div>
   </div>
 </div>
 
-<!-- ══════════════════════ MODAL: BONUS STARS ════════════════ -->
+<!-- ═══════════════════ MODAL: BONUS STARS ══════════════════ -->
 <div class="modal-overlay" id="modal-bonus" onclick="handleModalClick(event,'modal-bonus')">
   <div class="modal-box">
     <h3 class="modal-title" id="modal-bonus-kid-name">Bonus Stars</h3>
-    <div class="form-group">
-      <label>⭐ Stars to give</label>
-      <div class="stars-row">
-        <button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',-1)">−</button>
-        <input id="bonus-stars-input" type="number" value="1" min="1" max="20" readonly />
-        <button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',1)">+</button>
-      </div>
+    <div class="form-group"><label>⭐ Stars to give</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',-1)">−</button><input id="bonus-stars-input" type="number" value="1" min="1" max="50" readonly /><button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',1)">+</button></div>
     </div>
     <div class="form-group"><label>Reason (optional)</label><input id="bonus-reason-input" type="text" placeholder="e.g. Helped without being asked 💛" /></div>
-    <div class="modal-actions">
-      <button class="btn btn--secondary" onclick="closeBonusStars()">Cancel</button>
-      <button class="btn btn--primary" id="btn-save-bonus">Give Stars ⭐</button>
-    </div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeBonusStars()">Cancel</button><button class="btn btn--primary" id="btn-save-bonus">Give Stars ⭐</button></div>
   </div>
 </div>
 
-<!-- ══════════════════════ MODAL: ADD GOAL ═══════════════════ -->
-<div class="modal-overlay" id="modal-add-goal" onclick="handleModalClick(event,'modal-add-goal')">
+<!-- ════════════════════ MODAL: ADD REWARD ══════════════════ -->
+<div class="modal-overlay" id="modal-add-reward" onclick="handleModalClick(event,'modal-add-reward')">
   <div class="modal-box">
-    <h3 class="modal-title">Set a Goal 🎯</h3>
-    <div class="form-group"><label>What are you saving for? *</label><input id="goal-title-input" type="text" placeholder="e.g. New LEGO set" /></div>
-    <div class="form-group">
-      <label>⭐ Stars needed</label>
-      <div class="stars-row">
-        <button type="button" class="stars-btn" onclick="adjustStars('goal-stars-input',-5)">−</button>
-        <input id="goal-stars-input" type="number" value="10" min="1" max="500" readonly />
-        <button type="button" class="stars-btn" onclick="adjustStars('goal-stars-input',5)">+</button>
-      </div>
+    <h3 class="modal-title">Add Custom Reward 🎁</h3>
+    <div class="form-group"><label>Reward Name *</label><input id="new-reward-title" type="text" placeholder="e.g. Family game night" /></div>
+    <div class="form-group"><label>⭐ Star cost</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('new-reward-stars',-5)">−</button><input id="new-reward-stars" type="number" value="20" min="1" max="1000" readonly /><button type="button" class="stars-btn" onclick="adjustStars('new-reward-stars',5)">+</button></div>
     </div>
-    <div class="form-group">
-      <label>Pick an Emoji</label>
-      <div class="avatar-row">
-        <input id="goal-emoji-input" type="text" value="🎯" maxlength="2" />
-        <span id="goal-emoji-preview" class="avatar-preview">🎯</span>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn--secondary" onclick="closeAddGoal()">Cancel</button>
-      <button class="btn btn--primary" id="btn-save-goal">Save Goal 🎯</button>
-    </div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="new-reward-emoji" type="text" value="🎁" maxlength="2" /><span id="new-reward-emoji-preview" class="avatar-preview">🎁</span></div></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddReward()">Cancel</button><button class="btn btn--primary" id="btn-save-new-reward">Add Reward</button></div>
   </div>
 </div>
 
-<!-- ══════════════════════════ CELEBRATION ═══════════════════ -->
+<!-- ═══════════════════ MODAL: EDIT REWARD ══════════════════ -->
+<div class="modal-overlay" id="modal-edit-reward" onclick="handleModalClick(event,'modal-edit-reward')">
+  <div class="modal-box">
+    <h3 class="modal-title">Edit Reward ✏️</h3>
+    <div class="form-group"><label>Reward Name *</label><input id="edit-reward-title" type="text" /></div>
+    <div class="form-group"><label>⭐ Star cost</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('edit-reward-stars',-5)">−</button><input id="edit-reward-stars" type="number" min="1" max="1000" readonly /><button type="button" class="stars-btn" onclick="adjustStars('edit-reward-stars',5)">+</button></div>
+    </div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="edit-reward-emoji" type="text" maxlength="2" /><span id="edit-reward-emoji-preview" class="avatar-preview">🎁</span></div></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeEditReward()">Cancel</button><button class="btn btn--primary" id="btn-save-edit-reward">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: PICK GOAL (kid) ═══════════════ -->
+<div class="modal-overlay" id="modal-pick-goal" onclick="handleModalClick(event,'modal-pick-goal')">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
+    <h3 class="modal-title">Pick a Goal 🎯</h3>
+    <p style="text-align:center;color:var(--color-muted);font-size:0.85rem;margin-bottom:16px;">What do you want to save for?</p>
+    <div id="reward-picker-list"><p class="empty-state">Loading…</p></div>
+    <button class="btn btn--secondary mt-16" onclick="closePickGoal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════════════ CELEBRATION ══════════════════════ -->
 <div class="celebration" id="celebration">
   <div class="celebration-inner">
     <div class="celebration-stars">⭐🎉⭐</div>
@@ -265,10 +213,10 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════ TOAST ═══════════════ -->
+<!-- ═══════════════════════════ TOAST ═══════════════════════ -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
-<!-- ══════════════════════════════════ SCRIPTS ═══════════════ -->
+<!-- ══════════════════════════ SCRIPTS ══════════════════════ -->
 <script type="module" src="js/app.js"></script>
 <script>
   function togglePassword(id, btn) {
@@ -281,28 +229,23 @@
     src === "camera" ? input.setAttribute("capture","environment") : input.removeAttribute("capture");
     input.click();
   }
-  function handleModalClick(e, modalId) {
-    if (e.target.id === modalId) {
-      if (modalId === "modal-add-task") closeAddTask();
-      if (modalId === "modal-bonus")    closeBonusStars();
-      if (modalId === "modal-add-goal") closeAddGoal();
-    }
+  function handleModalClick(e, id) {
+    if (e.target.id !== id) return;
+    const actions = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal };
+    actions[id]?.();
   }
   function adjustStars(inputId, delta) {
     const el  = document.getElementById(inputId);
     const min = parseInt(el.min) || 1;
-    const max = parseInt(el.max) || 500;
+    const max = parseInt(el.max) || 1000;
     el.value  = Math.min(max, Math.max(min, parseInt(el.value || min) + delta));
   }
-  // Avatar/emoji live preview
-  document.getElementById("kid-avatar")?.addEventListener("input", e =>
-    document.getElementById("avatar-preview").textContent = e.target.value || "🌟");
-  document.getElementById("goal-emoji-input")?.addEventListener("input", e =>
-    document.getElementById("goal-emoji-preview").textContent = e.target.value || "🎯");
-  // Code input limit
-  document.getElementById("kid-code-input")?.addEventListener("input", e => {
-    if (e.target.value.length > 6) e.target.value = e.target.value.slice(0,6);
-  });
+  // Live emoji previews
+  document.getElementById("kid-avatar")?.addEventListener("input", e => document.getElementById("avatar-preview").textContent = e.target.value || "🌟");
+  document.getElementById("new-reward-emoji")?.addEventListener("input", e => document.getElementById("new-reward-emoji-preview").textContent = e.target.value || "🎁");
+  document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value || "🎁");
+  // Code limit
+  document.getElementById("kid-code-input")?.addEventListener("input", e => { if (e.target.value.length > 6) e.target.value = e.target.value.slice(0,6); });
 </script>
 </body>
 </html>

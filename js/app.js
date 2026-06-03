@@ -1,33 +1,24 @@
 // ============================================================
-// js/app.js — StarKids V10  Sprint 1 + 2 + 3
+// js/app.js — StarKids V10  Sprint 1 + 2 + 3 + 4
 // ============================================================
 
 import { signUpParent, loginParent, logoutParent, getParentProfile, onAuthChange } from "./auth.js";
-import {
-  addKid, getKidsByParent, deleteKid, regenerateKidCode,
-  loginKidByCode, uploadKidPhoto, updateKidPhoto
-} from "./kid.js";
-import {
-  createTask, createDefaultTasks, getTasksForKid,
-  getPendingApprovals, submitTask, approveTask, rejectTask,
-  getStarBalance, STATUS
-} from "./tasks.js";
-import {
-  createGoal, getGoalsForKid, deleteGoal,
-  checkGoalCompletion, addBonusStars, GOAL_STATUS
-} from "./goals.js";
+import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, approveTask, rejectTask, getStarBalance, STATUS } from "./tasks.js";
+import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js";
+import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, redeemReward } from "./rewards.js";
 
 // ── State ─────────────────────────────────────────────────────
-let currentParent = null;
-let currentKid    = null;
-let kidsList      = [];
-let selectedPhoto = null;
+let currentParent  = null;
+let currentKid     = null;
+let kidsList       = [];
+let rewardsCatalog = [];   // parent's reward list
+let selectedPhoto  = null;
 
 // ── Screen Router ─────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  const el = document.getElementById(id);
-  if (el) el.classList.add("active");
+  document.getElementById(id)?.classList.add("active");
 }
 
 // ── Toast ──────────────────────────────────────────────────────
@@ -38,16 +29,16 @@ function toast(msg, type = "info") {
   setTimeout(() => t.classList.remove("toast--show"), 3500);
 }
 
-// ── Celebrate (goal completed) ────────────────────────────────
-function celebrate(goalTitle) {
+// ── Celebration overlay ────────────────────────────────────────
+function celebrate(title) {
   const el = document.getElementById("celebration");
   if (!el) return;
-  document.getElementById("celebration-text").textContent = `🎉 Goal Reached!\n"${goalTitle}"`;
+  document.getElementById("celebration-text").textContent = `🎉 Goal Reached!\n"${title}"`;
   el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 4000);
+  setTimeout(() => el.classList.remove("show"), 4500);
 }
 
-// ── Friendly errors ────────────────────────────────────────────
+// ── Error map ──────────────────────────────────────────────────
 function friendlyError(err) {
   const map = {
     "auth/email-already-in-use": "This email is already registered.",
@@ -71,12 +62,12 @@ function setLoading(btn, loading) {
 // REMEMBER ME
 // ═══════════════════════════════════════════════════════════════
 const LS_EMAIL = "sk_remembered_email";
-const saveRememberedEmail  = e  => localStorage.setItem(LS_EMAIL, e);
-const clearRememberedEmail = () => localStorage.removeItem(LS_EMAIL);
-const getRememberedEmail   = () => localStorage.getItem(LS_EMAIL) || "";
+const saveEmail  = e  => localStorage.setItem(LS_EMAIL, e);
+const clearEmail = () => localStorage.removeItem(LS_EMAIL);
+const getSavedEmail = () => localStorage.getItem(LS_EMAIL) || "";
 
-(function prefillLogin() {
-  const saved = getRememberedEmail();
+(function prefill() {
+  const saved = getSavedEmail();
   if (!saved) return;
   const el = document.getElementById("login-email");
   const cb = document.getElementById("remember-me");
@@ -85,35 +76,32 @@ const getRememberedEmail   = () => localStorage.getItem(LS_EMAIL) || "";
 })();
 
 // ═══════════════════════════════════════════════════════════════
-// KID PHOTO PREVIEW
+// PHOTO PREVIEW
 // ═══════════════════════════════════════════════════════════════
 document.getElementById("kid-photo-input")?.addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
   selectedPhoto = file;
   const prev = document.getElementById("kid-photo-preview");
-  prev.src   = URL.createObjectURL(file);
+  prev.src = URL.createObjectURL(file);
   prev.style.display = "block";
   document.getElementById("kid-photo-placeholder").style.display = "none";
 });
 
 // ═══════════════════════════════════════════════════════════════
-// RENDER KIDS LIST
+// KIDS LIST
 // ═══════════════════════════════════════════════════════════════
 function renderKids() {
   const list = document.getElementById("kids-list");
   if (!list) return;
-  if (kidsList.length === 0) {
-    list.innerHTML = `<p class="empty-state">No kids yet. Add your first kid below! 👶</p>`;
-    return;
-  }
+  if (!kidsList.length) { list.innerHTML = `<p class="empty-state">No kids yet. Add your first kid! 👶</p>`; return; }
   list.innerHTML = kidsList.map(kid => {
-    const avatarHTML = kid.photoURL
+    const av = kid.photoURL
       ? `<img src="${kid.photoURL}" class="kid-card__photo" alt="${kid.name}" />`
       : `<div class="kid-card__avatar">${kid.avatarEmoji || "🌟"}</div>`;
     return `
       <div class="kid-card" data-id="${kid.id}">
-        ${avatarHTML}
+        ${av}
         <div class="kid-card__info">
           <div class="kid-card__name">${kid.name}</div>
           <div class="kid-card__age">Age ${kid.age}</div>
@@ -136,35 +124,23 @@ async function loadKids() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// RENDER APPROVALS
+// APPROVALS
 // ═══════════════════════════════════════════════════════════════
 async function loadPendingApprovals() {
   const pending = await getPendingApprovals(currentParent.uid);
   const el      = document.getElementById("approvals-list");
   if (!el) return;
-
   const badge = document.getElementById("approvals-badge");
-  if (badge) {
-    badge.textContent   = pending.length > 0 ? pending.length : "";
-    badge.style.display = pending.length > 0 ? "inline-flex" : "none";
-  }
-
-  if (pending.length === 0) {
-    el.innerHTML = `<p class="empty-state">No pending approvals 🎉</p>`;
-    return;
-  }
-
+  if (badge) { badge.textContent = pending.length || ""; badge.style.display = pending.length ? "inline-flex" : "none"; }
+  if (!pending.length) { el.innerHTML = `<p class="empty-state">No pending approvals 🎉</p>`; return; }
   el.innerHTML = pending.map(task => {
     const kid = kidsList.find(k => k.id === task.kidId);
-    const kidName    = kid ? kid.name : "Unknown";
-    const avatarHTML = kid?.photoURL
-      ? `<img src="${kid.photoURL}" class="approval-avatar-img" />`
-      : `<span>${kid?.avatarEmoji || "🌟"}</span>`;
+    const av  = kid?.photoURL ? `<img src="${kid.photoURL}" class="approval-avatar-img" />` : `<span>${kid?.avatarEmoji || "🌟"}</span>`;
     return `
       <div class="approval-card">
-        <div class="approval-avatar">${avatarHTML}</div>
+        <div class="approval-avatar">${av}</div>
         <div class="approval-info">
-          <div class="approval-kid">${kidName}</div>
+          <div class="approval-kid">${kid?.name || "?"}</div>
           <div class="approval-task">${task.title}</div>
           <div class="approval-stars">⭐ ${task.stars} star${task.stars > 1 ? "s" : ""}</div>
         </div>
@@ -177,47 +153,165 @@ async function loadPendingApprovals() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// RENDER KIDS WALLETS (parent overview tab)
+// WALLETS OVERVIEW (parent)
 // ═══════════════════════════════════════════════════════════════
 async function loadWalletsOverview() {
   const el = document.getElementById("wallets-list");
-  if (!el || kidsList.length === 0) {
-    if (el) el.innerHTML = `<p class="empty-state">Add kids first to see their wallets. 👶</p>`;
-    return;
-  }
+  if (!el) return;
+  if (!kidsList.length) { el.innerHTML = `<p class="empty-state">Add kids first. 👶</p>`; return; }
 
   const rows = await Promise.all(kidsList.map(async kid => {
-    const stars = await getStarBalance(kid.id);
-    const goals = await getGoalsForKid(kid.id);
-    const activeGoal = goals.find(g => g.status === GOAL_STATUS.ACTIVE);
-    const progressPct = activeGoal
-      ? Math.min(100, Math.round((stars / activeGoal.targetStars) * 100))
-      : null;
+    const stars     = await getStarBalance(kid.id);
+    const goals     = await getGoalsForKid(kid.id);
+    const active    = goals.find(g => g.status === GOAL_STATUS.ACTIVE);
+    const completed = goals.filter(g => g.status === GOAL_STATUS.COMPLETED);
+    const pct       = active ? Math.min(100, Math.round((stars / active.targetStars) * 100)) : null;
+    const av        = kid.photoURL ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />` : `<span class="wallet-avatar-emoji">${kid.avatarEmoji || "🌟"}</span>`;
 
-    const avatarHTML = kid.photoURL
-      ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />`
-      : `<span class="wallet-avatar-emoji">${kid.avatarEmoji || "🌟"}</span>`;
+    const completedHTML = completed.length ? `
+      <div class="wallet-completed-goals">
+        ${completed.map(g => `
+          <div class="wallet-completed-item">
+            <span>${g.emoji} ${g.title}</span>
+            <button class="btn btn--sm btn--success" onclick="handleRedeemGoal('${g.id}','${kid.id}',${g.targetStars},'${g.title}','${kid.name}')">🎁 Redeem</button>
+          </div>`).join("")}
+      </div>` : "";
 
     return `
       <div class="wallet-card">
-        <div class="wallet-avatar">${avatarHTML}</div>
+        <div class="wallet-avatar">${av}</div>
         <div class="wallet-info">
           <div class="wallet-name">${kid.name}</div>
           <div class="wallet-stars">⭐ ${stars} stars</div>
-          ${activeGoal ? `
+          ${active ? `
             <div class="wallet-goal">
-              <div class="wallet-goal-label">${activeGoal.emoji} ${activeGoal.title} — ${activeGoal.targetStars}⭐</div>
-              <div class="progress-bar">
-                <div class="progress-fill" style="width:${progressPct}%"></div>
-              </div>
-              <div class="progress-label">${progressPct}% there!</div>
+              <div class="wallet-goal-label">${active.emoji} Saving for: ${active.title} (${active.targetStars}⭐)</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+              <div class="progress-label">${stars} / ${active.targetStars} stars — ${pct}%</div>
             </div>` : `<div class="wallet-no-goal">No active goal</div>`}
+          ${completedHTML}
         </div>
       </div>`;
   }));
-
   el.innerHTML = rows.join("");
 }
+
+// ═══════════════════════════════════════════════════════════════
+// REWARDS CATALOG (parent manages)
+// ═══════════════════════════════════════════════════════════════
+async function loadRewardsCatalog() {
+  rewardsCatalog = await getRewardsForParent(currentParent.uid);
+  renderRewardsCatalog();
+}
+
+function renderRewardsCatalog() {
+  const el = document.getElementById("rewards-catalog-list");
+  if (!el) return;
+
+  // Group by category
+  const cats = {};
+  rewardsCatalog.forEach(r => {
+    const c = r.category || "custom";
+    if (!cats[c]) cats[c] = [];
+    cats[c].push(r);
+  });
+
+  const catLabels = { treat: "🍬 Treats", outing: "🎡 Outings", toy: "🧸 Toys & Things", big: "🏆 Big Rewards", custom: "✨ Custom" };
+
+  let html = "";
+  Object.entries(cats).forEach(([cat, rewards]) => {
+    html += `<div class="reward-cat-title">${catLabels[cat] || cat}</div>`;
+    html += rewards.map(r => `
+      <div class="reward-catalog-item">
+        <span class="reward-emoji">${r.emoji}</span>
+        <div class="reward-info">
+          <div class="reward-title">${r.title}</div>
+          <div class="reward-stars">⭐ ${r.stars} stars</div>
+        </div>
+        <div class="reward-actions">
+          <button class="btn btn--sm btn--secondary" onclick="openEditReward('${r.id}','${r.title}',${r.stars},'${r.emoji}')">✏️</button>
+          <button class="btn btn--sm btn--danger"    onclick="handleDeleteReward('${r.id}')">🗑</button>
+        </div>
+      </div>`).join("");
+  });
+
+  if (!rewardsCatalog.length) html = `<p class="empty-state">No rewards yet. Add some below!</p>`;
+  el.innerHTML = html;
+}
+
+// ── Redeem a completed goal ───────────────────────────────────
+window.handleRedeemGoal = async (goalId, kidId, stars, title, kidName) => {
+  if (!confirm(`Redeem "${title}" for ${kidName}? This will deduct ${stars}⭐ from their wallet.`)) return;
+  try {
+    await redeemReward(goalId, kidId, title, stars);
+    toast(`🎁 "${title}" redeemed for ${kidName}!`, "success");
+    loadWalletsOverview();
+  } catch (err) { toast("Failed to redeem.", "error"); console.error(err); }
+};
+
+// ── Edit reward modal ─────────────────────────────────────────
+let editRewardId = null;
+window.openEditReward = (id, title, stars, emoji) => {
+  editRewardId = id;
+  document.getElementById("edit-reward-title").value = title;
+  document.getElementById("edit-reward-stars").value = stars;
+  document.getElementById("edit-reward-emoji").value = emoji;
+  document.getElementById("edit-reward-emoji-preview").textContent = emoji;
+  document.getElementById("modal-edit-reward").classList.add("open");
+};
+window.closeEditReward = () => document.getElementById("modal-edit-reward").classList.remove("open");
+
+document.getElementById("btn-save-edit-reward")?.addEventListener("click", async () => {
+  const btn   = document.getElementById("btn-save-edit-reward");
+  const title = document.getElementById("edit-reward-title").value.trim();
+  const stars = parseInt(document.getElementById("edit-reward-stars").value, 10) || 1;
+  const emoji = document.getElementById("edit-reward-emoji").value || "🎁";
+  if (!title) { toast("Please enter a reward name.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await updateReward(editRewardId, { title, stars, emoji });
+    closeEditReward();
+    await loadRewardsCatalog();
+    toast("Reward updated! ✅", "success");
+  } catch (err) { toast("Failed to update.", "error"); }
+  finally { setLoading(btn, false); }
+});
+
+// ── Delete reward ─────────────────────────────────────────────
+window.handleDeleteReward = async (rewardId) => {
+  if (!confirm("Delete this reward from the catalog?")) return;
+  try {
+    await deleteReward(rewardId);
+    await loadRewardsCatalog();
+    toast("Reward removed.", "info");
+  } catch (err) { toast("Failed to delete.", "error"); }
+};
+
+// ── Add custom reward ─────────────────────────────────────────
+window.openAddReward = () => {
+  document.getElementById("new-reward-title").value = "";
+  document.getElementById("new-reward-stars").value = "20";
+  document.getElementById("new-reward-emoji").value = "🎁";
+  document.getElementById("new-reward-emoji-preview").textContent = "🎁";
+  document.getElementById("modal-add-reward").classList.add("open");
+};
+window.closeAddReward = () => document.getElementById("modal-add-reward").classList.remove("open");
+
+document.getElementById("btn-save-new-reward")?.addEventListener("click", async () => {
+  const btn   = document.getElementById("btn-save-new-reward");
+  const title = document.getElementById("new-reward-title").value.trim();
+  const stars = parseInt(document.getElementById("new-reward-stars").value, 10) || 20;
+  const emoji = document.getElementById("new-reward-emoji").value || "🎁";
+  if (!title) { toast("Please enter a reward name.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await createReward(currentParent.uid, title, stars, emoji, "custom");
+    closeAddReward();
+    await loadRewardsCatalog();
+    toast(`"${title}" added to catalog! 🎁`, "success");
+  } catch (err) { toast("Failed to add reward.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // TABS
@@ -229,14 +323,16 @@ window.showTab = (tab) => {
   document.getElementById(`tab-${tab}`)?.classList.add("active");
   if (tab === "approvals") loadPendingApprovals();
   if (tab === "wallets")   loadWalletsOverview();
+  if (tab === "rewards")   loadRewardsCatalog();
 };
 
 // ═══════════════════════════════════════════════════════════════
-// AUTH STATE
+// AUTH
 // ═══════════════════════════════════════════════════════════════
 onAuthChange(async user => {
   if (user) {
     currentParent = { uid: user.uid, ...(await getParentProfile(user.uid)) };
+    await seedDefaultRewards(currentParent.uid);
     goToParentDashboard();
   } else {
     currentParent = null;
@@ -252,7 +348,7 @@ function goToParentDashboard() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: SIGN UP / LOGIN / LOGOUT
+// PARENT AUTH
 // ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-signup")?.addEventListener("click", async () => {
   const btn = document.getElementById("btn-signup");
@@ -263,8 +359,9 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
   setLoading(btn, true);
   try {
     const user = await signUpParent(name, email, password);
-    toast("Account created! Welcome! 🌟", "success");
     currentParent = { uid: user.uid, ...(await getParentProfile(user.uid)) };
+    await seedDefaultRewards(currentParent.uid);
+    toast("Account created! Welcome! 🌟", "success");
     goToParentDashboard();
   } catch (err) { toast(friendlyError(err), "error"); }
   finally { setLoading(btn, false); }
@@ -279,9 +376,10 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
   setLoading(btn, true);
   try {
     const user = await loginParent(email, password);
-    remember ? saveRememberedEmail(email) : clearRememberedEmail();
-    toast("Welcome back! 🌟", "success");
+    remember ? saveEmail(email) : clearEmail();
     currentParent = { uid: user.uid, ...(await getParentProfile(user.uid)) };
+    await seedDefaultRewards(currentParent.uid);
+    toast("Welcome back! 🌟", "success");
     goToParentDashboard();
   } catch (err) { toast(friendlyError(err), "error"); }
   finally { setLoading(btn, false); }
@@ -293,7 +391,7 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: ADD KID
+// ADD KID
 // ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
   const btn   = document.getElementById("btn-add-kid");
@@ -326,16 +424,12 @@ document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: DELETE / REGEN CODE
+// DELETE KID / REGEN CODE
 // ═══════════════════════════════════════════════════════════════
 window.handleDeleteKid = async (kidId, kidName) => {
   if (!confirm(`Delete ${kidName}? This cannot be undone.`)) return;
-  try {
-    await deleteKid(kidId);
-    kidsList = kidsList.filter(k => k.id !== kidId);
-    renderKids();
-    toast(`${kidName} removed.`, "info");
-  } catch (err) { toast("Failed to delete.", "error"); }
+  try { await deleteKid(kidId); kidsList = kidsList.filter(k => k.id !== kidId); renderKids(); toast(`${kidName} removed.`, "info"); }
+  catch (err) { toast("Failed to delete.", "error"); }
 };
 
 window.handleRegenCode = async (kidId) => {
@@ -346,53 +440,33 @@ window.handleRegenCode = async (kidId) => {
     const el = document.getElementById(`code-${kidId}`);
     if (el) { el.textContent = newCode; el.classList.add("code-flash"); setTimeout(() => el.classList.remove("code-flash"), 800); }
     toast(`New code: ${newCode}`, "success");
-  } catch (err) { toast("Failed to regenerate code.", "error"); }
+  } catch (err) { toast("Failed to regenerate.", "error"); }
 };
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: BONUS STARS MODAL
+// BONUS STARS
 // ═══════════════════════════════════════════════════════════════
-let bonusKidId   = null;
-let bonusKidName = null;
-
-window.openBonusStars = (kidId, kidName) => {
-  bonusKidId   = kidId;
-  bonusKidName = kidName;
-  document.getElementById("modal-bonus-kid-name").textContent = `Bonus Stars for ${kidName}`;
-  document.getElementById("bonus-stars-input").value  = "1";
-  document.getElementById("bonus-reason-input").value = "";
-  document.getElementById("modal-bonus").classList.add("open");
-};
+let bonusKidId = null, bonusKidName = null;
+window.openBonusStars  = (id, name) => { bonusKidId = id; bonusKidName = name; document.getElementById("modal-bonus-kid-name").textContent = `Bonus Stars for ${name}`; document.getElementById("bonus-stars-input").value = "1"; document.getElementById("bonus-reason-input").value = ""; document.getElementById("modal-bonus").classList.add("open"); };
 window.closeBonusStars = () => document.getElementById("modal-bonus").classList.remove("open");
 
 document.getElementById("btn-save-bonus")?.addEventListener("click", async () => {
-  const btn    = document.getElementById("btn-save-bonus");
-  const stars  = parseInt(document.getElementById("bonus-stars-input").value, 10) || 1;
-  const reason = document.getElementById("bonus-reason-input").value.trim() || "Bonus";
+  const btn   = document.getElementById("btn-save-bonus");
+  const stars = parseInt(document.getElementById("bonus-stars-input").value, 10) || 1;
   setLoading(btn, true);
   try {
-    const newTotal = await addBonusStars(bonusKidId, stars, reason);
+    await addBonusStars(bonusKidId, stars);
     closeBonusStars();
     toast(`⭐ ${stars} bonus star${stars > 1 ? "s" : ""} given to ${bonusKidName}!`, "success");
-  } catch (err) { toast("Failed to give bonus.", "error"); console.error(err); }
+  } catch (err) { toast("Failed.", "error"); }
   finally { setLoading(btn, false); }
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: ADD TASK MODAL
+// ADD TASK
 // ═══════════════════════════════════════════════════════════════
-let taskTargetKidId   = null;
-let taskTargetKidName = null;
-
-window.openAddTask = (kidId, kidName) => {
-  taskTargetKidId   = kidId;
-  taskTargetKidName = kidName;
-  document.getElementById("modal-task-kid-name").textContent = `Task for ${kidName}`;
-  document.getElementById("task-title-input").value  = "";
-  document.getElementById("task-desc-input").value   = "";
-  document.getElementById("task-stars-input").value  = "1";
-  document.getElementById("modal-add-task").classList.add("open");
-};
+let taskKidId = null, taskKidName = null;
+window.openAddTask  = (id, name) => { taskKidId = id; taskKidName = name; document.getElementById("modal-task-kid-name").textContent = `Task for ${name}`; document.getElementById("task-title-input").value = ""; document.getElementById("task-desc-input").value = ""; document.getElementById("task-stars-input").value = "1"; document.getElementById("modal-add-task").classList.add("open"); };
 window.closeAddTask = () => document.getElementById("modal-add-task").classList.remove("open");
 
 document.getElementById("btn-save-task")?.addEventListener("click", async () => {
@@ -402,35 +476,33 @@ document.getElementById("btn-save-task")?.addEventListener("click", async () => 
   const stars = parseInt(document.getElementById("task-stars-input").value, 10) || 1;
   if (!title) { toast("Please enter a task title.", "error"); return; }
   setLoading(btn, true);
-  try {
-    await createTask(currentParent.uid, taskTargetKidId, title, desc, stars);
-    closeAddTask();
-    toast(`Task added for ${taskTargetKidName}! ⭐`, "success");
-  } catch (err) { toast("Failed to save task.", "error"); console.error(err); }
+  try { await createTask(currentParent.uid, taskKidId, title, desc, stars); closeAddTask(); toast(`Task added for ${taskKidName}! ⭐`, "success"); }
+  catch (err) { toast("Failed to save task.", "error"); }
   finally { setLoading(btn, false); }
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PARENT: APPROVE / REJECT
+// APPROVE / REJECT
 // ═══════════════════════════════════════════════════════════════
-window.handleApprove = async (taskId, kidId, stars, taskTitle) => {
+window.handleApprove = async (taskId, kidId, stars, title) => {
   try {
     await approveTask(taskId, kidId, stars);
-    toast(`✅ Approved! ${stars}⭐ awarded for "${taskTitle}"`, "success");
+    toast(`✅ Approved! ${stars}⭐ for "${title}"`, "success");
+    // Check if any goals completed
+    const newStars   = await getStarBalance(kidId);
+    const completed  = await checkGoalCompletion(kidId, newStars);
+    completed.forEach(g => celebrate(g.title));
     loadPendingApprovals();
   } catch (err) { toast("Failed to approve.", "error"); console.error(err); }
 };
 
-window.handleReject = async (taskId, taskTitle) => {
-  try {
-    await rejectTask(taskId);
-    toast(`❌ "${taskTitle}" sent back to kid.`, "info");
-    loadPendingApprovals();
-  } catch (err) { toast("Failed to reject.", "error"); }
+window.handleReject = async (taskId, title) => {
+  try { await rejectTask(taskId); toast(`❌ "${title}" sent back to kid.`, "info"); loadPendingApprovals(); }
+  catch (err) { toast("Failed to reject.", "error"); }
 };
 
 // ═══════════════════════════════════════════════════════════════
-// KID: LOGIN
+// KID LOGIN
 // ═══════════════════════════════════════════════════════════════
 document.getElementById("btn-kid-login")?.addEventListener("click", async () => {
   const btn  = document.getElementById("btn-kid-login");
@@ -444,56 +516,35 @@ document.getElementById("btn-kid-login")?.addEventListener("click", async () => 
     saveKidSession(kid);
     await showKidDashboard(kid);
     toast(`Hi ${kid.name}! Let's have a great day! 🌟`, "success");
-  } catch (err) {
-    const msg = err?.message || err?.code || "Unknown error";
-    toast("Error: " + msg.slice(0, 60), "error");
-    console.error("KID LOGIN ERROR:", err);
-  }
+  } catch (err) { toast("Error: " + (err?.message || "Unknown").slice(0, 60), "error"); console.error(err); }
   finally { setLoading(btn, false); }
 });
 
 // ═══════════════════════════════════════════════════════════════
-// KID: DASHBOARD
+// KID DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 async function showKidDashboard(kid) {
-  const avatarEl = document.getElementById("kid-dashboard-avatar");
-  avatarEl.innerHTML = kid.photoURL
-    ? `<img src="${kid.photoURL}" class="kid-dash-photo" alt="${kid.name}" />`
-    : kid.avatarEmoji || "🌟";
-
+  const av = document.getElementById("kid-dashboard-avatar");
+  av.innerHTML = kid.photoURL ? `<img src="${kid.photoURL}" class="kid-dash-photo" />` : kid.avatarEmoji || "🌟";
   document.getElementById("kid-dashboard-name").textContent = `Hi, ${kid.name}!`;
-
-  await refreshKidStars(kid.id);
+  const stars = await getStarBalance(kid.id);
+  document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
   await loadKidTasks(kid);
-  await loadKidGoals(kid.id);
-
+  await loadKidGoalsView(kid.id, stars);
+  showKidTab("tasks");
   showScreen("screen-kid-dashboard");
 }
 
-async function refreshKidStars(kidId) {
-  const stars = await getStarBalance(kidId);
-  document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
-  return stars;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// KID: TASKS
-// ═══════════════════════════════════════════════════════════════
+// ── Kid tasks ──────────────────────────────────────────────────
 async function loadKidTasks(kid) {
-  const tasks  = await getTasksForKid(kid.id);
-  const el     = document.getElementById("kid-tasks-list");
+  const tasks = await getTasksForKid(kid.id);
+  const el    = document.getElementById("kid-tasks-list");
   if (!el) return;
-
   const active   = tasks.filter(t => t.status === STATUS.PENDING || t.status === STATUS.REJECTED);
   const waiting  = tasks.filter(t => t.status === STATUS.SUBMITTED);
   const approved = tasks.filter(t => t.status === STATUS.APPROVED);
-
   let html = "";
-
-  if (!tasks.length) {
-    html = `<p class="empty-state">No tasks yet! Ask your parent. 🌟</p>`;
-  }
-
+  if (!tasks.length) html = `<p class="empty-state">No tasks yet! Ask your parent. 🌟</p>`;
   if (active.length) {
     html += `<div class="task-section-title">📋 My Tasks</div>`;
     html += active.map(t => `
@@ -504,34 +555,25 @@ async function loadKidTasks(kid) {
           <div class="task-card__stars">⭐ ${t.stars} star${t.stars > 1 ? "s" : ""}</div>
           ${t.status === STATUS.REJECTED ? `<div class="task-card__rejected">❌ Try again!</div>` : ""}
         </div>
-        <button class="btn btn--sm btn--success task-done-btn" onclick="handleTaskDone('${t.id}')">✅ Done!</button>
+        <button class="btn btn--sm btn--success" onclick="handleTaskDone('${t.id}')">✅ Done!</button>
       </div>`).join("");
   }
-
   if (waiting.length) {
-    html += `<div class="task-section-title">⏳ Waiting for Approval</div>`;
+    html += `<div class="task-section-title">⏳ Waiting Approval</div>`;
     html += waiting.map(t => `
       <div class="task-card task-card--submitted">
-        <div class="task-card__info">
-          <div class="task-card__title">${t.title}</div>
-          <div class="task-card__stars">⭐ ${t.stars} star${t.stars > 1 ? "s" : ""}</div>
-        </div>
+        <div class="task-card__info"><div class="task-card__title">${t.title}</div><div class="task-card__stars">⭐ ${t.stars}</div></div>
         <span class="task-badge task-badge--waiting">Waiting…</span>
       </div>`).join("");
   }
-
   if (approved.length) {
-    html += `<div class="task-section-title">✅ Completed Today</div>`;
+    html += `<div class="task-section-title">✅ Completed</div>`;
     html += approved.map(t => `
       <div class="task-card task-card--approved">
-        <div class="task-card__info">
-          <div class="task-card__title">${t.title}</div>
-          <div class="task-card__stars">⭐ +${t.stars} earned</div>
-        </div>
-        <span class="task-badge task-badge--approved">⭐ Done!</span>
+        <div class="task-card__info"><div class="task-card__title">${t.title}</div><div class="task-card__stars">⭐ +${t.stars}</div></div>
+        <span class="task-badge task-badge--approved">Done! ⭐</span>
       </div>`).join("");
   }
-
   el.innerHTML = html;
 }
 
@@ -546,99 +588,137 @@ window.handleTaskDone = async (taskId) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// KID: GOALS
+// KID GOALS — picks from parent reward catalog
 // ═══════════════════════════════════════════════════════════════
-async function loadKidGoals(kidId) {
-  const el    = document.getElementById("kid-goals-list");
+async function loadKidGoalsView(kidId, currentStars) {
+  const el = document.getElementById("kid-goals-list");
   if (!el) return;
 
-  const stars = await getStarBalance(kidId);
   const goals = await getGoalsForKid(kidId);
   const active    = goals.filter(g => g.status === GOAL_STATUS.ACTIVE);
   const completed = goals.filter(g => g.status === GOAL_STATUS.COMPLETED);
+  const redeemed  = goals.filter(g => g.status === "redeemed");
 
   let html = "";
 
-  if (!active.length && !completed.length) {
-    html = `
-      <p class="empty-state">No goals yet!</p>
-      <button class="btn btn--accent mt-8" onclick="openAddGoal()">🎯 Set a Goal</button>`;
-  } else {
-    html += `<button class="btn btn--sm btn--accent" style="margin-bottom:12px;" onclick="openAddGoal()">➕ New Goal</button>`;
-  }
-
+  // Active goal
   if (active.length) {
-    html += `<div class="task-section-title">🎯 My Goals</div>`;
+    html += `<div class="task-section-title">🎯 My Goal</div>`;
     html += active.map(g => {
-      const pct = Math.min(100, Math.round((stars / g.targetStars) * 100));
+      const pct = Math.min(100, Math.round((currentStars / g.targetStars) * 100));
       return `
         <div class="goal-card">
           <div class="goal-emoji">${g.emoji}</div>
           <div class="goal-info">
             <div class="goal-title">${g.title}</div>
-            <div class="goal-target">Target: ⭐ ${g.targetStars} stars</div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width:${pct}%"></div>
-            </div>
-            <div class="progress-label">⭐ ${stars} / ${g.targetStars} — ${pct}%</div>
+            <div class="goal-target">Need ⭐ ${g.targetStars} stars</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+            <div class="progress-label">⭐ ${currentStars} / ${g.targetStars} — ${pct}% there!</div>
           </div>
           <button class="goal-delete-btn" onclick="handleDeleteGoal('${g.id}')">×</button>
         </div>`;
     }).join("");
   }
 
+  // Completed (awaiting redemption by parent)
   if (completed.length) {
-    html += `<div class="task-section-title">🏆 Achieved!</div>`;
+    html += `<div class="task-section-title">🏆 Goal Reached! Tell your parent!</div>`;
     html += completed.map(g => `
       <div class="goal-card goal-card--done">
         <div class="goal-emoji">${g.emoji}</div>
         <div class="goal-info">
           <div class="goal-title">${g.title}</div>
-          <div class="goal-target">⭐ ${g.targetStars} stars — Achieved! 🎉</div>
+          <div class="goal-target">🎉 You did it! Ask parent to redeem.</div>
         </div>
-        <button class="goal-delete-btn" onclick="handleDeleteGoal('${g.id}')">×</button>
       </div>`).join("");
+  }
+
+  // Redeemed history
+  if (redeemed.length) {
+    html += `<div class="task-section-title">🎁 Redeemed</div>`;
+    html += redeemed.map(g => `
+      <div class="goal-card goal-card--redeemed">
+        <div class="goal-emoji">${g.emoji}</div>
+        <div class="goal-info"><div class="goal-title">${g.title}</div><div class="goal-target">🎁 Enjoyed!</div></div>
+      </div>`).join("");
+  }
+
+  // Pick a new goal button
+  if (!active.length) {
+    html += `
+      <div class="pick-goal-prompt">
+        <p>Pick something to save for! 🌟</p>
+        <button class="btn btn--kid" onclick="openPickGoal()">🎯 Pick a Goal</button>
+      </div>`;
   }
 
   el.innerHTML = html;
 }
 
-// ── Add Goal Modal ────────────────────────────────────────────
-window.openAddGoal = () => {
-  document.getElementById("goal-title-input").value  = "";
-  document.getElementById("goal-stars-input").value  = "10";
-  document.getElementById("goal-emoji-input").value  = "🎯";
-  document.getElementById("goal-emoji-preview").textContent = "🎯";
-  document.getElementById("modal-add-goal").classList.add("open");
-};
-window.closeAddGoal = () => document.getElementById("modal-add-goal").classList.remove("open");
+// ── Pick goal from reward catalog ─────────────────────────────
+let parentRewardsForKid = [];
 
-document.getElementById("btn-save-goal")?.addEventListener("click", async () => {
-  const btn   = document.getElementById("btn-save-goal");
-  const title = document.getElementById("goal-title-input").value.trim();
-  const stars = parseInt(document.getElementById("goal-stars-input").value, 10) || 10;
-  const emoji = document.getElementById("goal-emoji-input").value || "🎯";
-  if (!title) { toast("Please enter a goal name.", "error"); return; }
-  setLoading(btn, true);
+window.openPickGoal = async () => {
+  const el = document.getElementById("reward-picker-list");
+  el.innerHTML = `<p class="empty-state">Loading rewards…</p>`;
+  document.getElementById("modal-pick-goal").classList.add("open");
+
+  // Get parent's rewards — find parentId from kid data
+  const parentId = currentKid.parentId;
+  parentRewardsForKid = await getRewardsForParent(parentId);
+
+  if (!parentRewardsForKid.length) {
+    el.innerHTML = `<p class="empty-state">No rewards set by parent yet. Ask them to add some!</p>`;
+    return;
+  }
+
+  // Sort by stars ascending
+  const sorted = [...parentRewardsForKid].sort((a, b) => a.stars - b.stars);
+  const stars  = await getStarBalance(currentKid.id);
+
+  el.innerHTML = sorted.map(r => {
+    const canAfford = stars >= r.stars;
+    const pct       = Math.min(100, Math.round((stars / r.stars) * 100));
+    return `
+      <div class="reward-picker-item ${canAfford ? "reward-picker-item--ready" : ""}" onclick="handlePickGoal('${r.id}')">
+        <span class="reward-emoji">${r.emoji}</span>
+        <div class="reward-info">
+          <div class="reward-title">${r.title}</div>
+          <div class="reward-stars">⭐ ${r.stars} stars ${canAfford ? "— You can get this! 🎉" : `— ${pct}% saved`}</div>
+          ${!canAfford ? `<div class="mini-progress"><div class="mini-progress-fill" style="width:${pct}%"></div></div>` : ""}
+        </div>
+        ${canAfford ? `<span class="ready-badge">Ready! 🎉</span>` : ""}
+      </div>`;
+  }).join("");
+};
+
+window.closePickGoal = () => document.getElementById("modal-pick-goal").classList.remove("open");
+
+window.handlePickGoal = async (rewardId) => {
+  const reward = parentRewardsForKid.find(r => r.id === rewardId);
+  if (!reward) return;
   try {
-    await createGoal(currentKid.id, title, stars, emoji);
-    closeAddGoal();
-    toast(`Goal set: "${title}" 🎯`, "success");
-    await loadKidGoals(currentKid.id);
-  } catch (err) { toast("Failed to save goal.", "error"); console.error(err); }
-  finally { setLoading(btn, false); }
-});
+    await createGoalFromReward(currentKid.id, reward);
+    closePickGoal();
+    toast(`Goal set: "${reward.title}" 🎯`, "success");
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
+  } catch (err) { toast("Failed to set goal.", "error"); console.error(err); }
+};
 
 window.handleDeleteGoal = async (goalId) => {
   if (!confirm("Remove this goal?")) return;
   try {
     await deleteGoal(goalId);
-    await loadKidGoals(currentKid.id);
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
     toast("Goal removed.", "info");
-  } catch (err) { toast("Failed to remove goal.", "error"); }
+  } catch (err) { toast("Failed.", "error"); }
 };
 
-// ── Kid tabs ──────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// KID TABS
+// ═══════════════════════════════════════════════════════════════
 window.showKidTab = (tab) => {
   document.querySelectorAll(".kid-tab-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".kid-tab-panel").forEach(p => p.classList.remove("active"));
@@ -647,15 +727,14 @@ window.showKidTab = (tab) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// KID: SESSION
+// KID SESSION
 // ═══════════════════════════════════════════════════════════════
 function saveKidSession(kid)  { sessionStorage.setItem("sk_kid", JSON.stringify(kid)); }
 function loadKidSession()     { const d = sessionStorage.getItem("sk_kid"); return d ? JSON.parse(d) : null; }
 function clearKidSession()    { sessionStorage.removeItem("sk_kid"); }
 
 document.getElementById("btn-kid-logout")?.addEventListener("click", () => {
-  clearKidSession();
-  currentKid = null;
+  clearKidSession(); currentKid = null;
   document.getElementById("kid-code-input").value = "";
   showScreen("screen-home");
   toast("See you soon! 👋", "info");
@@ -664,19 +743,15 @@ document.getElementById("btn-kid-logout")?.addEventListener("click", () => {
 // ═══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
-window.goToScreen     = (id)   => showScreen(id);
-window.goToKidLogin   = ()     => showScreen("screen-kid-login");
-window.goToParentAuth = (mode) => showScreen(mode === "signup" ? "screen-signup" : "screen-login");
+window.goToScreen     = id   => showScreen(id);
+window.goToKidLogin   = ()   => showScreen("screen-kid-login");
+window.goToParentAuth = mode => showScreen(mode === "signup" ? "screen-signup" : "screen-login");
 
 // ═══════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════
 (async function boot() {
   const savedKid = loadKidSession();
-  if (savedKid) {
-    currentKid = savedKid;
-    await showKidDashboard(savedKid);
-  } else {
-    showScreen("screen-home");
-  }
+  if (savedKid) { currentKid = savedKid; await showKidDashboard(savedKid); }
+  else showScreen("screen-home");
 })();

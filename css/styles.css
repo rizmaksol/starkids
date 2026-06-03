@@ -958,3 +958,107 @@ input:focus, select:focus {
   color: var(--color-primary);
   white-space: pre-line;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SPRINT 4 — Rewards Catalog, Goal Picker, Redeem
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Rewards catalog (parent) ─────────────────────────────── */
+.reward-cat-title {
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 14px 0 6px;
+}
+.reward-catalog-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.reward-emoji { font-size: 1.8rem; flex-shrink: 0; }
+.reward-info  { flex: 1; min-width: 0; }
+.reward-title { font-weight: 700; font-size: 0.9rem; color: var(--color-text); }
+.reward-stars { font-size: 0.8rem; color: var(--color-secondary); font-weight: 700; margin-top: 2px; }
+.reward-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Wallet completed goals (redeem button) ───────────────── */
+.wallet-completed-goals { margin-top: 10px; }
+.wallet-completed-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fffbe6;
+  border: 2px solid var(--color-secondary);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 10px;
+}
+
+/* ── Goal picker (kid modal) ──────────────────────────────── */
+.reward-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.reward-picker-item:hover { border-color: var(--color-primary); background: #f4f2ff; }
+.reward-picker-item--ready {
+  border-color: var(--color-success);
+  background: #f0fff8;
+}
+.ready-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-success);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Mini progress bar (in picker) ───────────────────────── */
+.mini-progress {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 5px;
+}
+.mini-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: var(--radius-full);
+  min-width: 3px;
+}
+
+/* ── Goal card redeemed state ─────────────────────────────── */
+.goal-card--redeemed {
+  border-color: var(--color-secondary);
+  background: #fffbe6;
+  opacity: 0.75;
+}
+
+/* ── Pick goal prompt ─────────────────────────────────────── */
+.pick-goal-prompt {
+  text-align: center;
+  padding: 20px;
+  color: var(--color-muted);
+}
+.pick-goal-prompt p { margin-bottom: 12px; font-size: 1rem; }
+
+/* ── Modal scrollable fix ─────────────────────────────────── */
+.modal-box { max-height: 88vh; overflow-y: auto; }

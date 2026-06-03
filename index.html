@@ -567,8 +567,13 @@
 <!-- ══════════════════════════ SCRIPTS ══════════════════════ -->
 <script type="module" src="js/app.js"></script>
 <script>
-  // Service Worker registration
+  // Service Worker — clear all caches and unregister old SWs
   if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
+    });
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    // Register fresh SW that does no caching
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/starkids/sw.js")
         .then(r => console.log("SW registered"))

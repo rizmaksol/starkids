@@ -718,9 +718,11 @@ async function showKidDashboard(kid) {
 
   await loadKidTasks(kid);
   await loadKidGoalsView(kid.id, stars);
-  // Load family values for kid's parent (needed for value display)
+  // Load family values for kid's parent (needed for value display + praise)
   try { familyValues = await getFamilyValues(kid.parentId); } catch(e) {}
   showKidTab("tasks");
+  // Load jobs in tasks tab
+  await loadKidJobsSection(kid.id);
   showScreen("screen-kid-dashboard");
 }
 
@@ -825,28 +827,12 @@ async function loadKidGoalsView(kidId, currentStars) {
     html+=`<div class="task-section-title">🎁 Past Rewards</div>`;
     html+=redeemed.map(g=>`<div class="goal-card goal-card--redeemed"><div class="goal-emoji">${g.emoji}</div><div class="goal-info"><div class="goal-title">${g.title}</div><div class="goal-target">🎉 Enjoyed!</div></div></div>`).join("");
   }
-  // Values section (before jobs)
-  html += `<div class="task-section-title" style="margin-top:20px;">❤️ My Values</div>
-  <div id="kid-values-list"><p class="empty-state">Loading…</p></div>`;
-
-  // Praise section
-  html += `<div class="task-section-title" style="margin-top:20px;">💛 Praise from Parent</div>
-  <div id="kid-praise-list"><p class="empty-state">Loading…</p></div>`;
-
-  // Jobs section
-  html += `<div class="task-section-title" style="margin-top:20px;">💼 Entrepreneur Jobs</div>
-  <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:10px;">Pick up extra jobs to earn more stars!</p>
-  <div id="kid-jobs-list"><p class="empty-state">Loading jobs…</p></div>`;
-
   html+=`<div style="margin-top:16px;"><button class="btn btn--${active?"secondary":"kid"}" onclick="openPickGoal()">${active?"🔄 Browse & Change Goal":"🎯 Pick a Goal"}</button></div>`;
   el.innerHTML=html;
-  loadKidJobs(kidId);
-  loadKidValuesProgress(kidId);
-  loadKidPraise(kidId);
 }
 
 // ── Kid entrepreneur jobs ─────────────────────────────────────
-async function loadKidJobs(kidId) {
+async function loadKidJobsSection(kidId) {
   const el = document.getElementById("kid-jobs-list"); if (!el) return;
   const jobs    = await getEntrepreneurJobs(currentKid.parentId);
   const myTasks = await getTasksForKid(kidId);
@@ -917,6 +903,15 @@ window.showKidTab=(tab)=>{
   document.querySelectorAll(".kid-tab-panel").forEach(p=>p.classList.remove("active"));
   document.getElementById(`kid-tab-btn-${tab}`)?.classList.add("active");
   document.getElementById(`kid-tab-${tab}`)?.classList.add("active");
+  // Load praise & values when praise tab is opened
+  if (tab==="praise" && currentKid) {
+    loadKidPraise(currentKid.id);
+    loadKidValuesProgress(currentKid.id);
+  }
+  // Load entrepreneur jobs when tasks tab is opened
+  if (tab==="tasks" && currentKid) {
+    loadKidJobsSection(currentKid.id);
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════

@@ -197,14 +197,18 @@ async function loadPendingApprovals() {
   el.innerHTML = html;
 
   // Load submission photos asynchronously after rendering
+  console.log("Loading photos for", pending.length, "pending tasks");
   for (const task of pending) {
-    const wrap = document.getElementById(`photo-wrap-${task.id}`);
+    const wrapId = `photo-wrap-${task.id}`;
+    const wrap = document.getElementById(wrapId);
+    console.log("Task:", task.id, "wrap found:", !!wrap);
     if (!wrap) continue;
     const photo = await loadTaskPhoto(task.id);
+    console.log("Photo for", task.id, ":", photo ? photo.length + " chars" : "null");
     if (photo) {
-      wrap.innerHTML = `<img src="${photo}" class="submission-photo" onclick="showPhotoFull(this.src)" />`;
+      wrap.innerHTML = `<img src="${photo}" class="submission-photo" onclick="showPhotoFull(this.src)" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer;" />`;
     } else {
-      wrap.innerHTML = "";
+      wrap.innerHTML = `<span style="font-size:0.75rem;color:#aaa;">No photo</span>`;
     }
   }
 }

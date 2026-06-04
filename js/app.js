@@ -4,7 +4,7 @@
 
 import { db } from "./firebase.js?v=10";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=10";
-import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange, saveCredentials, loadCredentials, clearCredentials } from "./auth.js?v=10";
+import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=10";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=10";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=10";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=10";
@@ -12,6 +12,31 @@ import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefa
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=10";
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=10";
 import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=10";
+
+// ── Credential helpers (inline — no import dependency) ───────
+const CRED_KEY_E = "sk_cred_email";
+const CRED_KEY_P = "sk_cred_pass";
+
+function saveCredentials(email, password) {
+  try {
+    localStorage.setItem(CRED_KEY_E, email);
+    localStorage.setItem(CRED_KEY_P, btoa(unescape(encodeURIComponent(password))));
+  } catch(e) { console.warn("Could not save credentials", e); }
+}
+
+function loadCredentials() {
+  try {
+    const email = localStorage.getItem(CRED_KEY_E) || "";
+    const raw   = localStorage.getItem(CRED_KEY_P) || "";
+    const password = raw ? decodeURIComponent(escape(atob(raw))) : "";
+    return { email, password };
+  } catch(e) { return { email: "", password: "" }; }
+}
+
+function clearCredentials() {
+  localStorage.removeItem(CRED_KEY_E);
+  localStorage.removeItem(CRED_KEY_P);
+}
 
 // ── State ─────────────────────────────────────────────────────
 let currentParent    = null;
@@ -1506,9 +1531,9 @@ window.saveProfileSettings = async () => {
 // ═══════════════════════════════════════════════════════════════
 // SESSION / NAVIGATION / BOOT
 // ═══════════════════════════════════════════════════════════════
-function saveKidSession(kid)  { sessionStorage.setItem("sk_kid",JSON.stringify(kid)); }
-function loadKidSession()     { const d=sessionStorage.getItem("sk_kid"); return d?JSON.parse(d):null; }
-function clearKidSession()    { sessionStorage.removeItem("sk_kid"); }
+function saveKidSession(kid)  { localStorage.setItem("sk_kid", JSON.stringify(kid)); }
+function loadKidSession()     { try { const d=localStorage.getItem("sk_kid"); return d?JSON.parse(d):null; } catch(e){return null;} }
+function clearKidSession()    { localStorage.removeItem("sk_kid"); }
 
 document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
   clearKidSession(); currentKid=null;

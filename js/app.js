@@ -4,7 +4,7 @@
 
 import { db } from "./firebase.js?v=10";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=10";
-import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=10";
+import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange, saveCredentials, loadCredentials, clearCredentials } from "./auth.js?v=10";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=10";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=10";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=10";
@@ -95,9 +95,14 @@ const saveEmail     = e  => localStorage.setItem(LS_EMAIL, e);
 const clearEmail    = () => localStorage.removeItem(LS_EMAIL);
 const getSavedEmail = () => localStorage.getItem(LS_EMAIL) || "";
 (function prefill() {
-  const s = getSavedEmail(); if (!s) return;
-  const el = document.getElementById("login-email"); const cb = document.getElementById("remember-me");
-  if (el) el.value = s; if (cb) cb.checked = true;
+  const { email, password } = loadCredentials();
+  if (!email) return;
+  const emailEl = document.getElementById("login-email");
+  const pwEl    = document.getElementById("login-password");
+  const cb      = document.getElementById("remember-me");
+  if (emailEl) emailEl.value = email;
+  if (pwEl && password) pwEl.value = password;
+  if (cb) cb.checked = true;
 })();
 
 // ── Photo preview ─────────────────────────────────────────────
@@ -718,7 +723,8 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
   const btn=document.getElementById("btn-login"); const email=document.getElementById("login-email").value.trim(); const password=document.getElementById("login-password").value; const remember=document.getElementById("remember-me")?.checked;
   if (!email||!password) { toast("Please enter email and password.","error"); return; } setLoading(btn,true);
   try {
-    const user=await loginParent(email,password); remember?saveEmail(email):clearEmail();
+    const user=await loginParent(email,password);
+    if (remember) { saveCredentials(email, password); } else { clearCredentials(); }
     const profile=await getParentProfile(user.uid);
     const name = profile?.name || user.displayName || email.split("@")[0] || "Parent";
     currentParent={uid:user.uid, name, email, ...profile};
@@ -729,7 +735,12 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
 
-document.getElementById("btn-logout")?.addEventListener("click", async () => { await logoutParent(); toast("Logged out!","info"); });
+document.getElementById("btn-logout")?.addEventListener("click", async () => {
+  clearCredentials();
+  clearKidSession();
+  await logoutParent();
+  toast("Logged out!", "info");
+});
 
 // ═══════════════════════════════════════════════════════════════
 // ADD KID

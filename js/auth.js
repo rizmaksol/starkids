@@ -15,7 +15,12 @@ import {
   doc, setDoc, getDoc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-await setPersistence(auth, browserLocalPersistence);
+// Set persistence inside try/catch — never fail silently
+try {
+  await setPersistence(auth, browserLocalPersistence);
+} catch(e) {
+  console.warn("Could not set persistence:", e);
+}
 
 // ── Sign Up ───────────────────────────────────────────────────
 export async function signUpParent(name, email, password, familyPrefs = {}) {
@@ -23,13 +28,13 @@ export async function signUpParent(name, email, password, familyPrefs = {}) {
   const uid = credential.user.uid;
   await setDoc(doc(db, "parents", uid), {
     name, email,
-    familyFocus:  familyPrefs.focus    || "values",
-    faith:        familyPrefs.faith    || null,
-    currency:     familyPrefs.currency || "SAR",
+    familyFocus:    familyPrefs.focus  || "values",
+    faith:          familyPrefs.faith  || null,
+    currency:       familyPrefs.currency || "SAR",
     currencySymbol: familyPrefs.symbol || "﷼",
-    starRate:     familyPrefs.rate     || 0.10,
-    setupComplete: true,
-    createdAt:    serverTimestamp()
+    starRate:       familyPrefs.rate   || 0.10,
+    setupComplete:  true,
+    createdAt:      serverTimestamp()
   });
   return credential.user;
 }
@@ -42,7 +47,28 @@ export async function loginParent(email, password) {
 
 // ── Logout ────────────────────────────────────────────────────
 export async function logoutParent() {
+  // Clear saved credentials on explicit logout
+  localStorage.removeItem("sk_saved_email");
+  localStorage.removeItem("sk_saved_pw");
   await signOut(auth);
+}
+
+// ── Save / Load credentials ───────────────────────────────────
+export function saveCredentials(email, password) {
+  localStorage.setItem("sk_saved_email", email);
+  // Simple obfuscation — not encryption, but better than plain text
+  localStorage.setItem("sk_saved_pw", btoa(password));
+}
+
+export function loadCredentials() {
+  const email = localStorage.getItem("sk_saved_email") || "";
+  const pw    = localStorage.getItem("sk_saved_pw") || "";
+  return { email, password: pw ? atob(pw) : "" };
+}
+
+export function clearCredentials() {
+  localStorage.removeItem("sk_saved_email");
+  localStorage.removeItem("sk_saved_pw");
 }
 
 // ── Get parent profile ────────────────────────────────────────

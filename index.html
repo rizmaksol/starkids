@@ -618,30 +618,31 @@
 
 <!-- ══════════════════════════ SCRIPTS ══════════════════════ -->
 <script>
-  // Fallback nav functions — available immediately before module loads
-  function goToParentAuth(mode) {
-    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-    document.getElementById(mode === "signup" ? "screen-signup" : "screen-login")?.classList.add("active");
-  }
-  function goToKidLogin() {
-    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-    document.getElementById("screen-kid-login")?.classList.add("active");
-  }
-  function goToScreen(id) {
-    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  // Fallback nav — runs before module loads, only switches non-splash screens
+  function _switchScreen(id) {
+    // Don't interfere with splash
+    document.querySelectorAll(".screen:not(#screen-splash)").forEach(s => s.classList.remove("active"));
     document.getElementById(id)?.classList.add("active");
+    // Hide splash
+    document.getElementById("screen-splash")?.classList.remove("active");
+    sessionStorage.setItem("sk_splash_shown","1");
   }
+  function goToParentAuth(mode) { _switchScreen(mode==="signup"?"screen-signup":"screen-login"); }
+  function goToKidLogin()       { _switchScreen("screen-kid-login"); }
+  function goToScreen(id)       { _switchScreen(id); }
 </script>
 <script type="module" src="./js/app.js?v=10"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   function runSplash() {
-    // Don't show splash if already seen this session
+    // If already logged in (skipSplash was called), don't run
     if (sessionStorage.getItem("sk_splash_shown")) {
-      document.getElementById("screen-splash").classList.remove("active");
-      document.getElementById("screen-home").classList.add("active");
+      document.getElementById("screen-splash")?.classList.remove("active");
       return;
     }
+    // Make sure splash is visible
+    document.getElementById("screen-splash")?.classList.add("active");
+    document.querySelectorAll(".screen:not(#screen-splash)").forEach(s=>s.classList.remove("active"));
 
     const words   = ["sw-1", "sw-2", "sw-3"];
     const logo    = document.getElementById("splash-logo");

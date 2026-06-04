@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StarKids</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6c63ff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="StarKids" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="icons/icon-192.png" />
+</head>
+<body>
+
+<!-- ════════════════════════════════ HOME ════════════════════ -->
+<section class="screen active" id="screen-home">
+  <div class="home-hero">
+    <div class="home-app-icon-emoji">⭐</div>
+    <h1 class="home-hero__title">Star<span>Kids</span></h1>
+    <p class="home-hero__tagline">Build habits. Earn stars. Grow together. 🚀</p>
+  </div>
+  <div class="home-buttons">
+    <button class="btn btn--primary" onclick="goToParentAuth('login')">👨‍👩‍👧 I'm a Parent</button>
+    <div class="divider">— or —</div>
+    <button class="btn btn--kid" onclick="goToKidLogin()">🌟 I'm a Kid!</button>
+  </div>
+  <p class="mt-24" style="color:var(--color-muted);font-size:0.8rem;text-align:center;">
+    New parent? <button onclick="goToParentAuth('signup')" style="background:none;border:none;color:var(--color-primary);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">Create an account</button>
+  </p>
+  <!-- PWA install prompt -->
+  <div id="pwa-install-bar" class="pwa-install-bar" style="display:none;">
+    <span>📲 Install StarKids on your phone!</span>
+    <button onclick="installPWA()" class="btn btn--sm btn--primary" style="width:auto;">Install</button>
+    <button onclick="dismissInstall()" class="pwa-dismiss">✕</button>
+  </div>
+</section>
+
+<!-- ════════════════════════════ SIGN UP ═════════════════════ -->
+<section class="screen" id="screen-signup">
+  <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
+
+  <!-- Step 1: Account details -->
+  <div id="signup-step-1" class="w-full">
+    <div class="card">
+      <h2 class="card__title">Create Account 🌟</h2>
+      <div class="signup-step-indicator"><span class="step active">1</span><span class="step-line"></span><span class="step">2</span></div>
+      <div class="form-group"><label>Your Name</label><input id="signup-name" type="text" placeholder="e.g. Sarah" autocomplete="name" /></div>
+      <div class="form-group"><label>Email</label><input id="signup-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
+      <div class="form-group"><label>Password</label><input id="signup-password" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" /></div>
+      <button class="btn btn--primary mt-8" onclick="goToSignupStep2()">Next → Family Setup</button>
+      <div class="auth-switch mt-12">Already have an account? <button onclick="goToParentAuth('login')">Log in</button></div>
+    </div>
+  </div>
+
+  <!-- Step 2: Family Preferences -->
+  <div id="signup-step-2" class="w-full" style="display:none;">
+    <div class="card">
+      <h2 class="card__title">Family Setup ❤️</h2>
+      <div class="signup-step-indicator"><span class="step done">✓</span><span class="step-line active"></span><span class="step active">2</span></div>
+      <p style="text-align:center;color:var(--color-muted);font-size:0.9rem;margin-bottom:20px;">This helps us personalise StarKids for your family.</p>
+
+      <!-- Family Focus -->
+      <div class="form-group">
+        <label>Family Focus</label>
+        <div class="focus-selector">
+          <button type="button" class="focus-btn active" data-focus="faith" onclick="selectFocus('faith')">
+            🙏 Faith-Based
+            <span>Habits guided by your faith tradition</span>
+          </button>
+          <button type="button" class="focus-btn" data-focus="values" onclick="selectFocus('values')">
+            ❤️ Values-Based
+            <span>Universal family values & character</span>
+          </button>
+          <button type="button" class="focus-btn" data-focus="custom" onclick="selectFocus('custom')">
+            ✨ Custom
+            <span>You decide everything</span>
+          </button>
+        </div>
+        <input type="hidden" id="signup-focus" value="faith" />
+      </div>
+
+      <!-- Faith selector (shown when faith-based selected) -->
+      <div id="faith-selector-section" class="form-group">
+        <label>Your Faith Tradition</label>
+        <div class="faith-grid">
+          <button type="button" class="faith-grid-btn active" data-faith="muslim"           onclick="selectFaith('muslim')">🕌 Muslim</button>
+          <button type="button" class="faith-grid-btn" data-faith="christian"              onclick="selectFaith('christian')">✝️ Christian</button>
+          <button type="button" class="faith-grid-btn" data-faith="christian_orthodox"     onclick="selectFaith('christian_orthodox')">☦️ Orthodox</button>
+          <button type="button" class="faith-grid-btn" data-faith="jewish"                 onclick="selectFaith('jewish')">✡️ Jewish</button>
+          <button type="button" class="faith-grid-btn" data-faith="hindu"                  onclick="selectFaith('hindu')">🪔 Hindu</button>
+          <button type="button" class="faith-grid-btn" data-faith="buddhist"               onclick="selectFaith('buddhist')">☸️ Buddhist</button>
+          <button type="button" class="faith-grid-btn" data-faith="sikh"                   onclick="selectFaith('sikh')">🪯 Sikh</button>
+          <button type="button" class="faith-grid-btn" data-faith="nonreligious"           onclick="selectFaith('nonreligious')">🌿 Mindfulness</button>
+        </div>
+        <input type="hidden" id="signup-faith" value="muslim" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn--secondary" onclick="goToSignupStep1()">← Back</button>
+        <button id="btn-signup" class="btn btn--primary">Create Account 🌟</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ LOGIN ══════════════════════ -->
+<section class="screen" id="screen-login">
+  <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
+  <div class="card">
+    <h2 class="card__title">Welcome Back 👋</h2>
+    <div class="form-group"><label>Email</label><input id="login-email" type="email" placeholder="you@email.com" autocomplete="email" /></div>
+    <div class="form-group"><label>Password</label>
+      <div class="password-wrap"><input id="login-password" type="password" placeholder="Your password" autocomplete="current-password" /><button type="button" class="toggle-pw" onclick="togglePassword('login-password',this)">👁</button></div>
+    </div>
+    <div class="remember-row"><label class="remember-label"><input type="checkbox" id="remember-me" /><span>Remember my email</span></label></div>
+    <button id="btn-login" class="btn btn--primary mt-8">Log In</button>
+    <div class="auth-switch mt-12">No account yet? <button onclick="goToParentAuth('signup')">Sign up free</button></div>
+  </div>
+</section>
+
+<!-- ══════════════════════ PARENT DASHBOARD ══════════════════ -->
+<section class="screen" id="screen-parent-dashboard">
+  <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button></div>
+  <p class="dashboard-welcome w-full" id="parent-name-display">Welcome! 👋</p>
+
+  <div class="tab-bar w-full">
+    <button class="tab-btn active" id="tab-btn-kids"      onclick="showTab('kids')">👨‍👩‍👧 Kids</button>
+    <button class="tab-btn"        id="tab-btn-approvals" onclick="showTab('approvals')">✅ Approve <span id="approvals-badge" class="badge" style="display:none;"></span></button>
+    <button class="tab-btn"        id="tab-btn-wallets"   onclick="showTab('wallets')">⭐ Wallets</button>
+    <button class="tab-btn"        id="tab-btn-rewards"   onclick="showTab('rewards')">🎁 Rewards</button>
+    <button class="tab-btn"        id="tab-btn-finance"   onclick="showTab('finance')">💰 Finance</button>
+    <button class="tab-btn"        id="tab-btn-values"    onclick="showTab('values')">❤️ Values</button>
+    <button class="tab-btn"        id="tab-btn-report"    onclick="showTab('report')">📊 Report</button>
+    <button class="tab-btn"        id="tab-btn-profile"   onclick="showTab('profile')">👤 Profile</button>
+  </div>
+
+  <!-- Kids tab -->
+  <div class="tab-panel active w-full" id="tab-kids">
+    <div class="card"><h3 class="kids-list-header">My Kids 👨‍👩‍👧</h3><div id="kids-list"><p class="empty-state">Loading…</p></div></div>
+    <div class="card">
+      <h3 class="card__title" style="font-size:1.1rem;margin-bottom:16px;">➕ Add a Kid</h3>
+      <div class="form-group">
+        <label>Kid's Photo</label>
+        <div class="photo-upload-area" onclick="document.getElementById('kid-photo-input').click()">
+          <img id="kid-photo-preview" src="" alt="" style="display:none;" />
+          <div id="kid-photo-placeholder" class="photo-placeholder"><span class="photo-icon">📷</span><span class="photo-hint">Tap to choose<br><small>Gallery or Camera</small></span></div>
+        </div>
+        <input id="kid-photo-input" type="file" accept="image/*" style="display:none;" />
+        <div class="photo-source-btns">
+          <button type="button" class="btn btn--sm btn--secondary" onclick="openPhotoSource('gallery')">🖼 Gallery</button>
+          <button type="button" class="btn btn--sm btn--secondary" onclick="openPhotoSource('camera')">📸 Camera</button>
+        </div>
+      </div>
+      <div class="form-group"><label>Kid's Name</label><input id="kid-name" type="text" placeholder="e.g. Ahmed" /></div>
+      <div class="form-group"><label>Age</label><input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" /></div>
+      <div class="form-group"><label>Fallback Emoji</label><div class="avatar-row"><input id="kid-avatar" type="text" value="🌟" maxlength="2" /><span class="avatar-preview" id="avatar-preview">🌟</span></div></div>
+      <button id="btn-add-kid" class="btn btn--accent mt-8">Add Kid</button>
+    </div>
+  </div>
+
+  <!-- Approvals tab -->
+  <div class="tab-panel w-full" id="tab-approvals">
+    <div class="card"><h3 class="kids-list-header">Pending Approvals ✅</h3><div id="approvals-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+
+  <!-- Wallets tab -->
+  <div class="tab-panel w-full" id="tab-wallets">
+    <div class="card"><h3 class="kids-list-header">Kids Wallets ⭐</h3><div id="wallets-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+
+  <!-- Rewards tab -->
+  <div class="tab-panel w-full" id="tab-rewards">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 class="kids-list-header" style="margin:0;">Rewards Catalog 🎁</h3>
+        <button class="btn btn--sm btn--accent" onclick="openAddReward()">➕ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Kids pick from this list as their savings goal.</p>
+      <div id="rewards-catalog-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Finance tab -->
+  <div class="tab-panel w-full" id="tab-finance">
+    <div class="card">
+      <h3 class="kids-list-header">💰 Finance Settings</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:16px;">Set how much each star is worth in real money. Kids see their balance in stars AND money.</p>
+      <div class="form-group">
+        <label>Currency</label>
+        <select id="currency-select" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;background:var(--color-bg);">
+          <option value="SAR">SAR — Saudi Riyal</option>
+          <option value="USD">USD — US Dollar</option>
+          <option value="AED">AED — UAE Dirham</option>
+          <option value="GBP">GBP — British Pound</option>
+          <option value="EUR">EUR — Euro</option>
+          <option value="PKR">PKR — Pakistani Rupee</option>
+          <option value="EGP">EGP — Egyptian Pound</option>
+          <option value="KWD">KWD — Kuwaiti Dinar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Currency Symbol</label>
+        <input id="currency-symbol-input" type="text" value="﷼" placeholder="e.g. ﷼ or $ or £" maxlength="3" oninput="updateRatePreview()" />
+      </div>
+      <div class="form-group">
+        <label>1 Star = how much money?</label>
+        <input id="star-rate-input" type="number" value="0.10" min="0.01" max="100" step="0.01" placeholder="e.g. 0.10" oninput="updateRatePreview()" />
+      </div>
+      <div class="rate-preview-box" id="rate-preview">10 ⭐ = ﷼ 1.00 · 50 ⭐ = ﷼ 5.00 · 100 ⭐ = ﷼ 10.00</div>
+      <button class="btn btn--primary mt-8" onclick="saveFinanceSettingsHandler()">Save Settings 💾</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 class="kids-list-header" style="margin:0;">💼 Entrepreneur Jobs</h3>
+        <button class="btn btn--sm btn--accent" onclick="openAddJob()">➕ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Extra jobs kids can take on to earn more stars. Teaches initiative!</p>
+      <div id="jobs-catalog-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Values tab -->
+  <div class="tab-panel w-full" id="tab-values">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 class="kids-list-header" style="margin:0;">❤️ Family Values</h3>
+        <button class="btn btn--sm btn--accent" onclick="openAddValue()">➕ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:14px;">These values guide your family. Tag tasks to values so kids see what they're building.</p>
+      <div id="values-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Report tab -->
+  <div class="tab-panel w-full" id="tab-report">
+    <div class="card">
+      <h3 class="kids-list-header">📊 Weekly Report</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:16px;">Last 7 days performance for each kid.</p>
+      <div id="weekly-reports-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Profile tab -->
+  <div class="tab-panel w-full" id="tab-profile">
+    <div class="card">
+      <h3 class="kids-list-header">👤 Profile Settings</h3>
+
+      <div class="form-group">
+        <label>Your Name</label>
+        <input id="profile-name-input" type="text" placeholder="Your name" />
+      </div>
+
+      <div class="form-group">
+        <label>Family Focus</label>
+        <div class="focus-selector">
+          <button type="button" class="focus-btn profile-focus-btn active" data-pfocus="faith" onclick="selectProfileFocus('faith')">
+            🙏 Faith-Based <span>Habits guided by your faith tradition</span>
+          </button>
+          <button type="button" class="focus-btn profile-focus-btn" data-pfocus="values" onclick="selectProfileFocus('values')">
+            ❤️ Values-Based <span>Universal family values & character</span>
+          </button>
+          <button type="button" class="focus-btn profile-focus-btn" data-pfocus="custom" onclick="selectProfileFocus('custom')">
+            ✨ Custom <span>You decide everything</span>
+          </button>
+        </div>
+        <input type="hidden" id="profile-focus-hidden" value="faith" />
+      </div>
+
+      <div id="profile-faith-section" class="form-group">
+        <label>Faith Tradition</label>
+        <div class="faith-grid">
+          <button type="button" class="faith-grid-btn profile-faith-btn active" data-pfaith="muslim"           onclick="selectProfileFaith('muslim')">🕌 Muslim</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="christian"              onclick="selectProfileFaith('christian')">✝️ Christian</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="christian_orthodox"     onclick="selectProfileFaith('christian_orthodox')">☦️ Orthodox</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="jewish"                 onclick="selectProfileFaith('jewish')">✡️ Jewish</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="hindu"                  onclick="selectProfileFaith('hindu')">🪔 Hindu</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="buddhist"               onclick="selectProfileFaith('buddhist')">☸️ Buddhist</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="sikh"                   onclick="selectProfileFaith('sikh')">🪯 Sikh</button>
+          <button type="button" class="faith-grid-btn profile-faith-btn" data-pfaith="nonreligious"           onclick="selectProfileFaith('nonreligious')">🌿 Mindfulness</button>
+        </div>
+        <input type="hidden" id="profile-faith-hidden" value="muslim" />
+      </div>
+
+      <button id="btn-save-profile" class="btn btn--primary mt-8" onclick="saveProfileSettings()">Save Changes ✅</button>
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════════════════ KID LOGIN ═══════════════════ -->
+<section class="screen" id="screen-kid-login">
+  <div class="app-bar w-full"><button class="btn btn--ghost back-btn" onclick="goToScreen('screen-home')">← Back</button><span class="app-logo">Star<span>Kids</span></span><div style="width:64px"></div></div>
+  <div class="card">
+    <h2 class="card__title">Enter Your Code 🔑</h2>
+    <p style="text-align:center;color:var(--color-muted);margin-bottom:20px;">Ask your parent for your 6-digit code</p>
+    <div class="form-group code-input-wrap"><input id="kid-code-input" type="number" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" /></div>
+    <button id="btn-kid-login" class="btn btn--kid mt-8">🚀 Start My Day!</button>
+  </div>
+</section>
+
+<!-- ══════════════════════════ KID DASHBOARD ═════════════════ -->
+<section class="screen" id="screen-kid-dashboard">
+  <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">Exit</button></div>
+
+  <div class="kid-dashboard-hero w-full">
+    <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
+    <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
+    <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ 0 Stars</div>
+    <div class="kid-dashboard-money" id="kid-dashboard-money">💰 ﷼ 0.00</div>
+    <!-- Refresh button -->
+    <button id="btn-kid-refresh" class="btn-refresh" onclick="refreshKidDashboard()" title="Check for new stars & achievements">
+      🔄 Refresh
+    </button>
+    <!-- Streak display -->
+    <div id="kid-streak-bar" class="streak-bar" style="display:none;"></div>
+  </div>
+
+  <div class="tab-bar w-full" style="max-width:480px;">
+    <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks"  onclick="showKidTab('tasks')">📋 Tasks</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals"  onclick="showKidTab('goals')">🎯 My Goal</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-praise"        onclick="showKidTab('praise')">💛 Praise <span id="kid-praise-badge" class="badge" style="display:none;"></span></button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-achievements" onclick="showKidTab('achievements')">🏆 Awards</button>
+  </div>
+
+  <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
+    <div class="card"><h3 class="kids-list-header">My Tasks 📋</h3><div id="kid-tasks-list"><p class="empty-state">Loading…</p></div></div>
+    <div class="card">
+      <h3 class="kids-list-header">💼 Entrepreneur Jobs</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:10px;">Pick up extra jobs to earn more stars and money!</p>
+      <div id="kid-jobs-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+  <div class="kid-tab-panel w-full" id="kid-tab-goals">
+    <div class="card"><h3 class="kids-list-header">My Goal 🎯</h3><div id="kid-goals-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+  <div class="kid-tab-panel w-full" id="kid-tab-achievements">
+    <div class="card">
+      <h3 class="kids-list-header">🏆 My Achievements</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:14px;">Earn achievements by building great habits!</p>
+      <div id="kid-achievements-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+  <div class="kid-tab-panel w-full" id="kid-tab-praise">
+    <div class="card">
+      <h3 class="kids-list-header">💛 Praise from Parent</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:10px;">Messages your parent sent you 💌</p>
+      <div id="kid-praise-tab-list"><p class="empty-state">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h3 class="kids-list-header">❤️ My Values Progress</h3>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:10px;">Values you are living through your tasks</p>
+      <div id="kid-values-tab-list"><p class="empty-state">Loading…</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ MODAL: ADD TASK ════════════════ -->
+<div class="modal-overlay" id="modal-add-task" onclick="handleModalClick(event,'modal-add-task')">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modal-task-kid-name">Add Task</h3>
+    <div class="form-group"><label>Task Title *</label><input id="task-title-input" type="text" placeholder="e.g. Make your bed" /></div>
+    <div class="form-group"><label>Description (optional)</label><input id="task-desc-input" type="text" placeholder="e.g. Fold the blanket too" /></div>
+    <div class="form-group"><label>Task Type</label>
+      <div class="task-type-row">
+        <button type="button" class="type-btn active" data-type="daily"   onclick="selectTaskType('daily')">🔄 Daily</button>
+        <button type="button" class="type-btn"        data-type="weekly"  onclick="selectTaskType('weekly')">📅 Weekly</button>
+        <button type="button" class="type-btn"        data-type="onetime" onclick="selectTaskType('onetime')">1️⃣ One-time</button>
+      </div>
+      <input type="hidden" id="task-type-input" value="daily" />
+    </div>
+    <div class="form-group"><label>⭐ Stars to earn</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',-1)">−</button><input id="task-stars-input" type="number" value="1" min="1" max="10" readonly /><button type="button" class="stars-btn" onclick="adjustStars('task-stars-input',1)">+</button></div>
+    </div>
+    <div class="form-group">
+      <label>Tag to a Family Value (optional)</label>
+      <select id="task-value-select" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;background:var(--color-bg);">
+        <option value="">— No value tag —</option>
+      </select>
+    </div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddTask()">Cancel</button><button class="btn btn--primary" id="btn-save-task">Save Task</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MODAL: BONUS ════════════════════ -->
+<div class="modal-overlay" id="modal-bonus" onclick="handleModalClick(event,'modal-bonus')">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modal-bonus-kid-name">Bonus Stars</h3>
+    <div class="form-group"><label>⭐ Stars to give</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',-1)">−</button><input id="bonus-stars-input" type="number" value="1" min="1" max="50" readonly /><button type="button" class="stars-btn" onclick="adjustStars('bonus-stars-input',1)">+</button></div>
+    </div>
+    <div class="form-group"><label>Reason (optional)</label><input id="bonus-reason-input" type="text" placeholder="e.g. Helped without being asked 💛" /></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeBonusStars()">Cancel</button><button class="btn btn--primary" id="btn-save-bonus">Give Stars ⭐</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: ADD REWARD ═══════════════════ -->
+<div class="modal-overlay" id="modal-add-reward" onclick="handleModalClick(event,'modal-add-reward')">
+  <div class="modal-box">
+    <h3 class="modal-title">Add Custom Reward 🎁</h3>
+    <div class="form-group"><label>Reward Name *</label><input id="new-reward-title" type="text" placeholder="e.g. Family game night" /></div>
+    <div class="form-group"><label>⭐ Star cost</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('new-reward-stars',-5)">−</button><input id="new-reward-stars" type="number" value="20" min="1" max="1000" readonly /><button type="button" class="stars-btn" onclick="adjustStars('new-reward-stars',5)">+</button></div>
+    </div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="new-reward-emoji" type="text" value="🎁" maxlength="2" /><span id="new-reward-emoji-preview" class="avatar-preview">🎁</span></div></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddReward()">Cancel</button><button class="btn btn--primary" id="btn-save-new-reward">Add Reward</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: EDIT REWARD ═══════════════════ -->
+<div class="modal-overlay" id="modal-edit-reward" onclick="handleModalClick(event,'modal-edit-reward')">
+  <div class="modal-box">
+    <h3 class="modal-title">Edit Reward ✏️</h3>
+    <div class="form-group"><label>Reward Name *</label><input id="edit-reward-title" type="text" /></div>
+    <div class="form-group"><label>⭐ Star cost</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('edit-reward-stars',-5)">−</button><input id="edit-reward-stars" type="number" min="1" max="1000" readonly /><button type="button" class="stars-btn" onclick="adjustStars('edit-reward-stars',5)">+</button></div>
+    </div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="edit-reward-emoji" type="text" maxlength="2" /><span id="edit-reward-emoji-preview" class="avatar-preview">🎁</span></div></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeEditReward()">Cancel</button><button class="btn btn--primary" id="btn-save-edit-reward">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- ════════════════ MODAL: PICK GOAL (kid) ═════════════════ -->
+<div class="modal-overlay" id="modal-pick-goal" onclick="handleModalClick(event,'modal-pick-goal')">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
+    <h3 class="modal-title">Pick a Goal 🎯</h3>
+    <p style="text-align:center;color:var(--color-muted);font-size:0.85rem;margin-bottom:16px;">What do you want to save for?</p>
+    <div id="reward-picker-list"><p class="empty-state">Loading…</p></div>
+    <button class="btn btn--secondary mt-16" onclick="closePickGoal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ STREAK POPUP ════════════════════ -->
+<div class="celebration" id="celebration">
+  <div class="celebration-inner">
+    <div class="celebration-stars" id="celebration-icon">⭐🎉⭐</div>
+    <div class="celebration-text" id="celebration-text">Goal Reached!</div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: REJECT TASK ══════════════════ -->
+<div class="modal-overlay" id="modal-reject-task" onclick="handleModalClick(event,'modal-reject-task')">
+  <div class="modal-box">
+    <h3 class="modal-title">❌ Send Back with Feedback</h3>
+    <p class="modal-subtitle" id="reject-modal-task-title">Task</p>
+    <div class="form-group">
+      <label>What does the kid need to fix? *</label>
+      <textarea id="reject-reason-input"
+        placeholder="e.g. Good effort! But please make sure the blanket is fully tucked in next time. Take a photo to show me! 📸"
+        style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:0.95rem;min-height:100px;resize:vertical;background:var(--color-bg);"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeRejectModal()">Cancel</button>
+      <button class="btn btn--danger" id="btn-confirm-reject" onclick="confirmRejectTask()">Send Feedback ❌</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: SUBMIT TASK ═══════════════════ -->
+<div class="modal-overlay" id="modal-submit-task" onclick="handleModalClick(event,'modal-submit-task')">
+  <div class="modal-box">
+    <h3 class="modal-title">✅ Mark as Done!</h3>
+    <p class="modal-subtitle" id="submit-task-title">Task</p>
+    <div class="form-group">
+      <label>Add a photo (optional) 📸</label>
+      <p style="font-size:0.78rem;color:var(--color-muted);margin-bottom:8px;">Show your parent what you did!</p>
+      <div class="photo-upload-area" onclick="document.getElementById('submit-task-photo-input').click()" style="height:80px;">
+        <img id="submit-task-photo-preview" src="" alt="" style="display:none;width:100%;height:80px;object-fit:cover;border-radius:var(--radius-sm);" />
+        <div id="submit-task-photo-placeholder" class="photo-placeholder">
+          <span class="photo-icon">📷</span>
+          <span class="photo-hint">Tap to add a photo<br><small>Gallery or Camera</small></span>
+        </div>
+      </div>
+      <input id="submit-task-photo-input" type="file" accept="image/*" style="display:none;" />
+      <div class="photo-source-btns" style="margin-top:8px;">
+        <button type="button" class="btn btn--sm btn--secondary" onclick="openSubmitPhotoSource('gallery')">🖼 Gallery</button>
+        <button type="button" class="btn btn--sm btn--secondary" onclick="openSubmitPhotoSource('camera')">📸 Camera</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeSubmitTaskModal()">Cancel</button>
+      <button class="btn btn--success" id="btn-confirm-submit-task" onclick="confirmSubmitTask()">🚀 Send to Parent!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ MODAL: ADD JOB ════════════════════ -->
+<div class="modal-overlay" id="modal-add-job" onclick="handleModalClick(event,'modal-add-job')">
+  <div class="modal-box">
+    <h3 class="modal-title">Add Entrepreneur Job 💼</h3>
+    <div class="form-group"><label>Job Title *</label><input id="new-job-title" type="text" placeholder="e.g. Wash the car" /></div>
+    <div class="form-group"><label>Description</label><input id="new-job-desc" type="text" placeholder="e.g. Full wash inside and out" /></div>
+    <div class="form-group"><label>⭐ Stars to earn</label>
+      <div class="stars-row"><button type="button" class="stars-btn" onclick="adjustStars('new-job-stars',-5)">−</button><input id="new-job-stars" type="number" value="20" min="1" max="200" readonly /><button type="button" class="stars-btn" onclick="adjustStars('new-job-stars',5)">+</button></div>
+    </div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="new-job-emoji" type="text" value="💼" maxlength="2" /><span id="new-job-emoji-preview" class="avatar-preview">💼</span></div></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddJob()">Cancel</button><button class="btn btn--primary" id="btn-save-new-job">Add Job 💼</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: ADD VALUE ════════════════════ -->
+<div class="modal-overlay" id="modal-add-value" onclick="handleModalClick(event,'modal-add-value')">
+  <div class="modal-box">
+    <h3 class="modal-title">Add Family Value ❤️</h3>
+    <div class="form-group"><label>Value Name *</label><input id="new-value-name" type="text" placeholder="e.g. Patience" /></div>
+    <div class="form-group"><label>Description</label><input id="new-value-desc" type="text" placeholder="e.g. Waiting calmly when things are hard" /></div>
+    <div class="form-group"><label>Emoji</label><div class="avatar-row"><input id="new-value-emoji" type="text" value="💫" maxlength="2" oninput="document.getElementById('new-value-emoji-preview').textContent=this.value||'💫'" /><span id="new-value-emoji-preview" class="avatar-preview">💫</span></div></div>
+    <div class="form-group"><label>Colour</label><input id="new-value-color" type="color" value="#6c63ff" style="width:100%;height:44px;border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;" /></div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeAddValue()">Cancel</button><button class="btn btn--primary" id="btn-save-new-value">Add Value</button></div>
+  </div>
+</div>
+
+<!-- ═════════════════════ MODAL: FAITH TASKS ════════════════ -->
+<div class="modal-overlay" id="modal-faith-tasks" onclick="handleModalClick(event,'modal-faith-tasks')">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto;">
+    <h3 class="modal-title" id="modal-faith-kid-name">Add Faith Journey Tasks</h3>
+    <input type="hidden" id="faith-modal-kid-id" />
+    <p style="text-align:center;color:var(--color-muted);font-size:0.85rem;margin-bottom:14px;" id="faith-modal-subtitle">Select the tasks to add as Daily habits.</p>
+    <div id="faith-tasks-list"></div>
+    <div class="modal-actions" style="margin-top:16px;"><button class="btn btn--secondary" onclick="closeFaithTasks()">Cancel</button><button class="btn btn--primary" id="btn-save-faith-tasks">Add Selected 🕌</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL: SEND PRAISE ═══════════════ -->
+<div class="modal-overlay" id="modal-send-praise" onclick="handleModalClick(event,'modal-send-praise')">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modal-praise-kid-name">Send Praise 💛</h3>
+    <div class="form-group"><label>Your Message *</label><textarea id="praise-message-input" placeholder="e.g. I'm so proud of how kind you were to your sister today. You showed real kindness! 💛" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;min-height:100px;resize:vertical;background:var(--color-bg);"></textarea></div>
+    <div class="form-group"><label>Link to a Family Value (optional)</label>
+      <select id="praise-value-select" style="width:100%;padding:12px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);font-size:1rem;background:var(--color-bg);"></select>
+    </div>
+    <div class="form-group"><label>Praise Emoji</label>
+      <div class="praise-emoji-row">
+        <button type="button" class="praise-emoji-btn active" onclick="selectPraiseEmoji('💛',this)">💛</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('⭐',this)">⭐</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🏆',this)">🏆</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🌟',this)">🌟</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('💪',this)">💪</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🎉',this)">🎉</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('❤️',this)">❤️</button>
+        <button type="button" class="praise-emoji-btn" onclick="selectPraiseEmoji('🙏',this)">🙏</button>
+      </div>
+      <input type="hidden" id="praise-emoji-select" value="💛" />
+    </div>
+    <div class="modal-actions"><button class="btn btn--secondary" onclick="closeSendPraise()">Cancel</button><button class="btn btn--primary" id="btn-send-praise">Send Praise 💛</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PHOTO FULLSCREEN ════════════════ -->
+<div id="photo-fullscreen" onclick="closePhotoFull()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;cursor:pointer;">
+  <img id="photo-fullscreen-img" src="" alt=""
+    style="max-width:95vw;max-height:90vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,0.5);" />
+  <div style="position:absolute;top:16px;right:20px;color:#fff;font-size:1.5rem;cursor:pointer;" onclick="closePhotoFull()">✕</div>
+</div>
+
+<!-- ═════════════════════════════ TOAST ═════════════════════ -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<!-- ══════════════════════════ SCRIPTS ══════════════════════ -->
+<script type="module" src="./js/app.js?v=10"></script>
+<script>
+  // Service Worker — clear all caches and unregister old SWs
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
+    });
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    // Register fresh SW that does no caching
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/starkids/sw.js")
+        .then(r => console.log("SW registered"))
+        .catch(e => console.log("SW failed:", e));
+    });
+  }
+
+  // PWA install prompt
+  let deferredPrompt = null;
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const bar = document.getElementById("pwa-install-bar");
+    if (bar && !localStorage.getItem("sk_pwa_dismissed")) bar.style.display = "flex";
+  });
+  window.installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById("pwa-install-bar").style.display = "none";
+  };
+  window.dismissInstall = () => {
+    document.getElementById("pwa-install-bar").style.display = "none";
+    localStorage.setItem("sk_pwa_dismissed", "1");
+  };
+
+  // Task type selector
+  window.selectTaskType = (type) => {
+    document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("active"));
+    document.querySelector(`[data-type="${type}"]`)?.classList.add("active");
+    document.getElementById("task-type-input").value = type;
+  };
+
+  function togglePassword(id, btn) {
+    const el = document.getElementById(id);
+    el.type = el.type === "password" ? "text" : "password";
+    btn.textContent = el.type === "password" ? "👁" : "🙈";
+  }
+  function openPhotoSource(src) {
+    const input = document.getElementById("kid-photo-input");
+    src === "camera" ? input.setAttribute("capture","environment") : input.removeAttribute("capture");
+    input.click();
+  }
+  function handleModalClick(e, id) {
+    if (e.target.id !== id) return;
+    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob, "modal-add-value": closeAddValue, "modal-faith-tasks": closeFaithTasks, "modal-send-praise": closeSendPraise, "modal-reject-task": closeRejectModal, "modal-submit-task": closeSubmitTaskModal };
+    map[id]?.();
+  }
+  function adjustStars(inputId, delta) {
+    const el = document.getElementById(inputId);
+    el.value = Math.min(parseInt(el.max)||1000, Math.max(parseInt(el.min)||1, parseInt(el.value||1) + delta));
+  }
+  document.getElementById("kid-avatar")?.addEventListener("input", e => document.getElementById("avatar-preview").textContent = e.target.value||"🌟");
+  document.getElementById("new-reward-emoji")?.addEventListener("input", e => document.getElementById("new-reward-emoji-preview").textContent = e.target.value||"🎁");
+  document.getElementById("edit-reward-emoji")?.addEventListener("input", e => document.getElementById("edit-reward-emoji-preview").textContent = e.target.value||"🎁");
+  document.getElementById("new-job-emoji")?.addEventListener("input", e => document.getElementById("new-job-emoji-preview").textContent = e.target.value||"💼");
+
+  window.openSubmitPhotoSource = (src) => {
+    const input = document.getElementById("submit-task-photo-input");
+    src === "camera" ? input.setAttribute("capture","environment") : input.removeAttribute("capture");
+    input.click();
+  };
+  window.selectPraiseEmoji = (emoji, btn) => {
+    document.querySelectorAll(".praise-emoji-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("praise-emoji-select").value = emoji;
+  };
+  document.getElementById("kid-code-input")?.addEventListener("input", e => { if(e.target.value.length>6) e.target.value=e.target.value.slice(0,6); });
+</script>
+</body>
+</html>

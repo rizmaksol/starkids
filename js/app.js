@@ -221,9 +221,8 @@ async function loadWalletsOverview() {
   if (!el) return;
   if (!kidsList.length) { el.innerHTML = `<p class="empty-state">Add kids first. 👶</p>`; return; }
   const rows = await Promise.all(kidsList.map(async kid => {
-    const stars  = await getStarBalance(kid.id);
+    const [stars, goals] = await Promise.all([getStarBalance(kid.id), getGoalsForKid(kid.id)]);
     const money  = starsToMoney(stars, financeSettings);
-    const goals  = await getGoalsForKid(kid.id);
     const active = goals.find(g => g.status === GOAL_STATUS.ACTIVE);
     const pct    = active ? Math.min(100, Math.round((stars/active.targetStars)*100)) : null;
     const av     = kid.photoURL ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />` : `<span class="wallet-avatar-emoji">${kid.avatarEmoji||"🌟"}</span>`;
@@ -1403,7 +1402,7 @@ async function loadWeeklyReports() {
           <div class="report-stat"><div class="report-stat__value">⭐ ${report.totalStars}</div><div class="report-stat__label">Total Stars</div></div>
         </div>
         ${report.topTask?`<div class="report-top-task">⭐ Best: <strong>${report.topTask}</strong></div>`:""}
-        ${report.pendingTasks>0?`<div class="report-pending">⏳ ${report.pendingTasks} pending approval</div>`:""}
+        ${report.pendingTasks>0?`<div class="report-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?'s':''} waiting your approval</div>`:""}
         ` : `
         <div class="report-stats">
           <div class="report-stat"><div class="report-stat__value">${monthly.total}</div><div class="report-stat__label">Tasks Done</div></div>
@@ -1498,7 +1497,13 @@ function saveKidSession(kid)  { sessionStorage.setItem("sk_kid",JSON.stringify(k
 function loadKidSession()     { const d=sessionStorage.getItem("sk_kid"); return d?JSON.parse(d):null; }
 function clearKidSession()    { sessionStorage.removeItem("sk_kid"); }
 
-document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{ clearKidSession(); currentKid=null; document.getElementById("kid-code-input").value=""; showScreen("screen-home"); toast("See you soon! 👋","info"); });
+document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
+  clearKidSession(); currentKid=null;
+  document.getElementById("kid-code-input").value="";
+  showScreen("screen-home");
+  renderSavedKidsSelector();
+  toast("See you soon! 👋","info");
+});
 
 // Photo fullscreen
 window.showPhotoFull = (url) => {
@@ -1507,6 +1512,50 @@ window.showPhotoFull = (url) => {
   el.style.display = "flex";
 };
 window.closePhotoFull = () => { document.getElementById("photo-fullscreen").style.display = "none"; };
+
+// ── Render saved kids on home screen ─────────────────────────
+function renderSavedKidsSelector() {
+  const el = document.getElementById("saved-kids-row");
+  if (!el) return;
+  const saved = getSavedKids();
+  if (!saved.length) { el.style.display="none"; return; }
+  el.style.display = "block";
+  el.innerHTML = `
+    <div class="saved-kids-label">👋 Welcome back!</div>
+    <div class="saved-kids-list">
+      ${saved.map(k => `
+        <div class="saved-kid-card" onclick="loginSavedKid('${k.id}','${k.code}')">
+          <div class="saved-kid-avatar">
+            ${k.photoURL
+              ? `<img src="${k.photoURL}" class="saved-kid-photo" />`
+              : `<span class="saved-kid-emoji">${k.avatarEmoji||"🌟"}</span>`}
+          </div>
+          <div class="saved-kid-name">${k.name}</div>
+          <button class="saved-kid-remove" onclick="event.stopPropagation();removeSavedKidProfile('${k.id}')" title="Remove">×</button>
+        </div>`).join("")}
+      <div class="saved-kid-card saved-kid-new" onclick="goToKidLogin()">
+        <div class="saved-kid-avatar"><span class="saved-kid-emoji">➕</span></div>
+        <div class="saved-kid-name">New Kid</div>
+      </div>
+    </div>`;
+}
+
+window.loginSavedKid = async (kidId, code) => {
+  try {
+    const kid = await loginKidByCode(code);
+    if (!kid) { toast("Could not log in. Try entering code manually.", "error"); goToKidLogin(); return; }
+    currentKid=kid; saveKidSession(kid); saveKidProfile(kid);
+    financeSettings = await getFinanceSettings(kid.parentId);
+    await showKidDashboard(kid);
+    toast(`Hi ${kid.name}! 🌟`, "success");
+  } catch(e) { toast("Error. Try entering code manually.", "error"); goToKidLogin(); }
+};
+
+window.removeSavedKidProfile = (kidId) => {
+  removeSavedKid(kidId);
+  if (currentKid?.id === kidId) clearKidSession();
+  renderSavedKidsSelector();
+};
 
 window.goToScreen     = id   => showScreen(id);
 window.goToKidLogin   = ()   => showScreen("screen-kid-login");

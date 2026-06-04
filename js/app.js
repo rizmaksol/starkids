@@ -193,6 +193,18 @@ async function loadPendingApprovals() {
   }
   if (!total) html = `<p class="empty-state">Nothing pending 🎉</p>`;
   el.innerHTML = html;
+
+  // Load submission photos asynchronously after rendering
+  for (const task of pending) {
+    const wrap = document.getElementById(`photo-wrap-${task.id}`);
+    if (!wrap) continue;
+    const photo = await loadTaskPhoto(task.id);
+    if (photo) {
+      wrap.innerHTML = `<img src="${photo}" class="submission-photo" onclick="showPhotoFull(this.src)" />`;
+    } else {
+      wrap.innerHTML = "";
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -955,6 +967,26 @@ document.getElementById("submit-task-photo-input")?.addEventListener("change", e
   prev.style.display = "block";
   document.getElementById("submit-task-photo-placeholder").style.display = "none";
 });
+
+// ── Photo stored in separate Firestore doc (avoids 1MB task limit) ─
+async function saveTaskPhoto(taskId, base64) {
+  const { setDoc, doc: fsDoc, serverTimestamp } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await setDoc(fsDoc(db, "taskPhotos", taskId), {
+    taskId, photo: base64, savedAt: serverTimestamp()
+  });
+}
+
+async function loadTaskPhoto(taskId) {
+  try {
+    const { getDoc, doc: fsDoc } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+    );
+    const snap = await getDoc(fsDoc(db, "taskPhotos", taskId));
+    return snap.exists() ? snap.data().photo : null;
+  } catch(e) { return null; }
+}
 
 window.confirmSubmitTask = async () => {
   const btn  = document.getElementById("btn-confirm-submit-task");

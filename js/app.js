@@ -2,6 +2,7 @@
 // js/app.js — StarKids V10  Sprint 1+2+3+4+5+6
 // ============================================================
 
+import { db } from "./firebase.js?v=10";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=10";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=10";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=10";
@@ -968,24 +969,25 @@ document.getElementById("submit-task-photo-input")?.addEventListener("change", e
   document.getElementById("submit-task-photo-placeholder").style.display = "none";
 });
 
-// ── Photo stored in separate Firestore doc (avoids 1MB task limit) ─
+// ── Photo stored in /taskPhotos/{taskId} ─────────────────────
 async function saveTaskPhoto(taskId, base64) {
-  const { setDoc, doc: fsDoc, serverTimestamp } = await import(
+  const { setDoc, doc, serverTimestamp } = await import(
     "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
   );
-  await setDoc(fsDoc(db, "taskPhotos", taskId), {
+  await setDoc(doc(db, "taskPhotos", taskId), {
     taskId, photo: base64, savedAt: serverTimestamp()
   });
+  console.log("✅ Photo saved to taskPhotos/", taskId);
 }
 
 async function loadTaskPhoto(taskId) {
   try {
-    const { getDoc, doc: fsDoc } = await import(
+    const { getDoc, doc } = await import(
       "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
     );
-    const snap = await getDoc(fsDoc(db, "taskPhotos", taskId));
+    const snap = await getDoc(doc(db, "taskPhotos", taskId));
     return snap.exists() ? snap.data().photo : null;
-  } catch(e) { return null; }
+  } catch(e) { console.error("loadTaskPhoto:", e); return null; }
 }
 
 window.confirmSubmitTask = async () => {

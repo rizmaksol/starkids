@@ -937,7 +937,21 @@ async function loadKidTasks(kid) {
   }
   if (waiting.length) {
     html+=`<div class="task-section-title">⏳ Waiting Approval</div>`;
-    html+=waiting.map(t=>`<div class="task-card task-card--submitted"><div class="task-card__info"><div class="task-card__title">${t.title}</div><div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div></div><span class="task-badge task-badge--waiting">Waiting…</span></div>`).join("");
+    html+=waiting.map(t=>`<div class="task-card task-card--submitted">
+      <div class="task-card__info">
+        <div class="task-card__title">${t.title}</div>
+        <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+        <div id="kid-photo-wrap-${t.id}"></div>
+      </div>
+      <span class="task-badge task-badge--waiting">Waiting…</span>
+    </div>`).join("");
+    // Load photos for waiting tasks
+    for (const t of waiting) {
+      const wrap = document.getElementById(`kid-photo-wrap-${t.id}`);
+      if (!wrap) continue;
+      const photo = await loadTaskPhoto(t.id);
+      if (photo) wrap.innerHTML = `<img src="${photo}" class="submission-photo-thumb" onclick="showPhotoFull(this.src)" />`;
+    }
   }
   if (approved.length) {
     html+=`<div class="task-section-title">✅ Completed</div>`;
@@ -1057,12 +1071,23 @@ window.refreshKidDashboard = async () => {
       const earned  = await checkAchievements(currentKid.id, stats);
       if (earned.length > 0) {
         await loadKidAchievements(currentKid.id);
+        // Award bonus stars for each achievement
+        let bonusTotal = 0;
+        for (const a of earned) {
+          const bonus = 5; // 5 bonus stars per achievement
+          await addBonusStars(currentKid.id, bonus);
+          bonusTotal += bonus;
+        }
+        // Refresh star display
+        const newStars = await getStarBalance(currentKid.id);
+        document.getElementById("kid-dashboard-stars").textContent = `⭐ ${newStars} Stars`;
+        document.getElementById("kid-dashboard-money").textContent = `💰 ${starsToMoney(newStars, financeSettings)}`;
         earned.forEach((a, i) => setTimeout(() =>
           celebrate(`🏆 Achievement Unlocked!
 ${a.emoji} ${a.title}
-${a.desc}`, a.emoji+"🏆"+a.emoji)
++5⭐ Bonus Stars!`, a.emoji+"🏆"+a.emoji)
         , 900*(i+1)));
-        toast(`🏆 ${earned.length} new achievement${earned.length>1?"s":""}!`, "success");
+        toast(`🏆 ${earned.length} achievement${earned.length>1?"s":""} unlocked! +${bonusTotal}⭐ bonus!`, "success");
       } else {
         toast("✅ All updated!", "success");
       }
@@ -1254,17 +1279,49 @@ async function loadKidAchievements(kidId) {
 // WEEKLY REPORT (Sprint 8) — Parent view
 // ═══════════════════════════════════════════════════════════════
 
+async function getMonthlyStats(kidId) {
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+  const { getDocs, collection, query, where } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const snap = await getDocs(query(collection(db, "tasks"), where("kidId","==",kidId)));
+  const tasks = snap.docs.map(d=>d.data());
+  const monthTasks = tasks.filter(t => {
+    if (!t.approvedAt) return false;
+    const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+    return d >= oneMonthAgo;
+  });
+  // Daily completion rate (tasks done per day this month)
+  const dailyMap = {};
+  monthTasks.forEach(t => {
+    const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+    const key = d.toISOString().slice(0,10);
+    dailyMap[key] = (dailyMap[key]||0) + 1;
+  });
+  const activeDays   = Object.keys(dailyMap).length;
+  const avgPerDay    = activeDays ? (monthTasks.length/activeDays).toFixed(1) : 0;
+  const starsMonth   = monthTasks.reduce((s,t)=>s+(t.stars||0),0);
+  const faithMonth   = monthTasks.filter(t=>t.isFaith).length;
+  return { total: monthTasks.length, activeDays, avgPerDay, starsMonth, faithMonth };
+}
+
 async function loadWeeklyReports() {
   const el = document.getElementById("weekly-reports-list");
   if (!el || !kidsList.length) {
-    if (el) el.innerHTML = `<p class="empty-state">Add kids to see their weekly reports.</p>`;
+    if (el) el.innerHTML = `<p class="empty-state">Add kids to see their reports.</p>`;
     return;
   }
 
+  // Period selector
+  const period = document.getElementById("report-period-select")?.value || "week";
+
   const rows = await Promise.all(kidsList.map(async kid => {
-    const report = await getWeeklyReport(kid.id);
-    const money  = starsToMoney(report.starsEarned, financeSettings);
-    const av     = kid.photoURL
+    const report  = await getWeeklyReport(kid.id);
+    const monthly = await getMonthlyStats(kid.id);
+    const money   = starsToMoney(report.starsEarned, financeSettings);
+    const moneyM  = starsToMoney(monthly.starsMonth, financeSettings);
+    const av      = kid.photoURL
       ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />`
       : `<span class="wallet-avatar-emoji">${kid.avatarEmoji||"🌟"}</span>`;
 
@@ -1274,42 +1331,48 @@ async function loadWeeklyReports() {
           <div class="wallet-avatar">${av}</div>
           <div>
             <div class="wallet-name">${kid.name}</div>
-            <div style="font-size:0.78rem;color:var(--color-muted);">This week's summary</div>
+            <div style="font-size:0.78rem;color:var(--color-muted);">Performance summary</div>
           </div>
         </div>
+
+        <div class="report-period-tabs">
+          <button class="report-tab ${period==="week"?"active":""}" onclick="switchReportPeriod('week')">📅 This Week</button>
+          <button class="report-tab ${period==="month"?"active":""}" onclick="switchReportPeriod('month')">🗓 This Month</button>
+        </div>
+
+        ${period==="week" ? `
         <div class="report-stats">
-          <div class="report-stat">
-            <div class="report-stat__value">${report.tasksCompleted}</div>
-            <div class="report-stat__label">Tasks Done</div>
-          </div>
-          <div class="report-stat">
-            <div class="report-stat__value">⭐ ${report.starsEarned}</div>
-            <div class="report-stat__label">Stars Earned</div>
-          </div>
-          <div class="report-stat">
-            <div class="report-stat__value">💰 ${money}</div>
-            <div class="report-stat__label">Money Value</div>
-          </div>
-          <div class="report-stat">
-            <div class="report-stat__value">${report.faithTasks}</div>
-            <div class="report-stat__label">🕌 Prayers</div>
-          </div>
-          <div class="report-stat">
-            <div class="report-stat__value">${report.jobsDone}</div>
-            <div class="report-stat__label">💼 Jobs Done</div>
-          </div>
-          <div class="report-stat">
-            <div class="report-stat__value">⭐ ${report.totalStars}</div>
-            <div class="report-stat__label">Total Stars</div>
-          </div>
+          <div class="report-stat"><div class="report-stat__value">${report.tasksCompleted}</div><div class="report-stat__label">Tasks Done</div></div>
+          <div class="report-stat"><div class="report-stat__value">⭐ ${report.starsEarned}</div><div class="report-stat__label">Stars Earned</div></div>
+          <div class="report-stat"><div class="report-stat__value">💰 ${money}</div><div class="report-stat__label">Value</div></div>
+          <div class="report-stat"><div class="report-stat__value">${report.faithTasks}</div><div class="report-stat__label">🕌 Prayers</div></div>
+          <div class="report-stat"><div class="report-stat__value">${report.jobsDone}</div><div class="report-stat__label">💼 Jobs</div></div>
+          <div class="report-stat"><div class="report-stat__value">⭐ ${report.totalStars}</div><div class="report-stat__label">Total Stars</div></div>
         </div>
-        ${report.topTask ? `<div class="report-top-task">⭐ Best task this week: <strong>${report.topTask}</strong></div>` : ""}
-        ${report.pendingTasks > 0 ? `<div class="report-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} still pending approval</div>` : ""}
+        ${report.topTask?`<div class="report-top-task">⭐ Best: <strong>${report.topTask}</strong></div>`:""}
+        ${report.pendingTasks>0?`<div class="report-pending">⏳ ${report.pendingTasks} pending approval</div>`:""}
+        ` : `
+        <div class="report-stats">
+          <div class="report-stat"><div class="report-stat__value">${monthly.total}</div><div class="report-stat__label">Tasks Done</div></div>
+          <div class="report-stat"><div class="report-stat__value">⭐ ${monthly.starsMonth}</div><div class="report-stat__label">Stars Earned</div></div>
+          <div class="report-stat"><div class="report-stat__value">💰 ${moneyM}</div><div class="report-stat__label">Value</div></div>
+          <div class="report-stat"><div class="report-stat__value">${monthly.activeDays}</div><div class="report-stat__label">Active Days</div></div>
+          <div class="report-stat"><div class="report-stat__value">${monthly.avgPerDay}</div><div class="report-stat__label">Tasks/Day</div></div>
+          <div class="report-stat"><div class="report-stat__value">${monthly.faithMonth}</div><div class="report-stat__label">🕌 Prayers</div></div>
+        </div>
+        <div class="report-top-task">📊 Active ${monthly.activeDays} out of 30 days this month</div>
+        `}
       </div>`;
   }));
 
   el.innerHTML = rows.join("");
 }
+
+window.switchReportPeriod = (period) => {
+  const sel = document.getElementById("report-period-select");
+  if (sel) sel.value = period;
+  loadWeeklyReports();
+};
 
 // ═══════════════════════════════════════════════════════════════
 // PROFILE SETTINGS (parent)

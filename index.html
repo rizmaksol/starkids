@@ -19,33 +19,8 @@
 </head>
 <body>
 
-<!-- ════════════════════════════════ SPLASH ══════════════════ -->
-<section class="screen active" id="screen-splash">
-  <div class="splash-container">
-    <div class="splash-words">
-      <span class="splash-word" id="sw-1">Learn.</span>
-      <span class="splash-word" id="sw-2">Earn.</span>
-      <span class="splash-word" id="sw-3">Grow.</span>
-    </div>
-    <div class="splash-logo" id="splash-logo">
-      <div class="splash-star">⭐</div>
-      <div class="splash-brand">Star<span>Kids</span></div>
-    </div>
-    <div class="splash-tagline" id="splash-tagline">
-      <p class="splash-main-tag">Raising children who earn,<br>not just receive.</p>
-      <p class="splash-sub-tag">The first app built for future entrepreneurs.</p>
-    </div>
-    <div class="splash-pillars" id="splash-pillars">
-      <div class="splash-pillar">💡<span>Habits</span></div>
-      <div class="splash-pillar">💰<span>Finance</span></div>
-      <div class="splash-pillar">❤️<span>Values</span></div>
-      <div class="splash-pillar">🚀<span>Growth</span></div>
-    </div>
-  </div>
-</section>
-
 <!-- ════════════════════════════════ HOME ════════════════════ -->
-<section class="screen" id="screen-home">
+<section class="screen active" id="screen-home">
   <div class="home-hero-v2">
     <div class="home-brand-row">
       <span class="home-star-icon">⭐</span>
@@ -643,67 +618,8 @@
 <script type="module" src="./js/app.js?v=10"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
-  function runSplash() {
-    // If already logged in (skipSplash was called), don't run
-    if (sessionStorage.getItem("sk_splash_shown")) {
-      document.getElementById("screen-splash")?.classList.remove("active");
-      return;
-    }
-    // Make sure splash is visible
-    document.getElementById("screen-splash")?.classList.add("active");
-    document.querySelectorAll(".screen:not(#screen-splash)").forEach(s=>s.classList.remove("active"));
-
-    const words   = ["sw-1", "sw-2", "sw-3"];
-    const logo    = document.getElementById("splash-logo");
-    const tagline = document.getElementById("splash-tagline");
-    const pillars = document.getElementById("splash-pillars");
-
-    // Animate words one by one
-    words.forEach((id, i) => {
-      setTimeout(() => {
-        document.getElementById(id)?.classList.add("splash-word--visible");
-      }, 400 + i * 600);
-    });
-
-    // Fade out words, reveal logo
-    setTimeout(() => {
-      words.forEach(id => document.getElementById(id)?.classList.add("splash-word--fade"));
-      setTimeout(() => {
-        logo?.classList.add("splash-logo--visible");
-        setTimeout(() => {
-          tagline?.classList.add("splash-tagline--visible");
-          setTimeout(() => {
-            pillars?.classList.add("splash-pillars--visible");
-            // Go to home after pillars shown
-            setTimeout(() => {
-              sessionStorage.setItem("sk_splash_shown", "1");
-              document.getElementById("screen-splash").classList.remove("active");
-              document.getElementById("screen-home").classList.add("active");
-            }, 1800);
-          }, 600);
-        }, 500);
-      }, 400);
-    }, 2600);
-  }
-
-  // Run splash only if no active session
-  // Firebase auth takes ~500ms to restore session
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      // If already navigated away from splash by auth, don't run
-      const splash = document.getElementById("screen-splash");
-      if (splash && splash.classList.contains("active")) {
-        runSplash();
-      }
-    }, 600);
-  });
-
-  // Called by app.js when auth confirms logged-in user
-  window.skipSplash = () => {
-    sessionStorage.setItem("sk_splash_shown", "1");
-    const splash = document.getElementById("screen-splash");
-    if (splash) splash.classList.remove("active");
-  };
+  // No splash — home screen shows immediately
+  window.skipSplash = () => {};
 
   // ── Service Worker — clear all caches and unregister old SWs
   if ("serviceWorker" in navigator) {

@@ -3,6 +3,7 @@
 // ============================================================
 
 import { db } from "./firebase.js?v=10";
+import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=10";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=10";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=10";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=10";
@@ -860,6 +861,29 @@ async function showKidDashboard(kid) {
 
   const resetCount = await resetRecurringTasks(kid.id);
 
+  // Load prayer times if family is faith-based
+  if (kid.parentId) {
+    try {
+      const { city, country } = getPrayerCity();
+      if (city) {
+        const timings = await fetchPrayerTimes(city, country);
+        const next    = getNextPrayer(timings);
+        const prayerBar = document.getElementById("prayer-times-bar");
+        if (prayerBar) {
+          prayerBar.style.display = "block";
+          prayerBar.innerHTML = `
+            <div class="prayer-next">
+              ${next.emoji} Next: <strong>${next.name}</strong> at ${formatPrayerTime(next.time)}
+              <span class="prayer-countdown">(${next.minutesLeft < 60
+                ? next.minutesLeft + " min"
+                : Math.floor(next.minutesLeft/60) + "h " + (next.minutesLeft%60) + "m"} away)</span>
+            </div>`;
+          startPrayerAlerts(timings, kid.name);
+        }
+      }
+    } catch(e) { console.log("Prayer times not available:", e.message); }
+  }
+
   const stars = await getStarBalance(kid.id);
   const money = starsToMoney(stars, financeSettings);
   document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
@@ -899,24 +923,48 @@ async function loadKidTasks(kid) {
     const jobs    = active.filter(t => t.isEntrepreneur);
     if (regular.length) {
       html += `<div class="task-section-title">📋 My Tasks</div>`;
-      html += regular.map(t => {
-        const typeBadge   = t.taskType==="daily"?`<span class="type-badge type-badge--daily">🔄 Daily</span>`:t.taskType==="weekly"?`<span class="type-badge type-badge--weekly">📅 Weekly</span>`:`<span class="type-badge type-badge--onetime">1️⃣ One-time</span>`;
-        const streakBadge = (t.streak&&t.streak>1)?`<span class="streak-badge">🔥 ${t.streak}</span>`:"";
-        const rejReason   = t.status===STATUS.REJECTED && t.rejectionReason
-          ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
-        const rejPhoto    = t.status===STATUS.REJECTED && t.rejectionPhoto
-          ? `<img src="${t.rejectionPhoto}" class="rejection-photo" />` : "";
-        return `<div class="task-card task-card--pending ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
-          <div class="task-card__info">
-            <div class="task-card__title-row">${typeBadge}${streakBadge}</div>
-            <div class="task-card__title">${t.title}</div>
-            ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
-            <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
-            ${rejReason}${rejPhoto}
-          </div>
-          <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
-        </div>`;
-      }).join("");
+      // Separate faith tasks from regular tasks
+      const faithTasks   = regular.filter(t => t.isFaith);
+      const normalTasks  = regular.filter(t => !t.isFaith);
+
+      if (faithTasks.length) {
+        html += `<div class="task-section-title faith-section-title">🕌 Faith Journey</div>`;
+        html += faithTasks.map(t => {
+          const streakBadge = (t.streak&&t.streak>1)?`<span class="streak-badge">🔥 ${t.streak}</span>`:"";
+          const rejReason   = t.status===STATUS.REJECTED && t.rejectionReason
+            ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
+          return `<div class="task-card task-card--faith ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
+            <div class="task-card__info">
+              <div class="task-card__title-row"><span class="type-badge type-badge--faith">🕌 Faith</span>${streakBadge}</div>
+              <div class="task-card__title">${t.title}</div>
+              ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
+              <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+              ${rejReason}
+            </div>
+            <button class="btn btn--sm btn--faith" onclick="handleJobDone('${t.id}')">✅ Done!</button>
+          </div>`;
+        }).join("");
+      }
+
+      if (normalTasks.length) {
+        html += `<div class="task-section-title">📋 My Tasks</div>`;
+        html += normalTasks.map(t => {
+          const typeBadge   = t.taskType==="daily"?`<span class="type-badge type-badge--daily">🔄 Daily</span>`:t.taskType==="weekly"?`<span class="type-badge type-badge--weekly">📅 Weekly</span>`:`<span class="type-badge type-badge--onetime">1️⃣ One-time</span>`;
+          const streakBadge = (t.streak&&t.streak>1)?`<span class="streak-badge">🔥 ${t.streak}</span>`:"";
+          const rejReason   = t.status===STATUS.REJECTED && t.rejectionReason
+            ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
+          return `<div class="task-card task-card--pending ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
+            <div class="task-card__info">
+              <div class="task-card__title-row">${typeBadge}${streakBadge}</div>
+              <div class="task-card__title">${t.title}</div>
+              ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
+              <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+              ${rejReason}
+            </div>
+            <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
+          </div>`;
+        }).join("");
+      }
     }
     if (jobs.length) {
       html += `<div class="task-section-title">💼 Entrepreneur Jobs</div>`;
@@ -1415,6 +1463,46 @@ window.selectProfileFaith = function(faith) {
   document.querySelector('[data-pfaith="' + faith + '"]')?.classList.add("active");
   document.getElementById("profile-faith-hidden").value = faith;
 };
+
+window.savePrayerCitySettings = () => {
+  const city    = document.getElementById("prayer-city-input")?.value.trim();
+  const country = document.getElementById("prayer-country-input")?.value.trim() || "SA";
+  if (!city) { toast("Please enter a city name.", "error"); return; }
+  savePrayerCity(city, country);
+  toast(`✅ Prayer city set to ${city}! Kids will see prayer times on their dashboard.`, "success");
+};
+
+// Pre-fill prayer city on profile load
+const origLoadProfileTab = window.loadProfileTab;
+window.loadProfileTab = undefined;
+
+async function loadProfileTab() {
+  if (!currentParent?.uid) return;
+  try { familyValues = await getFamilyValues(currentParent.uid); if (!familyValues.length) familyValues = await seedDefaultValues(currentParent.uid); } catch(e) {}
+
+  const nameEl = document.getElementById("profile-name-input");
+  if (nameEl) nameEl.value = currentParent.name || "";
+
+  const focus = currentParent.familyFocus || "faith";
+  document.querySelectorAll(".profile-focus-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-pfocus="${focus}"]`)?.classList.add("active");
+  document.getElementById("profile-focus-hidden").value = focus;
+
+  const faith = currentParent.faith || "muslim";
+  document.querySelectorAll(".profile-faith-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-pfaith="${faith}"]`)?.classList.add("active");
+  document.getElementById("profile-faith-hidden").value = faith;
+
+  const faithSec = document.getElementById("profile-faith-section");
+  if (faithSec) faithSec.style.display = focus === "faith" ? "block" : "none";
+
+  // Pre-fill prayer city
+  const { city, country } = getPrayerCity();
+  const cityEl    = document.getElementById("prayer-city-input");
+  const countryEl = document.getElementById("prayer-country-input");
+  if (cityEl)    cityEl.value    = city;
+  if (countryEl) countryEl.value = country;
+}
 
 window.saveProfileSettings = async () => {
   const btn   = document.getElementById("btn-save-profile");

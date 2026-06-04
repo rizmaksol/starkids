@@ -47,21 +47,30 @@ function setLoading(btn, loading) {
 }
 function fmt(n) { return parseFloat(n).toFixed(2); }
 
-// ── Compress image before upload ─────────────────────────────
-// Resizes to max 800px and compresses to ~70% JPEG quality
-function compressImage(file, maxWidth = 800, quality = 0.7) {
-  return new Promise((resolve) => {
+// ── Convert file to compressed base64 ────────────────────────
+// Single reliable function: reads file → draws on canvas → returns base64 string
+function imageToBase64(file, maxWidth = 400, quality = 0.5) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    reader.onerror = () => reject(new Error("FileReader failed"));
     reader.onload = (e) => {
       const img = new Image();
+      img.onerror = () => reject(new Error("Image load failed"));
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let w = img.width, h = img.height;
-        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        canvas.toBlob(blob => resolve(new File([blob], file.name, { type: "image/jpeg" })),
-          "image/jpeg", quality);
+        try {
+          const canvas = document.createElement("canvas");
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+          if (h > maxWidth) { w = Math.round(w * maxWidth / h); h = maxWidth; }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          const b64 = canvas.toDataURL("image/jpeg", quality);
+          resolve(b64);
+        } catch(err) {
+          reject(new Error("Canvas failed: " + err.message));
+        }
       };
       img.src = e.target.result;
     };
@@ -69,14 +78,12 @@ function compressImage(file, maxWidth = 800, quality = 0.7) {
   });
 }
 
-// ── Convert file to base64 data URL ──────────────────────────
+// Keep these for backward compat
+function compressImage(file, maxWidth = 400, quality = 0.5) {
+  return Promise.resolve(file); // no-op, imageToBase64 handles compression
+}
 function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result);
-    reader.onerror = e => reject(e);
-    reader.readAsDataURL(file);
-  });
+  return imageToBase64(file, 400, 0.5);
 }
 
 // ── Remember Me ───────────────────────────────────────────────
@@ -953,46 +960,41 @@ window.confirmSubmitTask = async () => {
   const btn  = document.getElementById("btn-confirm-submit-task");
   const file = document.getElementById("submit-task-photo-input")?.files[0];
   if(btn) { btn.disabled=true; btn.textContent="Sending…"; }
-  let photoURL = null;
-
-  if (file) {
-    try {
-      toast("Compressing photo… 📸", "info");
-      // Always compress first — target very small size for Firestore
-      // Firestore doc limit 1MB, base64 overhead ~33%, so target <600KB base64
-      const step1 = await compressImage(file, 400, 0.5);
-      const b64   = await fileToBase64(step1);
-      if (b64.length <= 600000) {
-        photoURL = b64;
-        toast(`Photo ready ✅ (${Math.round(b64.length/1024)}KB)`, "success");
-      } else {
-        // Compress harder
-        const step2 = await compressImage(file, 250, 0.4);
-        const b64b  = await fileToBase64(step2);
-        if (b64b.length <= 600000) {
-          photoURL = b64b;
-          toast(`Photo ready ✅ (${Math.round(b64b.length/1024)}KB)`, "success");
-        } else {
-          photoURL = null;
-          toast("Photo too large even after compression — sent without photo.", "info");
-        }
-      }
-    } catch(e) {
-      console.error("Photo compression failed:", e.message, e);
-      toast("Photo error: " + (e.message||"unknown") + " — sent without.", "info");
-      photoURL = null;
-    }
-  }
 
   try {
-    toast("Saving task…", "info");
-    await submitTaskWithPhoto(submitTaskId, photoURL);
+    // Step 1: Submit task first (no photo) — always succeeds
+    await submitTaskWithPhoto(submitTaskId, null);
+
+    // Step 2: If photo selected, save it to separate Firestore doc
+    // /taskPhotos/{taskId} — avoids 1MB task document limit
+    if (file) {
+      try {
+        toast("Processing photo… 📸", "info");
+        // Aggressive compression: 300px, 40% quality → ~30-50KB
+        const b64 = await imageToBase64(file, 300, 0.4);
+        const kb  = Math.round(b64.length / 1024);
+        console.log("Photo size after compression:", kb, "KB");
+
+        if (b64.length <= 800000) {
+          // Save to separate collection to avoid task doc size limit
+          await saveTaskPhoto(submitTaskId, b64);
+          toast(`🚀 Sent with photo (${kb}KB)! Tap 🔄 Refresh`, "success");
+        } else {
+          toast(`🚀 Sent! Photo too large (${kb}KB) — try a smaller image.`, "info");
+        }
+      } catch(photoErr) {
+        console.error("Photo save failed:", photoErr);
+        toast("🚀 Sent! Photo failed — " + (photoErr.message||"error"), "info");
+      }
+    } else {
+      toast("🚀 Sent! Tap 🔄 Refresh after parent approves", "success");
+    }
+
     closeSubmitTaskModal();
-    toast("🚀 Sent! Tap 🔄 Refresh after parent approves", "success");
     await loadKidTasks(currentKid);
   } catch(err) {
-    toast("Save failed: " + (err.message||err.code||"error"), "error");
-    console.error("submitTaskWithPhoto failed:", err);
+    toast("Failed: " + (err.message||err.code||"error"), "error");
+    console.error("Submit failed:", err);
   } finally {
     if(btn) { btn.disabled=false; btn.textContent="🚀 Send to Parent!"; }
   }

@@ -122,6 +122,7 @@ const getSavedEmail = () => localStorage.getItem(LS_EMAIL) || "";
 // Prefill runs after DOM is ready
 function prefillLoginForm() {
   const { email, password } = loadCredentials();
+  console.log("prefillLoginForm called, email:", email, "has password:", !!password);
   if (!email) return;
   const emailEl = document.getElementById("login-email");
   const pwEl    = document.getElementById("login-password");
@@ -751,7 +752,12 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
   if (!email||!password) { toast("Please enter email and password.","error"); return; } setLoading(btn,true);
   try {
     const user=await loginParent(email,password);
-    if (remember) { saveCredentials(email, password); } else { clearCredentials(); }
+    if (remember) {
+      saveCredentials(email, password);
+      console.log("✅ Credentials saved:", email);
+    } else {
+      clearCredentials();
+    }
     const profile=await getParentProfile(user.uid);
     const name = profile?.name || user.displayName || email.split("@")[0] || "Parent";
     currentParent={uid:user.uid, name, email, ...profile};

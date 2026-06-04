@@ -24,8 +24,13 @@ let selectedPhoto    = null;
 
 // ── Helpers ───────────────────────────────────────────────────
 function showScreen(id) {
+  // Always clear splash when navigating anywhere
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id)?.classList.add("active");
+  // Mark splash as done
+  if (id !== "screen-splash") {
+    sessionStorage.setItem("sk_splash_shown", "1");
+  }
 }
 function toast(msg, type = "info") {
   const t = document.getElementById("toast");

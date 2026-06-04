@@ -289,6 +289,23 @@
         <input type="hidden" id="profile-faith-hidden" value="muslim" />
       </div>
 
+      <div id="prayer-city-section" class="form-group" style="margin-top:16px;border-top:2px solid var(--color-border);padding-top:16px;">
+        <label>🕌 Prayer Times City</label>
+        <p style="font-size:0.78rem;color:var(--color-muted);margin-bottom:8px;">Enter your city for accurate prayer times and alerts on kid dashboard.</p>
+        <div style="display:flex;gap:8px;">
+          <input id="prayer-city-input" type="text" placeholder="e.g. Mecca" style="flex:2;" />
+          <input id="prayer-country-input" type="text" placeholder="SA" maxlength="2" style="flex:1;" />
+        </div>
+        <select id="prayer-method-select" style="width:100%;margin-top:8px;padding:10px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-body);background:var(--color-bg);">
+          <option value="4">Umm Al-Qura (Saudi Arabia)</option>
+          <option value="1">University of Islamic Sciences, Karachi</option>
+          <option value="2">ISNA (North America)</option>
+          <option value="3">Muslim World League</option>
+          <option value="5">Egyptian General Authority</option>
+        </select>
+        <button class="btn btn--info mt-8" onclick="savePrayerCitySettings()">Save Prayer City 🕌</button>
+      </div>
+
       <button id="btn-save-profile" class="btn btn--primary mt-8" onclick="saveProfileSettings()">Save Changes ✅</button>
     </div>
   </div>
@@ -311,6 +328,7 @@
   <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">Exit</button></div>
 
   <div class="kid-dashboard-hero w-full">
+    <div id="prayer-times-bar" class="prayer-times-bar" style="display:none;"></div>
     <div id="kid-dashboard-avatar" class="kid-dash-avatar">🌟</div>
     <div class="kid-dashboard-hero__name" id="kid-dashboard-name">Hi!</div>
     <div class="kid-dashboard-hero__stars" id="kid-dashboard-stars">⭐ 0 Stars</div>

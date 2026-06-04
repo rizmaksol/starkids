@@ -6,7 +6,7 @@ import { db } from "./firebase.js?v=10";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=10";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=10";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=10";
-import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=10";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=10";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=10";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=10";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=10";
@@ -144,7 +144,11 @@ async function loadKids() {
 // APPROVALS (tasks + redemptions)
 // ═══════════════════════════════════════════════════════════════
 async function loadPendingApprovals() {
-  const pending  = await getPendingApprovals(currentParent.uid);
+  // Use kidId-based query to catch tasks that may be missing parentId
+  const kidIds   = kidsList.map(k => k.id);
+  const pending  = kidIds.length
+    ? await getPendingApprovalsByKids(kidIds)
+    : await getPendingApprovals(currentParent.uid);
   const allGoals = [];
   for (const kid of kidsList) {
     const goals = await getGoalsForKid(kid.id);

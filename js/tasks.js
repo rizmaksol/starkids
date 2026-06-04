@@ -151,9 +151,22 @@ export async function getTasksForKid(kidId) {
 
 // ── Get pending approvals ─────────────────────────────────────
 export async function getPendingApprovals(parentId) {
+  // Query by parentId first
   const q    = query(collection(db, "tasks"), where("parentId", "==", parentId), where("status", "==", STATUS.SUBMITTED));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Get ALL submitted tasks for a list of kid IDs (catches tasks missing parentId)
+export async function getPendingApprovalsByKids(kidIds) {
+  if (!kidIds.length) return [];
+  const results = [];
+  for (const kidId of kidIds) {
+    const q    = query(collection(db, "tasks"), where("kidId", "==", kidId), where("status", "==", STATUS.SUBMITTED));
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => results.push({ id: d.id, ...d.data() }));
+  }
+  return results;
 }
 
 // ── Submit task ───────────────────────────────────────────────

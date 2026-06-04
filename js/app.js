@@ -168,6 +168,7 @@ async function loadPendingApprovals() {
           <div class="approval-kid">${kid?.name||"?"}</div>
           <div class="approval-task">${typeLabel} ${task.title}${streakInfo}</div>
           <div class="approval-stars">⭐ ${task.stars} stars = ${starsToMoney(task.stars, financeSettings)}</div>
+          <div id="photo-wrap-${task.id}" class="task-photo-wrap"></div>
         </div>
         <div class="approval-actions">
           <button class="btn btn--sm btn--success" onclick="handleApprove('${task.id}','${task.kidId}',${task.stars},'${task.title}',${task.streak||0})">✅ Approve</button>

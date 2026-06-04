@@ -1427,43 +1427,6 @@ window.switchReportPeriod = (period) => {
 // PROFILE SETTINGS (parent)
 // ═══════════════════════════════════════════════════════════════
 
-async function loadProfileTab() {
-  if (!currentParent?.uid) return;
-
-  // Pre-fill name
-  const nameEl = document.getElementById("profile-name-input");
-  if (nameEl) nameEl.value = currentParent.name || "";
-
-  // Pre-fill focus
-  const focus = currentParent.familyFocus || "faith";
-  document.querySelectorAll(".profile-focus-btn").forEach(b => b.classList.remove("active"));
-  document.querySelector(`[data-pfocus="${focus}"]`)?.classList.add("active");
-  document.getElementById("profile-focus-hidden").value = focus;
-
-  // Pre-fill faith
-  const faith = currentParent.faith || "muslim";
-  document.querySelectorAll(".profile-faith-btn").forEach(b => b.classList.remove("active"));
-  document.querySelector(`[data-pfaith="${faith}"]`)?.classList.add("active");
-  document.getElementById("profile-faith-hidden").value = faith;
-
-  // Show/hide faith selector
-  const faithSec = document.getElementById("profile-faith-section");
-  if (faithSec) faithSec.style.display = focus === "faith" ? "block" : "none";
-}
-
-window.selectProfileFocus = function(focus) {
-  document.querySelectorAll(".profile-focus-btn").forEach(b => b.classList.remove("active"));
-  document.querySelector('[data-pfocus="' + focus + '"]')?.classList.add("active");
-  document.getElementById("profile-focus-hidden").value = focus;
-  const fs = document.getElementById("profile-faith-section");
-  if (fs) fs.style.display = focus === "faith" ? "block" : "none";
-};
-
-window.selectProfileFaith = function(faith) {
-  document.querySelectorAll(".profile-faith-btn").forEach(b => b.classList.remove("active"));
-  document.querySelector('[data-pfaith="' + faith + '"]')?.classList.add("active");
-  document.getElementById("profile-faith-hidden").value = faith;
-};
 
 window.savePrayerCitySettings = () => {
   const city    = document.getElementById("prayer-city-input")?.value.trim();
@@ -1474,9 +1437,6 @@ window.savePrayerCitySettings = () => {
 };
 
 // Pre-fill prayer city on profile load
-const origLoadProfileTab = window.loadProfileTab;
-window.loadProfileTab = undefined;
-
 async function loadProfileTab() {
   if (!currentParent?.uid) return;
   try { familyValues = await getFamilyValues(currentParent.uid); if (!familyValues.length) familyValues = await seedDefaultValues(currentParent.uid); } catch(e) {}

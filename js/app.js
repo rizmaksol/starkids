@@ -26,11 +26,7 @@ let selectedPhoto    = null;
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id)?.classList.add("active");
-  // Only mark splash done when navigating away from it
-  if (id !== "screen-splash") {
-    sessionStorage.setItem("sk_splash_shown", "1");
-    document.getElementById("screen-splash")?.classList.remove("active");
-  }
+  if (id !== "screen-splash") sessionStorage.setItem("sk_splash_shown","1");
 }
 function toast(msg, type = "info") {
   const t = document.getElementById("toast");

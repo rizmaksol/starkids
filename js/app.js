@@ -718,15 +718,18 @@ document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
     if (selectedPhoto) {
       toast("Processing photo… 📸","info");
       try {
-        const compressed = await compressImage(selectedPhoto, 400, 0.65);
-        const b64 = await fileToBase64(compressed);
-        if (b64.length <= 700000) {
-          await updateKidPhoto(kid.id, b64);
-          kid.photoURL = b64;
+        const b64 = await fileToBase64(selectedPhoto);
+        const final = b64.length > 900000
+          ? await fileToBase64(await compressImage(selectedPhoto, 300, 0.6))
+          : b64;
+        if (final.length <= 900000) {
+          await updateKidPhoto(kid.id, final);
+          kid.photoURL = final;
+          toast("Photo saved! ✅","success");
         } else {
-          toast("Photo too large — try a smaller image.","info");
+          toast("Photo too large — kid added without photo.","info");
         }
-      } catch(e) { console.error("Kid photo failed:", e); toast("Photo failed — kid added without photo.","info"); }
+      } catch(e) { console.error("Kid photo failed:", e); toast("Photo failed.","info"); }
     }
     await createDefaultTasks(currentParent.uid,kid.id,age);
     kidsList.push(kid); renderKids();
@@ -898,14 +901,19 @@ async function loadKidTasks(kid) {
     }
     if (jobs.length) {
       html += `<div class="task-section-title">💼 Entrepreneur Jobs</div>`;
-      html += jobs.map(t => `<div class="task-card task-card--job">
-        <div class="task-card__info">
-          <div class="task-card__title">${t.title}</div>
-          ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
-          <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
-        </div>
-        <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
-      </div>`).join("");
+      html += jobs.map(t => {
+        const rejReason = t.status===STATUS.REJECTED && t.rejectionReason
+          ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
+        return `<div class="task-card task-card--job ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
+          <div class="task-card__info">
+            <div class="task-card__title">${t.title}</div>
+            ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
+            <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+            ${rejReason}
+          </div>
+          <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
+        </div>`;
+      }).join("");
     }
   }
   if (waiting.length) {
@@ -951,12 +959,15 @@ document.getElementById("btn-confirm-submit-task")?.addEventListener("click", as
   if (file) {
     try {
       toast("Processing photo… 📸", "info");
-      const compressed = await compressImage(file, 400, 0.65);
-      const b64 = await fileToBase64(compressed);
-      // Firestore doc limit is 1MB — base64 at 400px is ~40KB, well within limit
-      if (b64.length > 700000) {
-        toast("Photo too large even after compression — sent without photo.", "info");
-        photoURL = null;
+      // Read directly as base64 — skip compression for reliability
+      const b64 = await fileToBase64(file);
+      if (b64.length > 900000) {
+        // If too large, try to compress first
+        const compressed = await compressImage(file, 300, 0.6);
+        const b64small = await fileToBase64(compressed);
+        photoURL = b64small.length <= 900000 ? b64small : null;
+        if (!photoURL) toast("Photo too large — sent without photo.", "info");
+        else toast("Photo ready! ✅", "success");
       } else {
         photoURL = b64;
         toast("Photo ready! ✅", "success");

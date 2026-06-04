@@ -617,6 +617,21 @@
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
 <!-- ══════════════════════════ SCRIPTS ══════════════════════ -->
+<script>
+  // Fallback nav functions — available immediately before module loads
+  function goToParentAuth(mode) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(mode === "signup" ? "screen-signup" : "screen-login")?.classList.add("active");
+  }
+  function goToKidLogin() {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-kid-login")?.classList.add("active");
+  }
+  function goToScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id)?.classList.add("active");
+  }
+</script>
 <script type="module" src="./js/app.js?v=10"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────

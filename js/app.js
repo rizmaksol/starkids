@@ -957,31 +957,42 @@ window.confirmSubmitTask = async () => {
 
   if (file) {
     try {
-      toast("Reading photo… 📸", "info");
-      photoURL = await fileToBase64(file);
-      if (photoURL.length > 900000) {
-        toast("Photo too large — compressing…", "info");
-        const smaller = await compressImage(file, 300, 0.6);
-        photoURL = await fileToBase64(smaller);
-        if (photoURL.length > 900000) { photoURL = null; toast("Photo too large — sent without.", "info"); }
-        else toast("Photo ready! ✅", "success");
+      toast("Compressing photo… 📸", "info");
+      // Always compress first — target very small size for Firestore
+      // Firestore doc limit 1MB, base64 overhead ~33%, so target <600KB base64
+      const step1 = await compressImage(file, 400, 0.5);
+      const b64   = await fileToBase64(step1);
+      if (b64.length <= 600000) {
+        photoURL = b64;
+        toast(`Photo ready ✅ (${Math.round(b64.length/1024)}KB)`, "success");
       } else {
-        toast("Photo ready! ✅", "success");
+        // Compress harder
+        const step2 = await compressImage(file, 250, 0.4);
+        const b64b  = await fileToBase64(step2);
+        if (b64b.length <= 600000) {
+          photoURL = b64b;
+          toast(`Photo ready ✅ (${Math.round(b64b.length/1024)}KB)`, "success");
+        } else {
+          photoURL = null;
+          toast("Photo too large even after compression — sent without photo.", "info");
+        }
       }
     } catch(e) {
-      console.error("Photo failed:", e);
+      console.error("Photo compression failed:", e.message, e);
+      toast("Photo error: " + (e.message||"unknown") + " — sent without.", "info");
       photoURL = null;
-      toast("Photo failed — sent without photo.", "info");
     }
   }
 
   try {
+    toast("Saving task…", "info");
     await submitTaskWithPhoto(submitTaskId, photoURL);
     closeSubmitTaskModal();
     toast("🚀 Sent! Tap 🔄 Refresh after parent approves", "success");
     await loadKidTasks(currentKid);
   } catch(err) {
-    toast("Something went wrong.", "error"); console.error(err);
+    toast("Save failed: " + (err.message||err.code||"error"), "error");
+    console.error("submitTaskWithPhoto failed:", err);
   } finally {
     if(btn) { btn.disabled=false; btn.textContent="🚀 Send to Parent!"; }
   }

@@ -1874,10 +1874,16 @@ input:focus, select:focus {
 #screen-splash {
   background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
   min-height: 100vh;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+}
+#screen-splash.active {
+  display: flex;
 }
 
 .splash-container {

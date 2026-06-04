@@ -35,6 +35,9 @@
     <p class="home-sub-tag">The first app built for future entrepreneurs 🚀</p>
   </div>
 
+  <!-- Saved kids profiles -->
+  <div id="saved-kids-row" style="display:none;" class="w-full" style="max-width:480px;"></div>
+
   <div class="home-buttons">
     <button class="btn btn--primary" onclick="goToParentAuth('login')">👨‍👩‍👧 I'm a Parent</button>
     <div class="divider">— or —</div>
@@ -620,6 +623,11 @@
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately
   window.skipSplash = () => {};
+  // Show saved kids on load
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof renderSavedKidsSelector === "function") renderSavedKidsSelector();
+    setTimeout(() => { if (typeof renderSavedKidsSelector === "function") renderSavedKidsSelector(); }, 800);
+  });
 
   // ── Service Worker — clear all caches and unregister old SWs
   if ("serviceWorker" in navigator) {

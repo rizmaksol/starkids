@@ -94,7 +94,8 @@ const LS_EMAIL = "sk_remembered_email";
 const saveEmail     = e  => localStorage.setItem(LS_EMAIL, e);
 const clearEmail    = () => localStorage.removeItem(LS_EMAIL);
 const getSavedEmail = () => localStorage.getItem(LS_EMAIL) || "";
-(function prefill() {
+// Prefill runs after DOM is ready
+function prefillLoginForm() {
   const { email, password } = loadCredentials();
   if (!email) return;
   const emailEl = document.getElementById("login-email");
@@ -103,7 +104,8 @@ const getSavedEmail = () => localStorage.getItem(LS_EMAIL) || "";
   if (emailEl) emailEl.value = email;
   if (pwEl && password) pwEl.value = password;
   if (cb) cb.checked = true;
-})();
+}
+document.addEventListener("DOMContentLoaded", prefillLoginForm);
 
 // ── Photo preview ─────────────────────────────────────────────
 document.getElementById("kid-photo-input")?.addEventListener("change", e => {
@@ -1570,7 +1572,10 @@ window.removeSavedKidProfile = (kidId) => {
 
 window.goToScreen     = id   => showScreen(id);
 window.goToKidLogin   = ()   => showScreen("screen-kid-login");
-window.goToParentAuth = mode => showScreen(mode==="signup"?"screen-signup":"screen-login");
+window.goToParentAuth = mode => {
+  showScreen(mode==="signup"?"screen-signup":"screen-login");
+  if (mode !== "signup") setTimeout(prefillLoginForm, 50);
+};
 
 (async function boot() {
   const saved=loadKidSession();

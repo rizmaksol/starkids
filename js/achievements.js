@@ -170,7 +170,7 @@ export async function getWeeklyReport(kidId) {
   const totalStars   = walletSnap.exists() ? (walletSnap.data().stars || 0) : 0;
 
   const starsThisWeek = weekTasks.reduce((sum, t) => sum + (t.stars || 0), 0);
-  const pendingTasks  = allTasks.filter(t => t.status === "pending" || t.status === "submitted").length;
+  const pendingTasks  = allTasks.filter(t => t.status === "submitted").length; // Only tasks submitted by kid awaiting parent approval
   const faithThisWeek = weekTasks.filter(t => t.isFaith).length;
   const jobsThisWeek  = weekTasks.filter(t => t.isEntrepreneur).length;
 

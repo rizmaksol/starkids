@@ -783,11 +783,12 @@ input:focus, select:focus {
 }
 .stars-row input {
   text-align: center;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--color-secondary);
-  width: 70px;
+  width: 90px;
   flex-shrink: 0;
+  min-width: 90px;
 }
 .stars-btn {
   width: 40px;
@@ -1535,15 +1536,22 @@ input:focus, select:focus {
 .screen { transition: opacity 0.2s ease; }
 .screen.active { animation: fadeIn 0.25s ease; }
 
-/* ── Polish: tab bar scrollable on small screens ──────────── */
+/* ── Tab bar scrollable ───────────────────────────────────── */
 .tab-bar {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   flex-wrap: nowrap;
+  padding: 4px;
+  gap: 4px;
 }
 .tab-bar::-webkit-scrollbar { display: none; }
-.tab-btn { white-space: nowrap; flex-shrink: 0; }
+.tab-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+}
 
 /* ── Polish: card hover lift ──────────────────────────────── */
 .kid-card:hover,
@@ -1751,4 +1759,41 @@ input:focus, select:focus {
   animation: float 3s ease-in-out infinite;
   display: block;
   text-align: center;
+}
+
+/* ── Report period tabs ───────────────────────────────────── */
+.report-period-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.report-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--color-muted);
+  transition: all var(--transition);
+}
+.report-tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+/* ── Kid submission photo thumbnail ──────────────────────── */
+.submission-photo-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  cursor: pointer;
+  border: 2px solid var(--color-secondary);
+  display: block;
 }

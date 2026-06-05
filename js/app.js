@@ -955,7 +955,13 @@ document.getElementById("btn-kid-login")?.addEventListener("click", async () => 
   if (code.length!==6||!/^\d+$/.test(code)) { toast("Please enter a valid 6-digit code.","error"); return; } setLoading(btn,true);
   try {
     const kid=await loginKidByCode(code); if (!kid) { toast("Code not found. Ask your parent!","error"); return; }
-    currentKid=kid; saveKidSession(kid);
+    currentKid=kid;
+    saveKidSession(kid);
+    // Save to thumbnail list immediately
+    if (typeof window.SK_saveKidDirect === "function") {
+      window.SK_saveKidDirect(kid.id, kid.name, kid.avatarEmoji||"🌟", kid.photoURL||null, kid.code, kid.parentId);
+    }
+    if (typeof window.SK_renderKids === "function") window.SK_renderKids();
     // Load parent's finance settings for money display
     financeSettings = await getFinanceSettings(kid.parentId);
     await showKidDashboard(kid);

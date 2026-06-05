@@ -1646,6 +1646,7 @@ window.startRushSession = async (sessionId) => {
   document.getElementById("rush-monitor-title").textContent = `${session.emoji} ${session.label} — Live`;
   startRushMonitor(session, activeRushId);
   toast(`${session.emoji} ${session.label} started! Kids see it now 🚀`, "success");
+  playRushStartSound();
 };
 
 function startRushMonitor(session, rushId) {
@@ -1701,9 +1702,20 @@ function startRushMonitor(session, rushId) {
         }).join("");
       }
 
-      if (remaining === 0) {
+      // Check if all kids done
+      const allKidsDone = kidsList.every(kid => {
+        const kp = progress[kid.id] || {};
+        return rush.tasks?.every(t => kp[t.id]?.done);
+      });
+      if (allKidsDone && kidsList.length > 0) {
         clearInterval(rushIntervalId);
-        toast("⏰ Rush time's up!", "info");
+        document.getElementById("rush-monitor").style.display = "none";
+        celebrate("🏆 All kids finished the rush!", "🌅🏆🌟");
+        toast("🏆 All kids completed the rush!", "success");
+        await endRush(rushId);
+      } else if (remaining === 0) {
+        clearInterval(rushIntervalId);
+        toast("⏰ Rush time\'s up!", "info");
       }
     } catch(e) {}
   }, 2000);
@@ -1718,14 +1730,14 @@ window.stopRushSession = async () => {
 };
 
 // ── Edit Rush Session ────────────────────────────────────────
-let editingRushSession = null;
+window.editingRushSession = null;
 
 window.openEditRush = (sessionId) => {
-  editingRushSession = JSON.parse(JSON.stringify(DEFAULT_RUSH_SESSIONS[sessionId]));
+  window.editingRushSession = JSON.parse(JSON.stringify(DEFAULT_RUSH_SESSIONS[sessionId]));
   document.getElementById("edit-rush-session-id").value = sessionId;
   document.getElementById("edit-rush-title").textContent =
-    `✏️ Edit ${editingRushSession.label}`;
-  document.getElementById("edit-rush-time").value = editingRushSession.windowMinutes;
+    `✏️ Edit ${window.editingRushSession.label}`;
+  document.getElementById("edit-rush-time").value = window.editingRushSession.windowMinutes;
   renderEditRushTasks();
   document.getElementById("modal-edit-rush").classList.add("open");
 };
@@ -1741,37 +1753,37 @@ window.adjustRushTime = (delta) => {
 function renderEditRushTasks() {
   const el = document.getElementById("edit-rush-tasks-list");
   if (!el || !editingRushSession) return;
-  el.innerHTML = editingRushSession.tasks.map((t, i) => `
+  el.innerHTML = window.editingRushSession.tasks.map((t, i) => `
     <div style="display:flex;gap:8px;align-items:center;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:8px 12px;">
       <input value="${t.emoji}" style="width:44px;text-align:center;font-size:1.2rem;border:1px solid var(--color-border);border-radius:8px;padding:4px;" 
-        onchange="editingRushSession.tasks[${i}].emoji=this.value" />
+        onchange="window.editingRushSession.tasks[${i}].emoji=this.value" />
       <input value="${t.title}" style="flex:1;border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;font-family:var(--font-body);"
-        onchange="editingRushSession.tasks[${i}].title=this.value" />
+        onchange="window.editingRushSession.tasks[${i}].title=this.value" />
       <div style="display:flex;align-items:center;gap:4px;font-size:0.8rem;color:var(--color-muted);">
         ⭐<input type="number" value="${t.stars}" min="1" max="10" style="width:44px;text-align:center;border:1px solid var(--color-border);border-radius:8px;padding:4px;"
-          onchange="editingRushSession.tasks[${i}].stars=parseInt(this.value)||1" />
+          onchange="window.editingRushSession.tasks[${i}].stars=parseInt(this.value)||1" />
       </div>
       <button onclick="removeRushTask(${i})" style="background:none;border:none;color:var(--color-danger);font-size:1.1rem;cursor:pointer;padding:4px;">×</button>
     </div>`).join("");
 }
 
 window.addRushTask = () => {
-  if (!editingRushSession) return;
-  editingRushSession.tasks.push({id:`custom_${Date.now()}`,title:"New Task",emoji:"✅",stars:2});
+  if (!window.editingRushSession) return;
+  window.editingRushSession.tasks.push({id:`custom_${Date.now()}`,title:"New Task",emoji:"✅",stars:2});
   renderEditRushTasks();
 };
 
 window.removeRushTask = (idx) => {
-  editingRushSession.tasks.splice(idx, 1);
+  window.editingRushSession.tasks.splice(idx, 1);
   renderEditRushTasks();
 };
 
 window.saveRushEdits = () => {
-  if (!editingRushSession) return;
+  if (!window.editingRushSession) return;
   const sid  = document.getElementById("edit-rush-session-id").value;
   const time = parseInt(document.getElementById("edit-rush-time").value) || 30;
   DEFAULT_RUSH_SESSIONS[sid].windowMinutes = time;
-  DEFAULT_RUSH_SESSIONS[sid].tasks = editingRushSession.tasks;
+  DEFAULT_RUSH_SESSIONS[sid].tasks = window.editingRushSession.tasks;
   closeEditRush();
   loadRushTab();
   toast("✅ Rush session updated!", "success");
@@ -1779,14 +1791,43 @@ window.saveRushEdits = () => {
 
 window.editRushSession = window.openEditRush;
 
+// ── Rush start sound ─────────────────────────────────────────
+function playRushStartSound() {
+  try {
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    // Fanfare — ascending notes
+    const notes = [523, 659, 784, 1047, 784, 1047, 1175];
+    const times = [0, 0.15, 0.30, 0.45, 0.60, 0.70, 0.80];
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "square";
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + times[i]);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + times[i] + 0.14);
+      osc.start(ctx.currentTime + times[i]);
+      osc.stop(ctx.currentTime + times[i] + 0.15);
+    });
+  } catch(e) {}
+}
+
 // ── Kid side ──────────────────────────────────────────────────
 window.checkForActiveRush = async (kid) => {
   try {
+    // Don't re-show if already dismissed this rush
     const rush = await getActiveRushForKid(kid.parentId);
     if (!rush || !rush.kidIds?.includes(kid.id)) return;
     if (rush.status !== "active") return;
+    // Check if all tasks already done for this kid
+    const progress = rush.progress?.[kid.id] || {};
+    const allDone  = rush.tasks?.every(t => progress[t.id]?.done);
+    if (allDone) return; // Already finished — don't show overlay
+    // Don't re-show if same rush already displayed
+    if (kidRushId === rush.id) return;
     kidRushId   = rush.id;
     kidRushData = rush;
+    playRushStartSound(); // Sound alert for kid too
     showKidRushOverlay(kid, rush);
   } catch(e) { console.log("Rush check:", e.message); }
 };
@@ -1866,23 +1907,40 @@ function showKidRushOverlay(kid, rush) {
   render();
   if (kidRushInterval) clearInterval(kidRushInterval);
   kidRushInterval = setInterval(() => {
-    render();
-    const progress = kidRushData.progress?.[kid.id] || {};
-    const allDone  = rush.tasks.every(t => progress[t.id]?.done);
+    const progress  = kidRushData.progress?.[kid.id] || {};
+    const allDone   = rush.tasks.every(t => progress[t.id]?.done);
     const startAtMs = kidRushData.startAtMs || Date.now();
     const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
     const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
-    if (allDone || elapsed >= totalSec) {
+    const timeUp    = elapsed >= totalSec;
+
+    if (allDone) {
       clearInterval(kidRushInterval);
-      if (allDone) {
-        const totalStars = Object.values(progress).reduce((s,p)=>s+(p.stars||0),0);
-        setTimeout(() => {
-          overlay.style.display = "none";
-          celebrate(`🏆 Rush Complete!
+      kidRushInterval = null;
+      const totalStars = Object.values(progress).reduce((s,p)=>s+(p.stars||0),0);
+      // Show completion state briefly then close
+      render();
+      setTimeout(() => {
+        overlay.style.display = "none";
+        kidRushId   = null;
+        kidRushData = null;
+        celebrate(`🏆 Rush Complete!
 You earned ${totalStars}⭐!`, "🌅🏆🌟");
-          refreshKidDashboard();
-        }, 2000);
-      }
+        refreshKidDashboard();
+      }, 2500);
+    } else if (timeUp) {
+      clearInterval(kidRushInterval);
+      kidRushInterval = null;
+      render();
+      setTimeout(() => {
+        overlay.style.display = "none";
+        kidRushId   = null;
+        kidRushData = null;
+        toast("⏰ Rush time ended!", "info");
+        refreshKidDashboard();
+      }, 2000);
+    } else {
+      render();
     }
   }, 1000);
 }

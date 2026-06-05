@@ -499,7 +499,7 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     <div id="custom-rush-sessions"></div>
 
     <!-- Create New Rush Button -->
-    <button class="rush-create-btn" onclick="tryOpenCreateRush()">
+    <button class="rush-create-btn" onclick="(function(){var f=window.openCreateRush;if(f){f();}else{var t=setInterval(function(){if(window.openCreateRush){clearInterval(t);window.openCreateRush();}},200);}})()">
       <span class="rush-create-icon">➕</span>
       <div>
         <div class="rush-create-title">Create Custom Rush</div>
@@ -943,7 +943,7 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=13"></script>
+<script type="module" src="./js/app.js?v=14"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

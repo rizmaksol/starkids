@@ -195,27 +195,63 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
 };
 
 window._rushCreateClick = function() {
-  if (typeof window.openCreateRush === "function") {
-    window.openCreateRush();
+  // Always initialize editingRushSession with default new session
+  window.editingRushSession = {
+    id: null, label: "", emoji: "⚡", color: "#6C63FF",
+    windowMinutes: 20,
+    tasks: [
+      {id:"t1", title:"Task 1", emoji:"✅", stars:2},
+      {id:"t2", title:"Task 2", emoji:"✅", stars:2}
+    ]
+  };
+
+  // Open modal
+  var modal = document.getElementById("modal-edit-rush");
+  if (modal) modal.classList.add("open");
+  var title = document.getElementById("edit-rush-title");
+  if (title) title.textContent = "Create Rush Session";
+  var sid = document.getElementById("edit-rush-session-id");
+  if (sid) sid.value = "";
+  var time = document.getElementById("edit-rush-time");
+  if (time) time.value = 20;
+  var cf = document.getElementById("edit-rush-custom-fields");
+  if (cf) cf.style.display = "block";
+  var nm = document.getElementById("edit-rush-name");
+  if (nm) nm.value = "";
+  var em = document.getElementById("edit-rush-emoji");
+  if (em) em.value = "⚡";
+
+  // Render tasks immediately
+  if (typeof window.renderEditRushTasksInline === "function") {
+    window.renderEditRushTasksInline();
   } else {
-    var modal = document.getElementById("modal-edit-rush");
-    if (modal) modal.classList.add("open");
-    var title = document.getElementById("edit-rush-title");
-    if (title) title.textContent = "Create Rush Session";
-    var sid = document.getElementById("edit-rush-session-id");
-    if (sid) sid.value = "";
-    var time = document.getElementById("edit-rush-time");
-    if (time) time.value = 20;
-    var cf = document.getElementById("edit-rush-custom-fields");
-    if (cf) cf.style.display = "block";
-    var nm = document.getElementById("edit-rush-name");
-    if (nm) nm.value = "";
-    var em = document.getElementById("edit-rush-emoji");
-    if (em) em.value = "⚡";
-    setTimeout(function() {
-      if (typeof window.openCreateRush === "function") window.openCreateRush();
-    }, 800);
+    var tl = document.getElementById("edit-rush-tasks-list");
+    if (tl) tl.innerHTML = window.editingRushSession.tasks.map(function(t,i) {
+      return '<div style="display:flex;gap:8px;align-items:center;background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:8px 12px;margin-bottom:6px;">' +
+        '<input value="' + t.emoji + '" style="width:44px;text-align:center;font-size:1.2rem;border:1px solid #ddd;border-radius:8px;padding:4px;" ' +
+          'onchange="window.editingRushSession.tasks[' + i + '].emoji=this.value" />' +
+        '<input value="' + t.title + '" style="flex:1;border:1px solid #ddd;border-radius:8px;padding:6px 10px;" ' +
+          'onchange="window.editingRushSession.tasks[' + i + '].title=this.value" />' +
+        '<span style="font-size:0.8rem;color:#999;">⭐</span>' +
+        '<input type="number" value="' + t.stars + '" min="1" max="10" style="width:44px;text-align:center;border:1px solid #ddd;border-radius:8px;padding:4px;" ' +
+          'onchange="window.editingRushSession.tasks[' + i + '].stars=parseInt(this.value)||1" />' +
+        '<button onclick="window.editingRushSession.tasks.splice(' + i + ',1);window._rushCreateClick();" ' +
+          'style="background:none;border:none;color:red;font-size:1.2rem;cursor:pointer;">×</button>' +
+        '</div>';
+    }).join("");
   }
+
+  // If module loaded, use it
+  setTimeout(function() {
+    if (typeof window.openCreateRush === "function") window.openCreateRush();
+  }, 100);
+};
+
+// Make addRushTask work even before module loads
+window.addRushTask = window.addRushTask || function() {
+  if (!window.editingRushSession) return;
+  window.editingRushSession.tasks.push({id:"t"+Date.now(),title:"New Task",emoji:"✅",stars:2});
+  window._rushCreateClick();
 };
 </script>
 

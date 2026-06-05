@@ -99,10 +99,10 @@ function SK_renderKids() {
     var av = k.photo
       ? "<img src='"+k.photo+"' class='saved-kid-photo' />"
       : "<span class='saved-kid-emoji'>"+k.emoji+"</span>";
-    html += "<div class='saved-kid-card' onclick='SK_loginKid(""+k.id+"",""+k.code+"")'>";
+    html += "<div class='saved-kid-card' onclick='SK_loginKid(\"" + k.id + "\",\"" + k.code + "\")'>"; 
     html += "<div class='saved-kid-avatar'>"+av+"</div>";
     html += "<div class='saved-kid-name'>"+k.name+"</div>";
-    html += "<button class='saved-kid-remove' onclick='event.stopPropagation();SK_removeKid(""+k.id+"")'>×</button>";
+    html += "<button class='saved-kid-remove' onclick='event.stopPropagation();SK_removeKid(\"" + k.id + "\")'>×</button>";
     html += "</div>";
   });
   html += "<div class='saved-kid-card saved-kid-new' onclick='goToKidLogin()'>";

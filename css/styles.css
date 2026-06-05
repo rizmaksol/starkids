@@ -2152,3 +2152,318 @@ input:focus, select:focus {
   background: var(--color-bg);
 }
 .saved-kid-new .saved-kid-name { color: var(--color-muted); }
+
+/* ══════════════════════════════════════════════════════════════
+   RUSH MODE
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Rush tab button ──────────────────────────────────────── */
+.tab-btn--rush {
+  background: linear-gradient(135deg, #FF9F43, #FFD93D) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+.tab-btn--rush.active,
+.tab-btn--rush:hover { opacity: 0.9; }
+
+/* ── Rush intro card ──────────────────────────────────────── */
+.rush-intro-card { background: linear-gradient(135deg,#0f0c29,#302b63); color:#fff; }
+.rush-intro-header { display:flex; gap:14px; align-items:center; }
+.rush-intro-icon { font-size:2.5rem; flex-shrink:0; }
+.rush-intro-title { font-family:var(--font-display); font-size:1.2rem; font-weight:800; margin-bottom:3px; }
+.rush-intro-sub { font-size:0.78rem; opacity:0.75; }
+
+/* ── Rush session card ────────────────────────────────────── */
+.rush-session-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 16px;
+}
+.rush-session-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: white;
+}
+.rush-session-emoji { font-size: 2rem; flex-shrink:0; }
+.rush-session-title { font-family:var(--font-display); font-size:1.1rem; font-weight:800; }
+.rush-session-sub   { font-size:0.75rem; opacity:0.85; }
+.btn-rush-start {
+  margin-left: auto;
+  background: rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.4);
+  color: white;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-rush-start:hover { background: rgba(255,255,255,0.4); }
+.rush-tasks-list { padding: 12px 16px; }
+.rush-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+.rush-task-row:last-child { border-bottom: none; }
+.rush-task-emoji { font-size: 1.3rem; width:28px; text-align:center; }
+.rush-task-name  { flex:1; font-weight:600; }
+.rush-task-time  { font-size:0.75rem; color:var(--color-muted); }
+.rush-task-stars { font-size:0.75rem; color:var(--color-secondary); font-weight:700; }
+.btn-edit-rush {
+  display:block; width:calc(100% - 32px); margin:0 16px 16px;
+  padding:8px; background:var(--color-bg); border:2px dashed var(--color-border);
+  border-radius:var(--radius-md); font-family:var(--font-body);
+  font-size:0.8rem; color:var(--color-muted); cursor:pointer;
+}
+
+/* ── Rush monitor (parent) ────────────────────────────────── */
+.rush-kid-row {
+  display: flex; gap:12px; align-items:center;
+  padding: 12px 0; border-bottom:1px solid var(--color-border);
+}
+.rush-kid-row:last-child { border-bottom:none; }
+.rush-kid-avatar {
+  width:40px; height:40px; border-radius:50%;
+  background:var(--color-bg); overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; flex-shrink:0;
+}
+.rush-kid-info { flex:1; }
+.rush-kid-name  { font-weight:700; font-size:0.9rem; margin-bottom:4px; }
+.rush-kid-stats { font-size:0.75rem; color:var(--color-muted); margin-top:4px; }
+.rush-progress-bar {
+  height:8px; background:var(--color-border);
+  border-radius:4px; overflow:hidden;
+}
+.rush-progress-fill {
+  height:100%;
+  background: linear-gradient(90deg, #6C63FF, #FFD93D);
+  border-radius:4px;
+  transition: width 0.5s ease;
+}
+
+/* ── Kid rush overlay cards ───────────────────────────────── */
+.rush-task-card {
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s;
+}
+.rush-task-card.rush-task-warning { border-color: #FFD93D; background: rgba(255,217,61,0.1); }
+.rush-task-card.rush-task-urgent  { border-color: #FF6B6B; background: rgba(255,107,107,0.15); animation: pulse 1s infinite; }
+.rush-task-card.rush-task-done    { border-color: #1a936f; background: rgba(26,147,111,0.15); opacity:0.8; }
+.rush-task-card.rush-task-expired { border-color: #555; background: rgba(0,0,0,0.2); opacity:0.6; }
+
+.rush-tc-left  { display:flex; gap:12px; align-items:flex-start; flex:1; }
+.rush-tc-emoji { font-size:2rem; flex-shrink:0; }
+.rush-tc-title { color:#fff; font-weight:700; font-size:0.95rem; margin-bottom:4px; }
+.rush-tc-timer { color:#FFD93D; font-family:var(--font-display); font-size:1.1rem; font-weight:800; }
+.rush-tc-earned { color:#1a936f; font-weight:700; font-size:0.85rem; }
+.rush-tc-bar {
+  height:6px; background:rgba(255,255,255,0.15);
+  border-radius:3px; overflow:hidden; margin:6px 0;
+}
+.rush-tc-bar-fill {
+  height:100%; background:#6C63FF; border-radius:3px;
+  transition: width 1s linear;
+}
+.rush-tc-bar-fill.rush-task-warning { background:#FFD93D; }
+.rush-tc-bar-fill.rush-task-urgent  { background:#FF6B6B; }
+.rush-tc-bonus { font-size:0.72rem; color:rgba(255,255,255,0.6); }
+
+.btn-rush-done {
+  background: linear-gradient(135deg,#1a936f,#1abc9c);
+  color:#fff; border:none;
+  padding:10px 14px; border-radius:12px;
+  font-family:var(--font-body); font-weight:800;
+  font-size:0.85rem; cursor:pointer;
+  flex-shrink:0;
+  box-shadow:0 4px 12px rgba(26,147,111,0.4);
+}
+.btn-rush-done:disabled { opacity:0.5; }
+
+@keyframes pulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(255,107,107,0.4); }
+  50%      { box-shadow:0 0 0 8px rgba(255,107,107,0); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RUSH MODE — Redesigned
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Session grid ─────────────────────────────────────────── */
+.rush-sessions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ── Session card ─────────────────────────────────────────── */
+.rush-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  background: var(--color-surface);
+}
+.rush-card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px 14px;
+  color: white;
+}
+.rush-card--morning .rush-card-top  { background: linear-gradient(135deg,#FF9F43,#FFD93D); }
+.rush-card--afterschool .rush-card-top { background: linear-gradient(135deg,#6C63FF,#a78bfa); }
+.rush-card-icon  { font-size: 2.4rem; flex-shrink:0; }
+.rush-card-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; }
+.rush-card-sub   { font-size: 0.75rem; opacity: 0.85; margin-top: 2px; }
+
+.rush-card-window {
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ── Task preview ─────────────────────────────────────────── */
+.rush-tasks-preview {
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rush-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+}
+.rush-task-emoji { font-size: 1.2rem; width:24px; text-align:center; }
+.rush-task-name  { flex: 1; font-weight: 600; color: var(--color-text); }
+.rush-task-stars { font-size: 0.75rem; color: var(--color-secondary); font-weight: 700; }
+
+/* ── Card actions ─────────────────────────────────────────── */
+.rush-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px 16px;
+}
+.rush-btn-edit {
+  flex: 1;
+  padding: 10px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.rush-btn-edit:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.rush-btn-start {
+  flex: 2;
+  padding: 10px 20px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: 0 4px 14px rgba(108,99,255,0.35);
+}
+.rush-btn-start:hover { transform: scale(1.03); }
+
+/* ── Live Monitor ─────────────────────────────────────────── */
+.rush-monitor-card {
+  background: linear-gradient(160deg,#0f0c29,#302b63);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+  color: white;
+}
+.rush-monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.rush-monitor-title { font-family:var(--font-display); font-size:1.1rem; font-weight:800; }
+.rush-monitor-sub   { font-size:0.75rem; opacity:0.65; margin-top:3px; }
+.rush-monitor-timer-wrap { text-align:right; }
+.rush-monitor-timer {
+  font-size: 2.2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #FFD93D;
+  line-height: 1;
+}
+.rush-monitor-timer-label { font-size:0.65rem; opacity:0.5; margin-top:2px; }
+.rush-monitor-bar-wrap {
+  height: 8px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.rush-monitor-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg,#FF9F43,#FFD93D);
+  border-radius: 4px;
+  transition: width 2s linear;
+}
+.rush-monitor-kids { display:flex; flex-direction:column; gap:10px; }
+.rush-kid-row {
+  display:flex; gap:12px; align-items:center;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.rush-kid-avatar {
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,0.1);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;
+}
+.rush-kid-info  { flex:1; }
+.rush-kid-name  { font-weight:700;font-size:0.88rem;color:#fff; }
+.rush-kid-stats { font-size:0.72rem;color:rgba(255,255,255,0.55);margin-top:3px; }
+.rush-progress-bar { height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin:4px 0; }
+.rush-progress-fill { height:100%;border-radius:3px;transition:width 0.5s ease; }
+
+/* ── How it works ─────────────────────────────────────────── */
+.rush-howto { margin-top:4px; }
+.rush-howto-title { font-family:var(--font-display); font-size:0.9rem; font-weight:800; margin-bottom:12px; color:var(--color-primary); }
+.rush-howto-steps { display:flex;flex-direction:column;gap:10px; }
+.rush-howto-step  { display:flex;gap:10px;align-items:flex-start;font-size:0.82rem;color:var(--color-muted);line-height:1.4; }
+.rush-step-num {
+  width:22px;height:22px;border-radius:50%;
+  background:var(--color-primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.72rem;font-weight:800;flex-shrink:0;margin-top:1px;
+}

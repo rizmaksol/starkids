@@ -105,8 +105,10 @@ document.addEventListener("DOMContentLoaded", function() {
     console.log("Login prefilled for:", creds.email);
   }
 
-  // Render kid thumbnails
+  // Render kid thumbnails now and after modules load
   SK_renderKids();
+  setTimeout(SK_renderKids, 1000);
+  setTimeout(SK_renderKids, 3000);
 });
 
 function SK_renderKids() {

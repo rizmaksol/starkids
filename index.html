@@ -26,7 +26,13 @@
 // ── Parent credentials ────────────────────────────────────────
 window.SK = {
   saveParent: function(email, pw) {
-    try { localStorage.setItem("sk_email", email); localStorage.setItem("sk_pw", btoa(pw)); } catch(e){}
+    try {
+      localStorage.setItem("sk_email", email);
+      localStorage.setItem("sk_pw", btoa(pw));
+      localStorage.setItem("sk_cred_email", email);
+      localStorage.setItem("sk_cred_pass", btoa(pw));
+      console.log("Parent credentials saved:", email);
+    } catch(e){}
   },
   loadParent: function() {
     try {
@@ -47,25 +53,41 @@ window.SK = {
       var idx = kids.findIndex(function(k){return k.id===kid.id;});
       var p = {id:kid.id,name:kid.name,emoji:kid.avatarEmoji||"🌟",photo:kid.photoURL||null,code:kid.code,parentId:kid.parentId};
       if (idx>=0) kids[idx]=p; else kids.push(p);
+      // Write to both keys for compatibility
       localStorage.setItem("sk_kids", JSON.stringify(kids));
+      localStorage.setItem("sk_saved_kids", JSON.stringify(kids));
       localStorage.setItem("sk_current_kid", JSON.stringify(p));
+      localStorage.setItem("sk_kid", JSON.stringify(p));
       console.log("Kid saved:", kid.name);
     } catch(e){ console.error("saveKid error:",e); }
   },
   getKids: function() {
-    try { return JSON.parse(localStorage.getItem("sk_kids")||"[]"); } catch(e){return [];}
+    try {
+      // Read from both old key (sk_saved_kids) and new key (sk_kids)
+      var fromNew = JSON.parse(localStorage.getItem("sk_kids")||"[]");
+      var fromOld = JSON.parse(localStorage.getItem("sk_saved_kids")||"[]");
+      // Merge, preferring new
+      var merged = fromNew.length ? fromNew : fromOld;
+      return merged;
+    } catch(e){return [];}
   },
   getCurrentKid: function() {
-    try { var d=localStorage.getItem("sk_current_kid"); return d?JSON.parse(d):null; } catch(e){return null;}
+    try {
+      // Check both old key (sk_kid) and new key (sk_current_kid)
+      var d = localStorage.getItem("sk_current_kid") || localStorage.getItem("sk_kid");
+      return d ? JSON.parse(d) : null;
+    } catch(e){return null;}
   },
   clearCurrentKid: function() {
     localStorage.removeItem("sk_current_kid");
+    localStorage.removeItem("sk_kid");
   },
   removeKid: function(kidId) {
     try {
       var kids = SK.getKids().filter(function(k){return k.id!==kidId;});
-      localStorage.setItem("sk_kids",JSON.stringify(kids));
-      if (SK.getCurrentKid()?.id===kidId) SK.clearCurrentKid();
+      localStorage.setItem("sk_kids", JSON.stringify(kids));
+      localStorage.setItem("sk_saved_kids", JSON.stringify(kids));
+      if (SK.getCurrentKid() && SK.getCurrentKid().id===kidId) SK.clearCurrentKid();
     } catch(e){}
   }
 };

@@ -1783,11 +1783,44 @@ function getAllRushSessions() {
 }
 
 window.openEditRush = (sessionId) => {
-  window.editingRushSession = JSON.parse(JSON.stringify(DEFAULT_RUSH_SESSIONS[sessionId]));
+  const defaultS = DEFAULT_RUSH_SESSIONS[sessionId];
+  const customS  = customRushSessions.find(s => s.id === sessionId);
+  const source   = defaultS || customS;
+  if (!source) { toast("Session not found", "error"); return; }
+
+  // Deep clone with fallback for any undefined values
+  const cleaned = {
+    id:            source.id    || sessionId,
+    label:         source.label || "Rush",
+    emoji:         source.emoji || "⚡",
+    color:         source.color || "#6C63FF",
+    windowMinutes: source.windowMinutes || 20,
+    tasks: (source.tasks || []).map((t, i) => ({
+      id:    t && t.id    ? t.id    : "t" + i,
+      title: t && t.title ? t.title : "Task",
+      emoji: t && t.emoji ? t.emoji : "✅",
+      stars: t && t.stars ? t.stars : 2
+    }))
+  };
+  window.editingRushSession = cleaned;
+
   document.getElementById("edit-rush-session-id").value = sessionId;
-  document.getElementById("edit-rush-title").textContent =
-    `✏️ Edit ${window.editingRushSession.label}`;
-  document.getElementById("edit-rush-time").value = window.editingRushSession.windowMinutes;
+  document.getElementById("edit-rush-title").textContent = `✏️ Edit ${cleaned.label}`;
+  document.getElementById("edit-rush-time").value = cleaned.windowMinutes;
+
+  const customFields = document.getElementById("edit-rush-custom-fields");
+  if (customFields) {
+    customFields.style.display = customS ? "block" : "none";
+    if (customS) {
+      const nm = document.getElementById("edit-rush-name");
+      const em = document.getElementById("edit-rush-emoji");
+      const co = document.getElementById("edit-rush-color");
+      if (nm) nm.value = cleaned.label;
+      if (em) em.value = cleaned.emoji;
+      if (co) co.value = cleaned.color;
+    }
+  }
+
   renderEditRushTasks();
   document.getElementById("modal-edit-rush").classList.add("open");
 };

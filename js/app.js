@@ -1575,7 +1575,10 @@ window.loginSavedKid = async (kidId, code) => {
   try {
     const kid = await loginKidByCode(code);
     if (!kid) { toast("Could not log in. Try entering code manually.", "error"); goToKidLogin(); return; }
-    currentKid=kid; saveKidSession(kid); saveKidProfile(kid);
+    currentKid=kid;
+    saveKidSession(kid);
+    saveKidProfile(kid);
+    if (window.SK) window.SK.saveKid(kid);
     financeSettings = await getFinanceSettings(kid.parentId);
     await showKidDashboard(kid);
     toast(`Hi ${kid.name}! 🌟`, "success");

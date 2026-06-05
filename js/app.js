@@ -1639,7 +1639,7 @@ async function loadRushTab() {
 // ── Start rush ────────────────────────────────────────────────
 window.startRushSession = async (sessionId) => {
   if (!kidsList.length) { toast("Add kids first!", "error"); return; }
-  const session = DEFAULT_RUSH_SESSIONS[sessionId];
+  const session = DEFAULT_RUSH_SESSIONS[sessionId] || customRushSessions.find(s=>s.id===sessionId);
   if (!session) return;
   currentSession  = session;
   const kidIds    = kidsList.map(k => k.id);
@@ -1736,6 +1736,48 @@ window.stopRushSession = async () => {
 // ── Edit Rush Session ────────────────────────────────────────
 window.editingRushSession = null;
 
+// ── Custom Rush Sessions (saved to Firestore) ─────────────────
+let customRushSessions = [];
+
+async function loadCustomRushSessions() {
+  try {
+    const { getDocs, collection, query, where } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+    );
+    const q    = query(collection(db,"rushSessions"), where("parentId","==",currentParent.uid));
+    const snap = await getDocs(q);
+    customRushSessions = snap.docs.map(d => ({id:d.id,...d.data()}));
+    console.log("Loaded custom rush sessions:", customRushSessions.length);
+  } catch(e) { console.error("loadCustomRushSessions:", e); }
+}
+
+async function saveCustomRushSession(session) {
+  const { setDoc, doc, serverTimestamp } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const id = session.id || `custom_${currentParent.uid}_${Date.now()}`;
+  await setDoc(doc(db,"rushSessions",id), {
+    ...session, id, parentId: currentParent.uid, updatedAt: serverTimestamp()
+  });
+  return id;
+}
+
+async function deleteCustomRushSession(sessionId) {
+  const { deleteDoc, doc } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await deleteDoc(doc(db,"rushSessions",sessionId));
+  customRushSessions = customRushSessions.filter(s => s.id !== sessionId);
+}
+
+// Get all sessions (default + custom)
+function getAllRushSessions() {
+  return [
+    ...Object.values(DEFAULT_RUSH_SESSIONS),
+    ...customRushSessions
+  ];
+}
+
 window.openEditRush = (sessionId) => {
   window.editingRushSession = JSON.parse(JSON.stringify(DEFAULT_RUSH_SESSIONS[sessionId]));
   document.getElementById("edit-rush-session-id").value = sessionId;
@@ -1747,6 +1789,10 @@ window.openEditRush = (sessionId) => {
 };
 
 window.closeEditRush = () => document.getElementById("modal-edit-rush").classList.remove("open");
+window.highlightColor = (btn) => {
+  document.querySelectorAll(".rush-color-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+};
 
 window.adjustRushTime = (delta) => {
   const el  = document.getElementById("edit-rush-time");
@@ -1782,15 +1828,48 @@ window.removeRushTask = (idx) => {
   renderEditRushTasks();
 };
 
-window.saveRushEdits = () => {
+window.saveRushEdits = async () => {
   if (!window.editingRushSession) return;
-  const sid  = document.getElementById("edit-rush-session-id").value;
-  const time = parseInt(document.getElementById("edit-rush-time").value) || 30;
-  DEFAULT_RUSH_SESSIONS[sid].windowMinutes = time;
-  DEFAULT_RUSH_SESSIONS[sid].tasks = window.editingRushSession.tasks;
+  const sid      = document.getElementById("edit-rush-session-id").value;
+  const time     = parseInt(document.getElementById("edit-rush-time").value) || 20;
+  const isCustom = !DEFAULT_RUSH_SESSIONS[sid];
+
+  window.editingRushSession.windowMinutes = time;
+  window.editingRushSession.tasks = window.editingRushSession.tasks;
+
+  if (isCustom) {
+    // Save name/emoji/color for custom
+    window.editingRushSession.label = document.getElementById("edit-rush-name")?.value || "Custom Rush";
+    window.editingRushSession.emoji = document.getElementById("edit-rush-emoji")?.value || "⚡";
+    window.editingRushSession.color = document.getElementById("edit-rush-color")?.value || "#6C63FF";
+    const btn = document.querySelector(".modal-box .btn--primary");
+    if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
+    try {
+      const savedId = await saveCustomRushSession(window.editingRushSession);
+      window.editingRushSession.id = savedId;
+      // Update or add in local array
+      const idx = customRushSessions.findIndex(s=>s.id===savedId);
+      if (idx>=0) customRushSessions[idx] = window.editingRushSession;
+      else customRushSessions.push({...window.editingRushSession, id:savedId});
+      toast("✅ Rush session saved!", "success");
+    } catch(e) { toast("Failed to save.", "error"); console.error(e); return; }
+    finally { if (btn) { btn.disabled=false; btn.textContent="Save Changes ✅"; } }
+  } else {
+    DEFAULT_RUSH_SESSIONS[sid].windowMinutes = time;
+    DEFAULT_RUSH_SESSIONS[sid].tasks = window.editingRushSession.tasks;
+    toast("✅ Rush session updated!", "success");
+  }
   closeEditRush();
   loadRushTab();
-  toast("✅ Rush session updated!", "success");
+};
+
+window.deleteRushSession = async (sessionId) => {
+  if (!confirm("Delete this rush session?")) return;
+  try {
+    await deleteCustomRushSession(sessionId);
+    renderCustomRushSessions();
+    toast("Deleted.", "info");
+  } catch(e) { toast("Failed to delete.", "error"); }
 };
 
 window.editRushSession = window.openEditRush;

@@ -495,6 +495,18 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
 
     </div>
 
+    <!-- Custom Rush Sessions -->
+    <div id="custom-rush-sessions"></div>
+
+    <!-- Create New Rush Button -->
+    <button class="rush-create-btn" onclick="openCreateRush()">
+      <span class="rush-create-icon">➕</span>
+      <div>
+        <div class="rush-create-title">Create Custom Rush</div>
+        <div class="rush-create-sub">Evening routine, weekend chores, study hour...</div>
+      </div>
+    </button>
+
     <!-- How it works -->
     <div class="rush-howto card">
       <div class="rush-howto-title">⚡ How Rush Mode Works</div>
@@ -513,6 +525,29 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     <div class="modal-box">
       <h3 class="modal-title" id="edit-rush-title">✏️ Edit Morning Rush</h3>
       <input type="hidden" id="edit-rush-session-id" value="morning" />
+
+      <!-- Custom session fields (name, emoji, color) -->
+      <div id="edit-rush-custom-fields" style="display:none;">
+        <div class="form-group">
+          <label>Session Name</label>
+          <div style="display:flex;gap:8px;">
+            <input id="edit-rush-emoji" type="text" placeholder="⚡" style="width:60px;text-align:center;font-size:1.4rem;" maxlength="2" />
+            <input id="edit-rush-name" type="text" placeholder="e.g. Evening Routine" style="flex:1;" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Card Color</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="rush-color-btn" style="background:#FF9F43;" onclick="document.getElementById('edit-rush-color').value='#FF9F43';highlightColor(this)">🌅</button>
+            <button type="button" class="rush-color-btn" style="background:#6C63FF;" onclick="document.getElementById('edit-rush-color').value='#6C63FF';highlightColor(this)">💜</button>
+            <button type="button" class="rush-color-btn" style="background:#1a936f;" onclick="document.getElementById('edit-rush-color').value='#1a936f';highlightColor(this)">🌿</button>
+            <button type="button" class="rush-color-btn" style="background:#FF6B6B;" onclick="document.getElementById('edit-rush-color').value='#FF6B6B';highlightColor(this)">❤️</button>
+            <button type="button" class="rush-color-btn" style="background:#114b5f;" onclick="document.getElementById('edit-rush-color').value='#114b5f';highlightColor(this)">🌊</button>
+            <button type="button" class="rush-color-btn" style="background:#c77dff;" onclick="document.getElementById('edit-rush-color').value='#c77dff';highlightColor(this)">🔮</button>
+          </div>
+          <input type="hidden" id="edit-rush-color" value="#6C63FF" />
+        </div>
+      </div>
 
       <div class="form-group">
         <label>⏱ Time Window (minutes)</label>

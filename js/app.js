@@ -2011,9 +2011,12 @@ window.checkForActiveRush = async (kid) => {
     if (!rush) { console.log("No active rush found"); return; }
     if (!rush.kidIds?.includes(kid.id)) { console.log("Kid not in rush kidIds:", rush.kidIds); return; }
     if (rush.status !== "active") { console.log("Rush status:", rush.status); return; }
-    const progress = rush.progress?.[kid.id] || {};
-    const allDone  = rush.tasks?.every(t => progress[t.id]?.done);
+    const progress  = rush.progress?.[kid.id] || {};
+    const rushTasks = rush.tasks || [];
+    // Only consider done if there are tasks AND all are completed
+    const allDone   = rushTasks.length > 0 && rushTasks.every(t => progress[t?.id]?.done);
     if (allDone) { console.log("Kid already finished rush"); return; }
+    if (rushTasks.length === 0) { console.log("Rush has no tasks — skipping"); return; }
     if (kidRushId === rush.id) { console.log("Rush already showing"); return; }
     console.log("✅ Showing rush overlay for:", kid.name);
     kidRushId   = rush.id;

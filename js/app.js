@@ -1806,24 +1806,52 @@ window.adjustRushTime = (delta) => {
 
 function renderEditRushTasks() {
   const el = document.getElementById("edit-rush-tasks-list");
-  if (!el || !editingRushSession) return;
-  el.innerHTML = window.editingRushSession.tasks.map((t, i) => `
-    <div style="display:flex;gap:8px;align-items:center;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:8px 12px;">
-      <input value="${t.emoji}" style="width:44px;text-align:center;font-size:1.2rem;border:1px solid var(--color-border);border-radius:8px;padding:4px;" 
-        onchange="window.editingRushSession.tasks[${i}].emoji=this.value" />
-      <input value="${t.title}" style="flex:1;border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;font-family:var(--font-body);"
-        onchange="window.editingRushSession.tasks[${i}].title=this.value" />
-      <div style="display:flex;align-items:center;gap:4px;font-size:0.8rem;color:var(--color-muted);">
-        ⭐<input type="number" value="${t.stars}" min="1" max="10" style="width:44px;text-align:center;border:1px solid var(--color-border);border-radius:8px;padding:4px;"
-          onchange="window.editingRushSession.tasks[${i}].stars=parseInt(this.value)||1" />
-      </div>
-      <button onclick="removeRushTask(${i})" style="background:none;border:none;color:var(--color-danger);font-size:1.1rem;cursor:pointer;padding:4px;">×</button>
-    </div>`).join("");
+  if (!el || !window.editingRushSession) return;
+  el.innerHTML = "";
+  window.editingRushSession.tasks.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;align-items:center;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:8px 12px;margin-bottom:6px;";
+
+    const emojiInput = document.createElement("input");
+    emojiInput.value = t.emoji || "✅";
+    emojiInput.style.cssText = "width:44px;text-align:center;font-size:1.2rem;border:1px solid var(--color-border);border-radius:8px;padding:4px;";
+    emojiInput.addEventListener("input", function() { window.editingRushSession.tasks[i].emoji = this.value; });
+
+    const titleInput = document.createElement("input");
+    titleInput.value = t.title || "Task";
+    titleInput.style.cssText = "flex:1;border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;font-family:var(--font-body);";
+    titleInput.addEventListener("input", function() { window.editingRushSession.tasks[i].title = this.value; });
+
+    const starLabel = document.createElement("span");
+    starLabel.textContent = "⭐";
+    starLabel.style.cssText = "font-size:0.8rem;color:var(--color-muted);";
+
+    const starsInput = document.createElement("input");
+    starsInput.type = "number";
+    starsInput.value = t.stars || 2;
+    starsInput.min = 1; starsInput.max = 10;
+    starsInput.style.cssText = "width:44px;text-align:center;border:1px solid var(--color-border);border-radius:8px;padding:4px;";
+    starsInput.addEventListener("input", function() { window.editingRushSession.tasks[i].stars = parseInt(this.value)||1; });
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "×";
+    delBtn.style.cssText = "background:none;border:none;color:var(--color-danger);font-size:1.1rem;cursor:pointer;padding:4px;";
+    delBtn.addEventListener("click", function() { window.editingRushSession.tasks.splice(i,1); renderEditRushTasks(); });
+
+    row.appendChild(emojiInput);
+    row.appendChild(titleInput);
+    row.appendChild(starLabel);
+    row.appendChild(starsInput);
+    row.appendChild(delBtn);
+    el.appendChild(row);
+  });
 }
 
 window.addRushTask = () => {
-  if (!window.editingRushSession) return;
-  window.editingRushSession.tasks.push({id:`custom_${Date.now()}`,title:"New Task",emoji:"✅",stars:2});
+  if (!window.editingRushSession) {
+    window.editingRushSession = {id:null,label:"",emoji:"⚡",color:"#6C63FF",windowMinutes:20,tasks:[]};
+  }
+  window.editingRushSession.tasks.push({id:"t"+Date.now(),title:"New Task",emoji:"✅",stars:2});
   renderEditRushTasks();
 };
 

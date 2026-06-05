@@ -1557,11 +1557,37 @@ window.showPhotoFull = (url) => {
 };
 window.closePhotoFull = () => { document.getElementById("photo-fullscreen").style.display = "none"; };
 
+// ── Saved kids profiles ──────────────────────────────────────
+function getSavedKids() {
+  try { return JSON.parse(localStorage.getItem("sk_saved_kids") || "[]"); }
+  catch(e) { return []; }
+}
+function saveKidProfile(kid) {
+  const saved = getSavedKids();
+  const idx   = saved.findIndex(k => k.id === kid.id);
+  const profile = {
+    id: kid.id, name: kid.name,
+    avatarEmoji: kid.avatarEmoji || "🌟",
+    photoURL: kid.photoURL || null,
+    code: kid.code,
+    parentId: kid.parentId
+  };
+  if (idx !== -1) saved[idx] = profile;
+  else saved.push(profile);
+  localStorage.setItem("sk_saved_kids", JSON.stringify(saved));
+  console.log("Kid profile saved:", profile.name);
+}
+function removeSavedKid(kidId) {
+  const saved = getSavedKids().filter(k => k.id !== kidId);
+  localStorage.setItem("sk_saved_kids", JSON.stringify(saved));
+}
+
 // ── Render saved kids on home screen ─────────────────────────
 function renderSavedKidsSelector() {
   const el = document.getElementById("saved-kids-row");
   if (!el) return;
   const saved = getSavedKids();
+  console.log("renderSavedKidsSelector - saved kids:", saved.length);
   if (!saved.length) { el.style.display="none"; return; }
   el.style.display = "block";
   el.innerHTML = `
@@ -1601,15 +1627,4 @@ window.removeSavedKidProfile = (kidId) => {
   renderSavedKidsSelector();
 };
 
-window.goToScreen     = id   => showScreen(id);
-window.goToKidLogin   = ()   => showScreen("screen-kid-login");
-window.goToParentAuth = mode => {
-  showScreen(mode==="signup"?"screen-signup":"screen-login");
-  if (mode !== "signup") setTimeout(prefillLoginForm, 50);
-};
 
-(async function boot() {
-  const saved=loadKidSession();
-  if (saved) { currentKid=saved; financeSettings=await getFinanceSettings(saved.parentId); await showKidDashboard(saved); }
-  else showScreen("screen-home");
-})();

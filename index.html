@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StarKids</title>
 
@@ -499,7 +502,7 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     <div id="custom-rush-sessions"></div>
 
     <!-- Create New Rush Button -->
-    <button class="rush-create-btn" onclick="(function(){var f=window.openCreateRush;if(f){f();}else{var t=setInterval(function(){if(window.openCreateRush){clearInterval(t);window.openCreateRush();}},200);}})()">
+    <button class="rush-create-btn" onclick="document.getElementById('modal-edit-rush').classList.add('open');document.getElementById('edit-rush-title').textContent='➕ Create Rush Session';document.getElementById('edit-rush-session-id').value='';document.getElementById('edit-rush-time').value=20;var cf=document.getElementById('edit-rush-custom-fields');if(cf)cf.style.display='block';document.getElementById('edit-rush-name').value='';document.getElementById('edit-rush-emoji').value='⚡';document.getElementById('edit-rush-tasks-list').innerHTML='<div style='padding:8px;color:var(--color-muted);font-size:0.85rem;'>Loading...</div>';if(typeof window.openCreateRush==='function')window.openCreateRush();">
       <span class="rush-create-icon">➕</span>
       <div>
         <div class="rush-create-title">Create Custom Rush</div>

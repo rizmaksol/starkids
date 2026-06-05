@@ -649,6 +649,7 @@ window.showTab = (tab) => {
   if (tab==="values")    loadValuesTab();
   if (tab==="report")    loadWeeklyReports();
   if (tab==="profile")   loadProfileTab();
+  if (tab==="rush")      loadRushTab();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1512,6 +1513,188 @@ window.saveProfileSettings = async () => {
     toast("✅ Profile saved!", "success");
   } catch(err) { toast("Failed to save.", "error"); console.error(err); }
   finally { setLoading(btn, false); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// RUSH MODE
+// ═══════════════════════════════════════════════════════════════
+
+let activeRushId   = null;
+let rushTimers     = {};
+let currentSession = null;
+
+// ── Load rush tab ─────────────────────────────────────────────
+async function loadRushTab() {
+  ["morning","afterschool"].forEach(sid => {
+    const session = DEFAULT_RUSH_SESSIONS[sid];
+    const el = document.getElementById(`rush-${sid}-tasks`);
+    if (!el) return;
+    el.innerHTML = session.tasks.map(t => `
+      <div class="rush-task-row">
+        <span class="rush-task-emoji">${t.emoji}</span>
+        <span class="rush-task-name">${t.title}</span>
+        <span class="rush-task-time">⏱ ${t.minutes}min</span>
+        <span class="rush-task-stars">⭐ up to ${t.stars*3}</span>
+      </div>`).join("");
+  });
+}
+
+// ── Start rush session ────────────────────────────────────────
+window.startRushSession = async (sessionId) => {
+  if (!kidsList.length) { toast("Add kids first!", "error"); return; }
+  const session = DEFAULT_RUSH_SESSIONS[sessionId];
+  if (!session) return;
+  currentSession = session;
+  const kidIds = kidsList.map(k => k.id);
+
+  toast(`🌅 ${session.label} started for ${kidIds.length} kids!`, "success");
+
+  activeRushId = await startRush(currentParent.uid, sessionId, kidIds, session.tasks);
+
+  // Show monitor
+  document.getElementById("rush-monitor").style.display = "block";
+  updateRushMonitor(session, kidIds, {});
+
+  toast("Kids will see the rush tasks on their dashboards! 🚀", "info");
+};
+
+function updateRushMonitor(session, kidIds, progress) {
+  const el = document.getElementById("rush-monitor-content");
+  if (!el) return;
+  el.innerHTML = kidsList.map(kid => {
+    const kidProgress = progress[kid.id] || {};
+    const done  = Object.values(kidProgress).filter(p=>p.done).length;
+    const total = session.tasks.length;
+    const pct   = Math.round((done/total)*100);
+    const stars  = Object.values(kidProgress).reduce((s,p)=>s+(p.stars||0),0);
+    return `<div class="rush-kid-row">
+      <div class="rush-kid-avatar">${kid.photoURL?`<img src="${kid.photoURL}" class="saved-kid-photo"/>`:(kid.avatarEmoji||"🌟")}</div>
+      <div class="rush-kid-info">
+        <div class="rush-kid-name">${kid.name}</div>
+        <div class="rush-progress-bar"><div class="rush-progress-fill" style="width:${pct}%"></div></div>
+        <div class="rush-kid-stats">${done}/${total} done · ⭐ ${stars} earned</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+window.stopRushSession = async () => {
+  if (activeRushId) { await endRush(activeRushId); activeRushId = null; }
+  document.getElementById("rush-monitor").style.display = "none";
+  currentSession = null;
+  toast("Rush ended.", "info");
+};
+
+window.editRushSession = (sessionId) => {
+  toast("Custom rush tasks coming soon! 🛠", "info");
+};
+
+// ── Kid Rush Overlay ──────────────────────────────────────────
+let kidRushId    = null;
+let kidRushData  = null;
+let rushTaskTimers = {};
+
+window.checkForActiveRush = async (kid) => {
+  try {
+    const rush = await getActiveRushForKid(kid.parentId);
+    if (!rush || !rush.kidIds.includes(kid.id)) return;
+    kidRushId   = rush.rushId || rush.id;
+    kidRushData = rush;
+    showKidRushOverlay(kid, rush);
+  } catch(e) { console.log("No active rush:", e.message); }
+};
+
+function showKidRushOverlay(kid, rush) {
+  const session = DEFAULT_RUSH_SESSIONS[rush.sessionId] || {};
+  const overlay = document.getElementById("kid-rush-overlay");
+  document.getElementById("rush-overlay-emoji").textContent  = session.emoji  || "⚡";
+  document.getElementById("rush-overlay-title").textContent  = session.label  || "Rush!";
+  overlay.style.display = "block";
+
+  const progress  = rush.progress?.[kid.id] || {};
+  const startAtMs = rush.startAtMs || Date.now();
+  const container = document.getElementById("rush-tasks-container");
+
+  function renderTasks() {
+    container.innerHTML = rush.tasks.map(t => {
+      const done      = progress[t.id]?.done;
+      const totalSecs = t.minutes * 60;
+      const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
+      const remaining = Math.max(0, totalSecs - elapsed);
+      const pct       = Math.max(0, Math.min(100, (remaining/totalSecs)*100));
+      const mins      = Math.floor(remaining/60);
+      const secs      = remaining % 60;
+      const timeStr   = `${mins}:${String(secs).padStart(2,"0")}`;
+      const urgentCls = pct < 25 ? "rush-task-urgent" : pct < 50 ? "rush-task-warning" : "";
+
+      if (done) {
+        const earned = progress[t.id]?.stars || t.stars;
+        return `<div class="rush-task-card rush-task-done">
+          <div class="rush-tc-left"><span class="rush-tc-emoji">${t.emoji}</span>
+            <div><div class="rush-tc-title">${t.title}</div>
+            <div class="rush-tc-earned">✅ Done! +${earned}⭐</div></div>
+          </div></div>`;
+      }
+
+      if (remaining === 0) {
+        return `<div class="rush-task-card rush-task-expired">
+          <div class="rush-tc-left"><span class="rush-tc-emoji">${t.emoji}</span>
+            <div><div class="rush-tc-title">${t.title}</div>
+            <div class="rush-tc-earned">⏰ Time's up!</div></div>
+          </div></div>`;
+      }
+
+      return `<div class="rush-task-card ${urgentCls}">
+        <div class="rush-tc-left">
+          <span class="rush-tc-emoji">${t.emoji}</span>
+          <div>
+            <div class="rush-tc-title">${t.title}</div>
+            <div class="rush-tc-timer">${timeStr} left</div>
+            <div class="rush-tc-bar"><div class="rush-tc-bar-fill ${urgentCls}" style="width:${pct}%"></div></div>
+            <div class="rush-tc-bonus">${pct>66?"🌟 3x stars if done now!":pct>33?"⭐ 2x stars if done soon!":"⭐ Base stars"}</div>
+          </div>
+        </div>
+        <button class="btn-rush-done" onclick="completeKidRushTask('${t.id}',${t.stars},${startAtMs},${totalSecs})">✅ Done!</button>
+      </div>`;
+    }).join("");
+  }
+
+  renderTasks();
+  // Refresh every second
+  if (rushTaskTimers.interval) clearInterval(rushTaskTimers.interval);
+  rushTaskTimers.interval = setInterval(() => {
+    renderTasks();
+    // Check if all done
+    const allDone = rush.tasks.every(t => progress[t.id]?.done);
+    if (allDone) {
+      clearInterval(rushTaskTimers.interval);
+      setTimeout(() => {
+        overlay.style.display = "none";
+        const totalStars = Object.values(progress).reduce((s,p)=>s+(p.stars||0),0);
+        celebrate(`🏆 Rush Complete!
+You earned ${totalStars}⭐ stars!`, "🌅🏆🌟");
+        refreshKidDashboard();
+      }, 1500);
+    }
+  }, 1000);
+}
+
+window.completeKidRushTask = async (taskId, baseStars, startAtMs, totalSecs) => {
+  if (!kidRushId || !currentKid) return;
+  const btn = document.querySelector(`[onclick*="${taskId}"]`);
+  if (btn) { btn.disabled=true; btn.textContent="✅"; }
+  try {
+    const earned = await completeRushTask(kidRushId, currentKid.id, taskId, baseStars, startAtMs);
+    // Add to wallet
+    await addBonusStars(currentKid.id, earned);
+    // Update local progress
+    if (!kidRushData.progress) kidRushData.progress = {};
+    if (!kidRushData.progress[currentKid.id]) kidRushData.progress[currentKid.id] = {};
+    kidRushData.progress[currentKid.id][taskId] = { done: true, stars: earned };
+    toast(`+${earned}⭐ earned!`, "success");
+    // Re-render
+    showKidRushOverlay(currentKid, kidRushData);
+  } catch(e) { toast("Error. Try again.", "error"); console.error(e); }
 };
 
 // ═══════════════════════════════════════════════════════════════

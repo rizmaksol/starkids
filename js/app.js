@@ -13,6 +13,85 @@ import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJ
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=12";
 import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=12";
 
+// ── Rush Sessions (inline — no separate module needed) ────────
+const DEFAULT_RUSH_SESSIONS = {
+  morning: {
+    id:"morning", label:"🌅 Morning Rush", emoji:"🌅",
+    color:"#FF9F43", gradient:"linear-gradient(135deg,#FF9F43,#FFD93D)",
+    tasks:[
+      {id:"m1",title:"Make Bed 🛏",      emoji:"🛏", minutes:5,  stars:3},
+      {id:"m2",title:"Brush Teeth 🦷",   emoji:"🦷", minutes:3,  stars:2},
+      {id:"m3",title:"Face Wash 💧",     emoji:"💧", minutes:3,  stars:2},
+      {id:"m4",title:"Get Dressed 👕",   emoji:"👕", minutes:5,  stars:3},
+      {id:"m5",title:"Have Breakfast 🍳",emoji:"🍳", minutes:15, stars:3},
+    ]
+  },
+  afterschool: {
+    id:"afterschool", label:"🏠 After School", emoji:"🏠",
+    color:"#6C63FF", gradient:"linear-gradient(135deg,#6C63FF,#9c8fff)",
+    tasks:[
+      {id:"a1",title:"Change Clothes 👔", emoji:"👔",minutes:5,  stars:2},
+      {id:"a2",title:"Have Lunch 🍽",     emoji:"🍽",minutes:20, stars:2},
+      {id:"a3",title:"Wash Hands 🧼",     emoji:"🧼",minutes:2,  stars:1},
+      {id:"a4",title:"Pack School Bag 🎒",emoji:"🎒",minutes:10, stars:3},
+      {id:"a5",title:"Rest Time 😴",      emoji:"😴",minutes:30, stars:2},
+    ]
+  }
+};
+
+function calculateRushStars(baseStars, elapsed, total) {
+  const r = elapsed/total;
+  if (r<=0.33) return baseStars*3;
+  if (r<=0.66) return baseStars*2;
+  return baseStars;
+}
+
+async function startRush(parentId, sessionId, kidIds, tasks) {
+  const { setDoc, doc: fsDoc, serverTimestamp: fsts } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const rushId  = `${parentId}_${sessionId}_${Date.now()}`;
+  const startAtMs = Date.now();
+  await setDoc(fsDoc(db, "activeRush", rushId), {
+    rushId, parentId, sessionId, kidIds, tasks,
+    startAtMs, status:"active", progress:{}, startAt: fsts()
+  });
+  return rushId;
+}
+
+async function getActiveRushForKid(parentId) {
+  const { getDocs, collection, query, where } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const q    = query(collection(db,"activeRush"), where("parentId","==",parentId), where("status","==","active"));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return {id:snap.docs[0].id, ...snap.docs[0].data()};
+}
+
+async function completeRushTask(rushId, kidId, taskId, baseStars, startAtMs) {
+  const { updateDoc, doc: fsDoc, getDoc } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const elapsed   = Math.floor((Date.now()-startAtMs)/1000);
+  const snap      = await getDoc(fsDoc(db,"activeRush",rushId));
+  if (!snap.exists()) return baseStars;
+  const task      = snap.data().tasks.find(t=>t.id===taskId);
+  const totalSecs = (task?.minutes||5)*60;
+  const earned    = calculateRushStars(baseStars, elapsed, totalSecs);
+  await updateDoc(fsDoc(db,"activeRush",rushId), {
+    [`progress.${kidId}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
+  });
+  return earned;
+}
+
+async function endRush(rushId) {
+  const { updateDoc, doc: fsDoc, serverTimestamp: fsts } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await updateDoc(fsDoc(db,"activeRush",rushId), {status:"completed", endedAt:fsts()});
+}
+
 // ── Credential helpers — delegate to window.SK (defined in HTML) ─
 const saveCredentials  = (e,p) => window.SK?.saveParent(e,p);
 const loadCredentials  = ()    => window.SK?.loadParent() || {email:"",password:""};

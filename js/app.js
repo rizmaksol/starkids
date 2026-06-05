@@ -757,6 +757,12 @@ onAuthChange(async user => {
 });
 
 function goToParentDashboard() {
+  // Load custom rush sessions in background
+  loadCustomRushSessions().then(() => {
+    if (document.getElementById("tab-rush")?.classList.contains("active")) {
+      renderCustomRushSessions();
+    }
+  }).catch(()=>{});
   document.getElementById("parent-name-display").textContent = `Welcome, ${currentParent.name}! 👋`;
   showScreen("screen-parent-dashboard"); showTab("kids"); loadKids();
 }

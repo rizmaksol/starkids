@@ -1707,9 +1707,10 @@ function startRushMonitor(session, rushId) {
       }
 
       // Check if all kids done
-      const allKidsDone = kidsList.every(kid => {
+      const rushTasks = rush.tasks || [];
+      const allKidsDone = rushTasks.length > 0 && kidsList.every(kid => {
         const kp = progress[kid.id] || {};
-        return rush.tasks?.every(t => kp[t.id]?.done);
+        return rushTasks.every(t => t?.id && kp[t.id]?.done);
       });
       if (allKidsDone && kidsList.length > 0) {
         clearInterval(rushIntervalId);

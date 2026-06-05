@@ -193,6 +193,30 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     return true;
   } catch(e) { console.error("SK_saveKidDirect failed:", e); return false; }
 };
+
+window._rushCreateClick = function() {
+  if (typeof window.openCreateRush === "function") {
+    window.openCreateRush();
+  } else {
+    var modal = document.getElementById("modal-edit-rush");
+    if (modal) modal.classList.add("open");
+    var title = document.getElementById("edit-rush-title");
+    if (title) title.textContent = "Create Rush Session";
+    var sid = document.getElementById("edit-rush-session-id");
+    if (sid) sid.value = "";
+    var time = document.getElementById("edit-rush-time");
+    if (time) time.value = 20;
+    var cf = document.getElementById("edit-rush-custom-fields");
+    if (cf) cf.style.display = "block";
+    var nm = document.getElementById("edit-rush-name");
+    if (nm) nm.value = "";
+    var em = document.getElementById("edit-rush-emoji");
+    if (em) em.value = "⚡";
+    setTimeout(function() {
+      if (typeof window.openCreateRush === "function") window.openCreateRush();
+    }, 800);
+  }
+};
 </script>
 
 <!-- ════════════════════════════════ HOME ════════════════════ -->

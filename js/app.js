@@ -61,13 +61,17 @@ async function startRush(parentId, sessionId, kidIds, tasks, windowMinutes) {
 }
 
 async function getActiveRushForKid(parentId) {
-  const { getDocs, collection, query, where } = await import(
-    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-  );
+  // Use getDocs from tasks.js import chain (already loaded)
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const { getDocs, collection, query, where } = firestoreModule;
+  console.log("Checking activeRush for parentId:", parentId);
   const q    = query(collection(db,"activeRush"), where("parentId","==",parentId), where("status","==","active"));
   const snap = await getDocs(q);
+  console.log("Active rush docs found:", snap.size);
   if (snap.empty) return null;
-  return {id:snap.docs[0].id, ...snap.docs[0].data()};
+  const data = {id:snap.docs[0].id, ...snap.docs[0].data()};
+  console.log("Rush data:", data.sessionId, "kidIds:", data.kidIds, "status:", data.status);
+  return data;
 }
 
 async function completeRushTask(rushId, kidId, taskId, baseStars, startAtMs) {
@@ -1815,21 +1819,21 @@ function playRushStartSound() {
 // ── Kid side ──────────────────────────────────────────────────
 window.checkForActiveRush = async (kid) => {
   try {
-    // Don't re-show if already dismissed this rush
+    console.log("checkForActiveRush for:", kid.name, "parentId:", kid.parentId);
     const rush = await getActiveRushForKid(kid.parentId);
-    if (!rush || !rush.kidIds?.includes(kid.id)) return;
-    if (rush.status !== "active") return;
-    // Check if all tasks already done for this kid
+    if (!rush) { console.log("No active rush found"); return; }
+    if (!rush.kidIds?.includes(kid.id)) { console.log("Kid not in rush kidIds:", rush.kidIds); return; }
+    if (rush.status !== "active") { console.log("Rush status:", rush.status); return; }
     const progress = rush.progress?.[kid.id] || {};
     const allDone  = rush.tasks?.every(t => progress[t.id]?.done);
-    if (allDone) return; // Already finished — don't show overlay
-    // Don't re-show if same rush already displayed
-    if (kidRushId === rush.id) return;
+    if (allDone) { console.log("Kid already finished rush"); return; }
+    if (kidRushId === rush.id) { console.log("Rush already showing"); return; }
+    console.log("✅ Showing rush overlay for:", kid.name);
     kidRushId   = rush.id;
     kidRushData = rush;
-    playRushStartSound(); // Sound alert for kid too
+    playRushStartSound();
     showKidRushOverlay(kid, rush);
-  } catch(e) { console.log("Rush check:", e.message); }
+  } catch(e) { console.error("Rush check error:", e); }
 };
 
 function showKidRushOverlay(kid, rush) {

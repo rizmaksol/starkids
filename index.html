@@ -502,7 +502,7 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     <div id="custom-rush-sessions"></div>
 
     <!-- Create New Rush Button -->
-    <button class="rush-create-btn" onclick="document.getElementById('modal-edit-rush').classList.add('open');document.getElementById('edit-rush-title').textContent='➕ Create Rush Session';document.getElementById('edit-rush-session-id').value='';document.getElementById('edit-rush-time').value=20;var cf=document.getElementById('edit-rush-custom-fields');if(cf)cf.style.display='block';document.getElementById('edit-rush-name').value='';document.getElementById('edit-rush-emoji').value='⚡';document.getElementById('edit-rush-tasks-list').innerHTML='<div style='padding:8px;color:var(--color-muted);font-size:0.85rem;'>Loading...</div>';if(typeof window.openCreateRush==='function')window.openCreateRush();">
+    <button class="rush-create-btn" onclick="window._rushCreateClick()">
       <span class="rush-create-icon">➕</span>
       <div>
         <div class="rush-create-title">Create Custom Rush</div>

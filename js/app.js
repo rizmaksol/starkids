@@ -1868,8 +1868,19 @@ window.saveRushEdits = async () => {
   const time     = parseInt(document.getElementById("edit-rush-time").value) || 20;
   const isCustom = !DEFAULT_RUSH_SESSIONS[sid];
 
+  // Capture current task values from DOM inputs before saving
+  const taskRows = document.querySelectorAll("#edit-rush-tasks-list > div");
+  if (taskRows.length > 0) {
+    taskRows.forEach((row, i) => {
+      const inputs = row.querySelectorAll("input");
+      if (inputs[0] && window.editingRushSession.tasks[i]) {
+        window.editingRushSession.tasks[i].emoji = inputs[0].value || "✅";
+        window.editingRushSession.tasks[i].title = inputs[1]?.value || "Task";
+        window.editingRushSession.tasks[i].stars = parseInt(inputs[2]?.value) || 2;
+      }
+    });
+  }
   window.editingRushSession.windowMinutes = time;
-  window.editingRushSession.tasks = window.editingRushSession.tasks;
 
   if (isCustom) {
     // Save name/emoji/color for custom

@@ -1832,6 +1832,36 @@ window.removeRushTask = (idx) => {
   renderEditRushTasks();
 };
 
+window.renderCustomRushSessions = function() {
+  const container = document.getElementById("custom-rush-sessions");
+  if (!container) return;
+  if (!customRushSessions.length) { container.innerHTML = ""; return; }
+  container.innerHTML = customRushSessions.map(s => `
+    <div class="rush-card rush-card--custom">
+      <div class="rush-card-top" style="background:${s.color||"#1a936f"};">
+        <div class="rush-card-icon">${s.emoji||"⚡"}</div>
+        <div class="rush-card-info">
+          <div class="rush-card-title">${s.label||"Custom Rush"}</div>
+          <div class="rush-card-sub">Custom session</div>
+        </div>
+      </div>
+      <div class="rush-card-window">⏱ ${s.windowMinutes||20} min shared window</div>
+      <div class="rush-tasks-preview">
+        ${(s.tasks||[]).map(t=>`
+          <div class="rush-task-row">
+            <span class="rush-task-emoji">${t.emoji||"✅"}</span>
+            <span class="rush-task-name">${t.title}</span>
+            <span class="rush-task-stars">up to ${(t.stars||1)*3}⭐</span>
+          </div>`).join("")}
+      </div>
+      <div class="rush-card-actions">
+        <button class="rush-btn-edit" onclick="openEditRush('${s.id}')">✏️ Edit</button>
+        <button class="rush-btn-delete" onclick="deleteRushSession('${s.id}')">🗑</button>
+        <button class="rush-btn-start" onclick="startRushSession('${s.id}')">▶ Start</button>
+      </div>
+    </div>`).join("");
+};
+
 window.saveRushEdits = async () => {
   if (!window.editingRushSession) return;
   const sid      = document.getElementById("edit-rush-session-id").value;

@@ -147,6 +147,49 @@ window.SK_removeKid = function(kidId) {
 };
 
 window.SK_renderKids = SK_renderKids;
+
+// Watch for kid dashboard to appear and auto-save kid data
+var _kidObserver = new MutationObserver(function() {
+  var nameEl = document.getElementById("kid-dashboard-name");
+  if (nameEl && nameEl.textContent && nameEl.textContent !== "Hi!") {
+    var name = nameEl.textContent.replace("Hi, ","").replace("!","").trim();
+    var kids = SK.getKids();
+    var found = kids.find(function(k){ return k.name === name; });
+    if (!found) {
+      // Kid is logged in but not saved — try to get from current session
+      setTimeout(function() {
+        var sk_kid = localStorage.getItem("sk_current_kid") || localStorage.getItem("sk_kid");
+        if (sk_kid) {
+          try {
+            var kid = JSON.parse(sk_kid);
+            SK.saveKid(kid);
+            console.log("Observer saved kid:", kid.name);
+          } catch(e){}
+        }
+      }, 500);
+    }
+    _kidObserver.disconnect(); // stop watching
+  }
+});
+_kidObserver.observe(document.body, {childList: true, subtree: true, characterData: true});
+
+// Also expose a direct save function for app.js to call
+window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
+  try {
+    var p = {id:id, name:name, emoji:emoji||"🌟", photo:photo||null, code:code, parentId:parentId};
+    var kids = SK.getKids();
+    var idx = kids.findIndex(function(k){ return k.id===id; });
+    if (idx>=0) kids[idx]=p; else kids.push(p);
+    var str = JSON.stringify(kids);
+    localStorage.setItem("sk_kids", str);
+    localStorage.setItem("sk_saved_kids", str);
+    localStorage.setItem("sk_current_kid", JSON.stringify(p));
+    localStorage.setItem("sk_kid", JSON.stringify(p));
+    console.log("SK_saveKidDirect:", name, "total:", kids.length);
+    SK_renderKids();
+    return true;
+  } catch(e) { console.error("SK_saveKidDirect failed:", e); return false; }
+};
 </script>
 
 <!-- ════════════════════════════════ HOME ════════════════════ -->
@@ -748,7 +791,7 @@ window.SK_renderKids = SK_renderKids;
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=11"></script>
+<script type="module" src="./js/app.js?v=12"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

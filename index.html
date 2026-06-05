@@ -18,6 +18,112 @@
   <link rel="icon" href="icons/icon-192.png" />
 </head>
 <body>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// PERSISTENCE — runs immediately, before any module loads
+// ═══════════════════════════════════════════════════════════════
+
+// ── Parent credentials ────────────────────────────────────────
+window.SK = {
+  saveParent: function(email, pw) {
+    try { localStorage.setItem("sk_email", email); localStorage.setItem("sk_pw", btoa(pw)); } catch(e){}
+  },
+  loadParent: function() {
+    try {
+      const e = localStorage.getItem("sk_email") || "";
+      const p = localStorage.getItem("sk_pw") || "";
+      return { email: e, password: p ? atob(p) : "" };
+    } catch(e) { return {email:"",password:""}; }
+  },
+  clearParent: function() {
+    localStorage.removeItem("sk_email");
+    localStorage.removeItem("sk_pw");
+  },
+
+  // ── Kid profiles ────────────────────────────────────────────
+  saveKid: function(kid) {
+    try {
+      var kids = SK.getKids();
+      var idx = kids.findIndex(function(k){return k.id===kid.id;});
+      var p = {id:kid.id,name:kid.name,emoji:kid.avatarEmoji||"🌟",photo:kid.photoURL||null,code:kid.code,parentId:kid.parentId};
+      if (idx>=0) kids[idx]=p; else kids.push(p);
+      localStorage.setItem("sk_kids", JSON.stringify(kids));
+      localStorage.setItem("sk_current_kid", JSON.stringify(p));
+      console.log("Kid saved:", kid.name);
+    } catch(e){ console.error("saveKid error:",e); }
+  },
+  getKids: function() {
+    try { return JSON.parse(localStorage.getItem("sk_kids")||"[]"); } catch(e){return [];}
+  },
+  getCurrentKid: function() {
+    try { var d=localStorage.getItem("sk_current_kid"); return d?JSON.parse(d):null; } catch(e){return null;}
+  },
+  clearCurrentKid: function() {
+    localStorage.removeItem("sk_current_kid");
+  },
+  removeKid: function(kidId) {
+    try {
+      var kids = SK.getKids().filter(function(k){return k.id!==kidId;});
+      localStorage.setItem("sk_kids",JSON.stringify(kids));
+      if (SK.getCurrentKid()?.id===kidId) SK.clearCurrentKid();
+    } catch(e){}
+  }
+};
+
+// Prefill login form as soon as DOM ready
+document.addEventListener("DOMContentLoaded", function() {
+  var creds = SK.loadParent();
+  if (creds.email) {
+    var el = document.getElementById("login-email");
+    var pw = document.getElementById("login-password");
+    var cb = document.getElementById("remember-me");
+    if (el) el.value = creds.email;
+    if (pw) pw.value = creds.password;
+    if (cb) cb.checked = true;
+    console.log("Login prefilled for:", creds.email);
+  }
+
+  // Render kid thumbnails
+  SK_renderKids();
+});
+
+function SK_renderKids() {
+  var el = document.getElementById("saved-kids-row");
+  if (!el) return;
+  var kids = SK.getKids();
+  console.log("SK_renderKids:", kids.length, "kids");
+  if (!kids.length) { el.style.display="none"; return; }
+  el.style.display = "block";
+  var html = "<div class='saved-kids-label'>👋 Welcome back!</div><div class='saved-kids-list'>";
+  kids.forEach(function(k) {
+    var av = k.photo
+      ? "<img src='"+k.photo+"' class='saved-kid-photo' />"
+      : "<span class='saved-kid-emoji'>"+k.emoji+"</span>";
+    html += "<div class='saved-kid-card' onclick='SK_loginKid(""+k.id+"",""+k.code+"")'>";
+    html += "<div class='saved-kid-avatar'>"+av+"</div>";
+    html += "<div class='saved-kid-name'>"+k.name+"</div>";
+    html += "<button class='saved-kid-remove' onclick='event.stopPropagation();SK_removeKid(""+k.id+"")'>×</button>";
+    html += "</div>";
+  });
+  html += "<div class='saved-kid-card saved-kid-new' onclick='goToKidLogin()'>";
+  html += "<div class='saved-kid-avatar'><span class='saved-kid-emoji'>➕</span></div>";
+  html += "<div class='saved-kid-name'>New Kid</div></div>";
+  html += "</div>";
+  el.innerHTML = html;
+}
+
+window.SK_loginKid = function(kidId, code) {
+  // Will be overridden by app.js with full functionality
+  console.log("SK_loginKid called:", kidId);
+};
+
+window.SK_removeKid = function(kidId) {
+  SK.removeKid(kidId);
+  SK_renderKids();
+};
+
+window.SK_renderKids = SK_renderKids;
+</script>
 
 <!-- ════════════════════════════════ HOME ════════════════════ -->
 <section class="screen active" id="screen-home">

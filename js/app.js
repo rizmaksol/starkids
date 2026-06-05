@@ -17,24 +17,24 @@ import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeekl
 const DEFAULT_RUSH_SESSIONS = {
   morning: {
     id:"morning", label:"🌅 Morning Rush", emoji:"🌅",
-    color:"#FF9F43", gradient:"linear-gradient(135deg,#FF9F43,#FFD93D)",
+    color:"#FF9F43", windowMinutes: 30,
     tasks:[
-      {id:"m1",title:"Make Bed 🛏",      emoji:"🛏", minutes:5,  stars:3},
-      {id:"m2",title:"Brush Teeth 🦷",   emoji:"🦷", minutes:3,  stars:2},
-      {id:"m3",title:"Face Wash 💧",     emoji:"💧", minutes:3,  stars:2},
-      {id:"m4",title:"Get Dressed 👕",   emoji:"👕", minutes:5,  stars:3},
-      {id:"m5",title:"Have Breakfast 🍳",emoji:"🍳", minutes:15, stars:3},
+      {id:"m1",title:"Make Bed",      emoji:"🛏", stars:3},
+      {id:"m2",title:"Brush Teeth",   emoji:"🦷", stars:2},
+      {id:"m3",title:"Face Wash",     emoji:"💧", stars:2},
+      {id:"m4",title:"Get Dressed",   emoji:"👕", stars:3},
+      {id:"m5",title:"Have Breakfast",emoji:"🍳", stars:3},
     ]
   },
   afterschool: {
     id:"afterschool", label:"🏠 After School", emoji:"🏠",
-    color:"#6C63FF", gradient:"linear-gradient(135deg,#6C63FF,#9c8fff)",
+    color:"#6C63FF", windowMinutes: 45,
     tasks:[
-      {id:"a1",title:"Change Clothes 👔", emoji:"👔",minutes:5,  stars:2},
-      {id:"a2",title:"Have Lunch 🍽",     emoji:"🍽",minutes:20, stars:2},
-      {id:"a3",title:"Wash Hands 🧼",     emoji:"🧼",minutes:2,  stars:1},
-      {id:"a4",title:"Pack School Bag 🎒",emoji:"🎒",minutes:10, stars:3},
-      {id:"a5",title:"Rest Time 😴",      emoji:"😴",minutes:30, stars:2},
+      {id:"a1",title:"Change Clothes", emoji:"👔", stars:2},
+      {id:"a2",title:"Have Lunch",     emoji:"🍽", stars:2},
+      {id:"a3",title:"Wash Hands",     emoji:"🧼", stars:1},
+      {id:"a4",title:"Pack School Bag",emoji:"🎒", stars:3},
+      {id:"a5",title:"Rest Time",      emoji:"😴", stars:2},
     ]
   }
 };
@@ -46,14 +46,15 @@ function calculateRushStars(baseStars, elapsed, total) {
   return baseStars;
 }
 
-async function startRush(parentId, sessionId, kidIds, tasks) {
+async function startRush(parentId, sessionId, kidIds, tasks, windowMinutes) {
   const { setDoc, doc: fsDoc, serverTimestamp: fsts } = await import(
     "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
   );
-  const rushId  = `${parentId}_${sessionId}_${Date.now()}`;
+  const rushId    = `${parentId}_${sessionId}_${Date.now()}`;
   const startAtMs = Date.now();
   await setDoc(fsDoc(db, "activeRush", rushId), {
     rushId, parentId, sessionId, kidIds, tasks,
+    windowMinutes: windowMinutes || 30,
     startAtMs, status:"active", progress:{}, startAt: fsts()
   });
   return rushId;
@@ -1595,184 +1596,247 @@ window.saveProfileSettings = async () => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// RUSH MODE
+// RUSH MODE — Phase 1
+// One shared timer · Tasks in any order · Faster = more stars
 // ═══════════════════════════════════════════════════════════════
 
-let activeRushId   = null;
-let rushTimers     = {};
-let currentSession = null;
+let activeRushId    = null;
+let currentSession  = null;
+let rushIntervalId  = null;
+let kidRushId       = null;
+let kidRushData     = null;
+let kidRushInterval = null;
 
 // ── Load rush tab ─────────────────────────────────────────────
 async function loadRushTab() {
   ["morning","afterschool"].forEach(sid => {
-    const session = DEFAULT_RUSH_SESSIONS[sid];
+    const s  = DEFAULT_RUSH_SESSIONS[sid];
     const el = document.getElementById(`rush-${sid}-tasks`);
     if (!el) return;
-    el.innerHTML = session.tasks.map(t => `
+    el.innerHTML = s.tasks.map(t => `
       <div class="rush-task-row">
         <span class="rush-task-emoji">${t.emoji}</span>
         <span class="rush-task-name">${t.title}</span>
-        <span class="rush-task-time">⏱ ${t.minutes}min</span>
-        <span class="rush-task-stars">⭐ up to ${t.stars*3}</span>
+        <span class="rush-task-stars">up to ${t.stars * 3}⭐</span>
       </div>`).join("");
+    // Set time window label
+    const totalMins = s.windowMinutes;
+    const wl = document.getElementById(`rush-${sid}-window`);
+    if (wl) wl.textContent = `⏱ ${totalMins} min total window`;
   });
 }
 
-// ── Start rush session ────────────────────────────────────────
+// ── Start rush ────────────────────────────────────────────────
 window.startRushSession = async (sessionId) => {
   if (!kidsList.length) { toast("Add kids first!", "error"); return; }
   const session = DEFAULT_RUSH_SESSIONS[sessionId];
   if (!session) return;
-  currentSession = session;
-  const kidIds = kidsList.map(k => k.id);
+  currentSession  = session;
+  const kidIds    = kidsList.map(k => k.id);
+  activeRushId    = await startRush(currentParent.uid, sessionId, kidIds, session.tasks, session.windowMinutes);
 
-  toast(`🌅 ${session.label} started for ${kidIds.length} kids!`, "success");
-
-  activeRushId = await startRush(currentParent.uid, sessionId, kidIds, session.tasks);
-
-  // Show monitor
+  // Show live monitor
   document.getElementById("rush-monitor").style.display = "block";
-  updateRushMonitor(session, kidIds, {});
-
-  toast("Kids will see the rush tasks on their dashboards! 🚀", "info");
+  document.getElementById("rush-monitor-title").textContent = `${session.emoji} ${session.label} — Live`;
+  startRushMonitor(session, activeRushId);
+  toast(`${session.emoji} ${session.label} started! Kids see it now 🚀`, "success");
 };
 
-function updateRushMonitor(session, kidIds, progress) {
-  const el = document.getElementById("rush-monitor-content");
-  if (!el) return;
-  el.innerHTML = kidsList.map(kid => {
-    const kidProgress = progress[kid.id] || {};
-    const done  = Object.values(kidProgress).filter(p=>p.done).length;
-    const total = session.tasks.length;
-    const pct   = Math.round((done/total)*100);
-    const stars  = Object.values(kidProgress).reduce((s,p)=>s+(p.stars||0),0);
-    return `<div class="rush-kid-row">
-      <div class="rush-kid-avatar">${kid.photoURL?`<img src="${kid.photoURL}" class="saved-kid-photo"/>`:(kid.avatarEmoji||"🌟")}</div>
-      <div class="rush-kid-info">
-        <div class="rush-kid-name">${kid.name}</div>
-        <div class="rush-progress-bar"><div class="rush-progress-fill" style="width:${pct}%"></div></div>
-        <div class="rush-kid-stats">${done}/${total} done · ⭐ ${stars} earned</div>
-      </div>
-    </div>`;
-  }).join("");
+function startRushMonitor(session, rushId) {
+  if (rushIntervalId) clearInterval(rushIntervalId);
+  rushIntervalId = setInterval(async () => {
+    try {
+      const { getDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const snap = await getDoc(fsDoc(db, "activeRush", rushId));
+      if (!snap.exists()) { clearInterval(rushIntervalId); return; }
+      const rush     = snap.data();
+      const progress = rush.progress || {};
+      const elapsed  = Math.floor((Date.now() - rush.startAtMs) / 1000);
+      const totalSec = session.windowMinutes * 60;
+      const remaining = Math.max(0, totalSec - elapsed);
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+
+      // Update timer
+      const timerEl = document.getElementById("rush-monitor-timer");
+      if (timerEl) {
+        timerEl.textContent = `${mins}:${String(secs).padStart(2,"0")}`;
+        timerEl.style.color = remaining < 60 ? "#FF6B6B" : remaining < 180 ? "#FF9F43" : "#FFD93D";
+      }
+      // Progress bar
+      const barEl = document.getElementById("rush-monitor-bar");
+      if (barEl) barEl.style.width = `${Math.max(0,(remaining/totalSec)*100)}%`;
+
+      // Kids progress
+      const el = document.getElementById("rush-monitor-content");
+      if (el) {
+        el.innerHTML = kidsList.map(kid => {
+          const kp    = progress[kid.id] || {};
+          const done  = Object.values(kp).filter(p => p.done).length;
+          const total = session.tasks.length;
+          const pct   = Math.round((done / total) * 100);
+          const stars = Object.values(kp).reduce((s,p) => s+(p.stars||0), 0);
+          const av    = kid.photoURL
+            ? `<img src="${kid.photoURL}" class="saved-kid-photo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />`
+            : `<span style="font-size:1.4rem">${kid.avatarEmoji||"🌟"}</span>`;
+          return `<div class="rush-kid-row">
+            <div class="rush-kid-avatar">${av}</div>
+            <div class="rush-kid-info">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span class="rush-kid-name">${kid.name}</span>
+                <span style="font-size:0.75rem;color:var(--color-secondary);font-weight:700">⭐ ${stars}</span>
+              </div>
+              <div class="rush-progress-bar">
+                <div class="rush-progress-fill" style="width:${pct}%;background:${pct===100?"#1a936f":"#6C63FF"}"></div>
+              </div>
+              <div class="rush-kid-stats">${done}/${total} tasks done${pct===100?" 🏆":""}</div>
+            </div>
+          </div>`;
+        }).join("");
+      }
+
+      if (remaining === 0) {
+        clearInterval(rushIntervalId);
+        toast("⏰ Rush time's up!", "info");
+      }
+    } catch(e) {}
+  }, 2000);
 }
 
 window.stopRushSession = async () => {
-  if (activeRushId) { await endRush(activeRushId); activeRushId = null; }
+  if (activeRushId) await endRush(activeRushId);
+  activeRushId = null; currentSession = null;
+  if (rushIntervalId) clearInterval(rushIntervalId);
   document.getElementById("rush-monitor").style.display = "none";
-  currentSession = null;
   toast("Rush ended.", "info");
 };
 
 window.editRushSession = (sessionId) => {
-  toast("Custom rush tasks coming soon! 🛠", "info");
+  toast("Custom rush tasks — coming in Phase 2! 🛠", "info");
 };
 
-// ── Kid Rush Overlay ──────────────────────────────────────────
-let kidRushId    = null;
-let kidRushData  = null;
-let rushTaskTimers = {};
-
+// ── Kid side ──────────────────────────────────────────────────
 window.checkForActiveRush = async (kid) => {
   try {
     const rush = await getActiveRushForKid(kid.parentId);
-    if (!rush || !rush.kidIds.includes(kid.id)) return;
-    kidRushId   = rush.rushId || rush.id;
+    if (!rush || !rush.kidIds?.includes(kid.id)) return;
+    if (rush.status !== "active") return;
+    kidRushId   = rush.id;
     kidRushData = rush;
     showKidRushOverlay(kid, rush);
-  } catch(e) { console.log("No active rush:", e.message); }
+  } catch(e) { console.log("Rush check:", e.message); }
 };
 
 function showKidRushOverlay(kid, rush) {
-  const session = DEFAULT_RUSH_SESSIONS[rush.sessionId] || {};
-  const overlay = document.getElementById("kid-rush-overlay");
-  document.getElementById("rush-overlay-emoji").textContent  = session.emoji  || "⚡";
-  document.getElementById("rush-overlay-title").textContent  = session.label  || "Rush!";
+  const session   = DEFAULT_RUSH_SESSIONS[rush.sessionId] || {};
+  const overlay   = document.getElementById("kid-rush-overlay");
+  const container = document.getElementById("rush-tasks-container");
+  if (!overlay || !container) return;
+
+  document.getElementById("rush-overlay-emoji").textContent = session.emoji || "⚡";
+  document.getElementById("rush-overlay-title").textContent = session.label || "Rush!";
   overlay.style.display = "block";
 
-  const progress  = rush.progress?.[kid.id] || {};
-  const startAtMs = rush.startAtMs || Date.now();
-  const container = document.getElementById("rush-tasks-container");
+  function render() {
+    const progress  = kidRushData.progress?.[kid.id] || {};
+    const startAtMs = kidRushData.startAtMs || Date.now();
+    const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
+    const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
+    const remaining = Math.max(0, totalSec - elapsed);
+    const mins      = Math.floor(remaining / 60);
+    const secs      = remaining % 60;
+    const pctLeft   = Math.max(0, (remaining / totalSec) * 100);
+    const timerCol  = remaining < 60 ? "#FF6B6B" : remaining < 180 ? "#FF9F43" : "#FFD93D";
+    const bonus     = pctLeft > 66 ? "🌟 3× stars if done now!" : pctLeft > 33 ? "⭐ 2× stars if done now!" : "✅ Finish before time runs out!";
+    const doneTasks = rush.tasks.filter(t => progress[t.id]?.done).length;
+    const allDone   = doneTasks === rush.tasks.length;
 
-  function renderTasks() {
-    container.innerHTML = rush.tasks.map(t => {
-      const done      = progress[t.id]?.done;
-      const totalSecs = t.minutes * 60;
-      const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
-      const remaining = Math.max(0, totalSecs - elapsed);
-      const pct       = Math.max(0, Math.min(100, (remaining/totalSecs)*100));
-      const mins      = Math.floor(remaining/60);
-      const secs      = remaining % 60;
-      const timeStr   = `${mins}:${String(secs).padStart(2,"0")}`;
-      const urgentCls = pct < 25 ? "rush-task-urgent" : pct < 50 ? "rush-task-warning" : "";
-
-      if (done) {
-        const earned = progress[t.id]?.stars || t.stars;
-        return `<div class="rush-task-card rush-task-done">
-          <div class="rush-tc-left"><span class="rush-tc-emoji">${t.emoji}</span>
-            <div><div class="rush-tc-title">${t.title}</div>
-            <div class="rush-tc-earned">✅ Done! +${earned}⭐</div></div>
-          </div></div>`;
-      }
-
-      if (remaining === 0) {
-        return `<div class="rush-task-card rush-task-expired">
-          <div class="rush-tc-left"><span class="rush-tc-emoji">${t.emoji}</span>
-            <div><div class="rush-tc-title">${t.title}</div>
-            <div class="rush-tc-earned">⏰ Time's up!</div></div>
-          </div></div>`;
-      }
-
-      return `<div class="rush-task-card ${urgentCls}">
-        <div class="rush-tc-left">
-          <span class="rush-tc-emoji">${t.emoji}</span>
-          <div>
-            <div class="rush-tc-title">${t.title}</div>
-            <div class="rush-tc-timer">${timeStr} left</div>
-            <div class="rush-tc-bar"><div class="rush-tc-bar-fill ${urgentCls}" style="width:${pct}%"></div></div>
-            <div class="rush-tc-bonus">${pct>66?"🌟 3x stars if done now!":pct>33?"⭐ 2x stars if done soon!":"⭐ Base stars"}</div>
-          </div>
+    container.innerHTML = `
+      <div style="background:rgba(255,255,255,0.08);border-radius:16px;padding:16px;text-align:center;margin-bottom:16px;">
+        <div style="font-size:2.8rem;font-weight:700;color:${timerCol};font-variant-numeric:tabular-nums;">
+          ${mins}:${String(secs).padStart(2,"0")}
         </div>
-        <button class="btn-rush-done" onclick="completeKidRushTask('${t.id}',${t.stars},${startAtMs},${totalSecs})">✅ Done!</button>
-      </div>`;
-    }).join("");
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">time remaining</div>
+        <div style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+          <div style="width:${pctLeft}%;height:100%;background:${timerCol};border-radius:4px;transition:width 1s linear;"></div>
+        </div>
+        <div style="font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:8px;">${bonus}</div>
+      </div>
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:10px;text-align:center;">
+        ${doneTasks}/${rush.tasks.length} done — complete in any order!
+      </div>
+      ${rush.tasks.map(t => {
+        const done   = progress[t.id]?.done;
+        const earned = progress[t.id]?.stars || 0;
+        if (done) return `
+          <div style="background:rgba(26,147,111,0.2);border:1px solid #1a936f;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:1.8rem;">${t.emoji}</span>
+            <div style="flex:1;">
+              <div style="color:#fff;font-weight:600;font-size:0.9rem;">${t.title}</div>
+              <div style="color:#1a936f;font-size:0.8rem;margin-top:2px;">✅ Done! +${earned}⭐ earned</div>
+            </div>
+          </div>`;
+        if (remaining === 0) return `
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;opacity:0.5;">
+            <span style="font-size:1.8rem;">${t.emoji}</span>
+            <div style="flex:1;color:rgba(255,255,255,0.5);font-size:0.9rem;">${t.title}</div>
+            <span style="font-size:0.8rem;color:#FF6B6B;">⏰ Time up</span>
+          </div>`;
+        return `
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:1.8rem;">${t.emoji}</span>
+            <div style="flex:1;">
+              <div style="color:#fff;font-weight:600;font-size:0.9rem;">${t.title}</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:2px;">up to ${t.stars*3}⭐</div>
+            </div>
+            <button onclick="completeKidRushTask('${t.id}',${t.stars},${startAtMs},${totalSec})"
+              style="background:#FF9F43;border:none;border-radius:10px;padding:8px 14px;color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;">
+              ✅ Done!
+            </button>
+          </div>`;
+      }).join("")}
+      ${allDone ? `<div style="text-align:center;padding:16px;color:#FFD93D;font-size:1rem;font-weight:700;">🏆 All done! Amazing!</div>` : ""}
+    `;
   }
 
-  renderTasks();
-  // Refresh every second
-  if (rushTaskTimers.interval) clearInterval(rushTaskTimers.interval);
-  rushTaskTimers.interval = setInterval(() => {
-    renderTasks();
-    // Check if all done
-    const allDone = rush.tasks.every(t => progress[t.id]?.done);
-    if (allDone) {
-      clearInterval(rushTaskTimers.interval);
-      setTimeout(() => {
-        overlay.style.display = "none";
+  render();
+  if (kidRushInterval) clearInterval(kidRushInterval);
+  kidRushInterval = setInterval(() => {
+    render();
+    const progress = kidRushData.progress?.[kid.id] || {};
+    const allDone  = rush.tasks.every(t => progress[t.id]?.done);
+    const startAtMs = kidRushData.startAtMs || Date.now();
+    const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
+    const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
+    if (allDone || elapsed >= totalSec) {
+      clearInterval(kidRushInterval);
+      if (allDone) {
         const totalStars = Object.values(progress).reduce((s,p)=>s+(p.stars||0),0);
-        celebrate(`🏆 Rush Complete!
-You earned ${totalStars}⭐ stars!`, "🌅🏆🌟");
-        refreshKidDashboard();
-      }, 1500);
+        setTimeout(() => {
+          overlay.style.display = "none";
+          celebrate(`🏆 Rush Complete!
+You earned ${totalStars}⭐!`, "🌅🏆🌟");
+          refreshKidDashboard();
+        }, 2000);
+      }
     }
   }, 1000);
 }
 
 window.completeKidRushTask = async (taskId, baseStars, startAtMs, totalSecs) => {
   if (!kidRushId || !currentKid) return;
-  const btn = document.querySelector(`[onclick*="${taskId}"]`);
-  if (btn) { btn.disabled=true; btn.textContent="✅"; }
   try {
-    const earned = await completeRushTask(kidRushId, currentKid.id, taskId, baseStars, startAtMs);
-    // Add to wallet
+    const elapsed = Math.floor((Date.now() - startAtMs) / 1000);
+    const earned  = calculateRushStars(baseStars, elapsed, totalSecs);
+    const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await updateDoc(fsDoc(db, "activeRush", kidRushId), {
+      [`progress.${currentKid.id}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
+    });
     await addBonusStars(currentKid.id, earned);
-    // Update local progress
     if (!kidRushData.progress) kidRushData.progress = {};
     if (!kidRushData.progress[currentKid.id]) kidRushData.progress[currentKid.id] = {};
-    kidRushData.progress[currentKid.id][taskId] = { done: true, stars: earned };
+    kidRushData.progress[currentKid.id][taskId] = {done:true, stars:earned};
     toast(`+${earned}⭐ earned!`, "success");
-    // Re-render
-    showKidRushOverlay(currentKid, kidRushData);
   } catch(e) { toast("Error. Try again.", "error"); console.error(e); }
 };
 

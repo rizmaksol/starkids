@@ -1741,32 +1741,36 @@ let customRushSessions = [];
 
 async function loadCustomRushSessions() {
   try {
-    const { getDocs, collection, query, where } = await import(
-      "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-    );
-    const q    = query(collection(db,"rushSessions"), where("parentId","==",currentParent.uid));
-    const snap = await getDocs(q);
+    if (!currentParent?.uid) return;
+    const fm   = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const q    = fm.query(fm.collection(db,"rushSessions"), fm.where("parentId","==",currentParent.uid));
+    const snap = await fm.getDocs(q);
     customRushSessions = snap.docs.map(d => ({id:d.id,...d.data()}));
     console.log("Loaded custom rush sessions:", customRushSessions.length);
   } catch(e) { console.error("loadCustomRushSessions:", e); }
 }
 
 async function saveCustomRushSession(session) {
-  const { setDoc, doc, serverTimestamp } = await import(
-    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-  );
-  const id = session.id || `custom_${currentParent.uid}_${Date.now()}`;
-  await setDoc(doc(db,"rushSessions",id), {
-    ...session, id, parentId: currentParent.uid, updatedAt: serverTimestamp()
-  });
+  const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const id = session.id || ("custom_" + currentParent.uid + "_" + Date.now());
+  const data = {
+    id, parentId: currentParent.uid,
+    label: session.label || "Custom Rush",
+    emoji: session.emoji || "⚡",
+    color: session.color || "#6C63FF",
+    windowMinutes: session.windowMinutes || 20,
+    tasks: session.tasks || [],
+    updatedAt: fm.serverTimestamp()
+  };
+  console.log("Saving rush session:", data.label, "id:", id);
+  await fm.setDoc(fm.doc(db,"rushSessions",id), data);
+  console.log("Rush session saved to Firestore:", id);
   return id;
 }
 
 async function deleteCustomRushSession(sessionId) {
-  const { deleteDoc, doc } = await import(
-    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-  );
-  await deleteDoc(doc(db,"rushSessions",sessionId));
+  const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await fm.deleteDoc(fm.doc(db,"rushSessions",sessionId));
   customRushSessions = customRushSessions.filter(s => s.id !== sessionId);
 }
 
@@ -1852,7 +1856,8 @@ window.saveRushEdits = async () => {
       if (idx>=0) customRushSessions[idx] = window.editingRushSession;
       else customRushSessions.push({...window.editingRushSession, id:savedId});
       toast("✅ Rush session saved!", "success");
-    } catch(e) { toast("Failed to save.", "error"); console.error(e); return; }
+      console.log("customRushSessions after save:", customRushSessions.length);
+    } catch(e) { toast("Failed to save: " + (e.message||e), "error"); console.error("saveRushEdits error:", e); return; }
     finally { if (btn) { btn.disabled=false; btn.textContent="Save Changes ✅"; } }
   } else {
     DEFAULT_RUSH_SESSIONS[sid].windowMinutes = time;
@@ -1860,7 +1865,8 @@ window.saveRushEdits = async () => {
     toast("✅ Rush session updated!", "success");
   }
   closeEditRush();
-  loadRushTab();
+  await loadRushTab();
+  renderCustomRushSessions();
 };
 
 window.deleteRushSession = async (sessionId) => {

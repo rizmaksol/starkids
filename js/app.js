@@ -13,30 +13,10 @@ import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJ
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=10";
 import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=10";
 
-// ── Credential helpers (inline — no import dependency) ───────
-const CRED_KEY_E = "sk_cred_email";
-const CRED_KEY_P = "sk_cred_pass";
-
-function saveCredentials(email, password) {
-  try {
-    localStorage.setItem(CRED_KEY_E, email);
-    localStorage.setItem(CRED_KEY_P, btoa(unescape(encodeURIComponent(password))));
-  } catch(e) { console.warn("Could not save credentials", e); }
-}
-
-function loadCredentials() {
-  try {
-    const email = localStorage.getItem(CRED_KEY_E) || "";
-    const raw   = localStorage.getItem(CRED_KEY_P) || "";
-    const password = raw ? decodeURIComponent(escape(atob(raw))) : "";
-    return { email, password };
-  } catch(e) { return { email: "", password: "" }; }
-}
-
-function clearCredentials() {
-  localStorage.removeItem(CRED_KEY_E);
-  localStorage.removeItem(CRED_KEY_P);
-}
+// ── Credential helpers — delegate to window.SK (defined in HTML) ─
+const saveCredentials  = (e,p) => window.SK?.saveParent(e,p);
+const loadCredentials  = ()    => window.SK?.loadParent() || {email:"",password:""};
+const clearCredentials = ()    => window.SK?.clearParent();
 
 // ── State ─────────────────────────────────────────────────────
 let currentParent    = null;
@@ -1584,32 +1564,13 @@ function removeSavedKid(kidId) {
 
 // ── Render saved kids on home screen ─────────────────────────
 function renderSavedKidsSelector() {
-  const el = document.getElementById("saved-kids-row");
-  if (!el) return;
-  const saved = getSavedKids();
-  console.log("renderSavedKidsSelector - saved kids:", saved.length);
-  if (!saved.length) { el.style.display="none"; return; }
-  el.style.display = "block";
-  el.innerHTML = `
-    <div class="saved-kids-label">👋 Welcome back!</div>
-    <div class="saved-kids-list">
-      ${saved.map(k => `
-        <div class="saved-kid-card" onclick="loginSavedKid('${k.id}','${k.code}')">
-          <div class="saved-kid-avatar">
-            ${k.photoURL
-              ? `<img src="${k.photoURL}" class="saved-kid-photo" />`
-              : `<span class="saved-kid-emoji">${k.avatarEmoji||"🌟"}</span>`}
-          </div>
-          <div class="saved-kid-name">${k.name}</div>
-          <button class="saved-kid-remove" onclick="event.stopPropagation();removeSavedKidProfile('${k.id}')" title="Remove">×</button>
-        </div>`).join("")}
-      <div class="saved-kid-card saved-kid-new" onclick="goToKidLogin()">
-        <div class="saved-kid-avatar"><span class="saved-kid-emoji">➕</span></div>
-        <div class="saved-kid-name">New Kid</div>
-      </div>
-    </div>`;
+  // Use the SK_renderKids defined in HTML inline script
+  if (typeof window.SK_renderKids === "function") window.SK_renderKids();
 }
 
+window.SK_loginKid = async (kidId, code) => {
+  return window.loginSavedKid(kidId, code);
+};
 window.loginSavedKid = async (kidId, code) => {
   try {
     const kid = await loginKidByCode(code);

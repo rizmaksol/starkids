@@ -1012,6 +1012,12 @@ async function showKidDashboard(kid) {
     if (badge && unread > 0) { badge.textContent = unread; badge.style.display = "inline-flex"; }
     else if (badge) badge.style.display = "none";
   } catch(e) {}
+  // Check for active rush immediately and then every 30s
+  checkForActiveRush(kid).catch(e => console.log('Rush check:', e.message));
+  if (window._rushPollInterval) clearInterval(window._rushPollInterval);
+  window._rushPollInterval = setInterval(() => {
+    if (currentKid) checkForActiveRush(currentKid).catch(()=>{});
+  }, 30000);
   // Load achievements
   await loadKidAchievements(kid.id);
   showScreen("screen-kid-dashboard");

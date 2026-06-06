@@ -2518,3 +2518,64 @@ input:focus, select:focus {
   border-color: var(--color-text);
   transform: scale(1.15);
 }
+
+/* ── Kid photos — circular everywhere ───────────────────────── */
+.kid-card-avatar img,
+.kid-card-avatar,
+.kid-dash-photo,
+.saved-kid-photo {
+  border-radius: 50% !important;
+  object-fit: cover;
+  object-position: center;
+}
+
+.kid-card-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-bg);
+  border: 3px solid var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+.kid-card-avatar::after {
+  content: "📷";
+  position: absolute;
+  bottom: -2px; right: -2px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  width: 20px; height: 20px;
+  font-size: 0.65rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid white;
+}
+.kid-card-avatar img {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ── Rush History ────────────────────────────────────────────── */
+.rush-history-entry {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.rush-history-entry:last-child { border-bottom: none; }
+.rush-history-header {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 8px;
+}
+.rush-history-emoji { font-size: 1.4rem; }
+.rush-history-label { font-weight: 700; font-size: 0.88rem; color: var(--color-text); }
+.rush-history-date  { font-size: 0.72rem; color: var(--color-muted); }
+.rush-history-kids  { display: flex; flex-direction: column; gap: 4px; }
+.rush-history-kid {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 0.78rem; padding: 4px 8px;
+  background: var(--color-bg); border-radius: 8px;
+  justify-content: space-between;
+}
+.rush-kid-done    { color: #1a936f; font-weight: 700; }
+.rush-kid-partial { color: #FF9F43; font-weight: 700; }
+.rush-kid-stars   { color: var(--color-secondary); font-weight: 700; }

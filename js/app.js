@@ -2504,10 +2504,17 @@ function showKidRushOverlay(kid, rush) {
 
   function render() {
     const progress  = kidRushData.progress?.[kid.id] || {};
-    const startAtMs = kidRushData.startAtMs || Date.now();
-    const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
-    const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
-    const remaining = Math.max(0, totalSec - elapsed);
+    // startAtMs must be a valid past timestamp — fallback to now minus 1s if missing
+    const startAtMs = (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000)
+      ? kidRushData.startAtMs
+      : (Date.now() - 1000);
+    const windowMins = kidRushData.windowMinutes || session.windowMinutes || 30;
+    const totalSec   = windowMins * 60;
+    const elapsed    = Math.floor((Date.now() - startAtMs) / 1000);
+    // Guard: if elapsed is negative or absurdly large, something is wrong — use 1s
+    const safeElapsed = (elapsed < 0 || elapsed > totalSec + 60) ? 1 : elapsed;
+    const remaining  = Math.max(0, totalSec - safeElapsed);
+    console.log("Rush timer — startAtMs:", startAtMs, "elapsed:", safeElapsed, "remaining:", remaining, "total:", totalSec);
     const mins      = Math.floor(remaining / 60);
     const secs      = remaining % 60;
     const pctLeft   = Math.max(0, (remaining / totalSec) * 100);
@@ -2571,8 +2578,9 @@ function showKidRushOverlay(kid, rush) {
     const allDone   = rush.tasks.every(t => progress[t.id]?.done);
     const startAtMs = kidRushData.startAtMs || Date.now();
     const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
-    const elapsed   = Math.floor((Date.now() - startAtMs) / 1000);
-    const timeUp    = elapsed >= totalSec;
+    const startMs2  = (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) ? kidRushData.startAtMs : (Date.now()-1000);
+    const elapsed   = Math.max(0, Math.floor((Date.now() - startMs2) / 1000));
+    const timeUp    = elapsed >= totalSec && totalSec > 0;
 
     if (allDone) {
       clearInterval(kidRushInterval);

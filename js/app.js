@@ -2500,7 +2500,6 @@ window.checkForActiveRush = async (kid) => {
     if (rush.status !== "active") return;
     const progress  = rush.progress?.[kid.id] || {};
     const rushTasks = rush.tasks || [];
-    // Only consider done if there are tasks AND all are completed
     const allDone   = rushTasks.length > 0 && rushTasks.every(t => progress[t?.id]?.done);
     if (allDone) return;
     if (rushTasks.length === 0) return;
@@ -2540,7 +2539,6 @@ function showKidRushOverlay(kid, rush) {
       // No valid time data — give full window as safe fallback
       remaining = totalSec;
     }
-    console.log("Rush timer — endAtMs:", kidRushData.endAtMs, "remaining:", remaining, "total:", totalSec);
     const mins      = Math.floor(remaining / 60);
     const secs      = remaining % 60;
     const pctLeft   = Math.max(0, (remaining / totalSec) * 100);
@@ -2683,15 +2681,6 @@ document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
   toast("See you soon! 👋","info");
 });
 
-// ── Exit Rush Overlay (without ending the session) ────────────
-// Hides the overlay so the kid can tap Home or Switch Kid.
-// The rush session keeps running in Firestore — re-entering shows it again.
-window.exitRushEarly = () => {
-  document.getElementById("kid-rush-overlay").style.display = "none";
-  // Keep kidRushInterval running so timer stays alive in background
-  // If kid comes back via Switch, checkForActiveRush will re-show overlay
-};
-
 // Photo fullscreen
 window.showPhotoFull = (url) => {
   const el = document.getElementById("photo-fullscreen");
@@ -2785,9 +2774,20 @@ window.hideSwitchKidPanel = () => {
 
 window.switchToKid = async (kidId, code) => {
   window.hideSwitchKidPanel();
-  if (currentKid && currentKid.id === kidId) return; // already on this kid
+  if (currentKid && currentKid.id === kidId) return;
   toast("Switching kid…", "info");
+  // Reset rush state so overlay re-renders fresh for the new kid
+  kidRushId   = null;
+  kidRushData = null;
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
   await window.loginSavedKid(kidId, code);
+};
+
+// ── Exit Rush Overlay without ending the session ──────────────
+window.exitRushEarly = () => {
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  // Rush keeps running in Firestore — re-entering shows it again via checkForActiveRush
 };
 
 

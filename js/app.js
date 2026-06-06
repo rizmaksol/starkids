@@ -2448,6 +2448,28 @@ function playRushStartSound() {
 }
 
 // ── Kid side ──────────────────────────────────────────────────
+// ── Top Performer Award notification on kid dashboard ────────
+async function checkTopPerformerAward(kid) {
+  try {
+    const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const q  = fm.query(
+      fm.collection(db,"praise"),
+      fm.where("kidId","==",kid.id),
+      fm.where("isTopPerformer","==",true),
+      fm.where("read","==",false)
+    );
+    const snap = await fm.getDocs(q);
+    if (snap.empty) return;
+    // Show celebration on kid screen
+    const doc = snap.docs[0];
+    celebrate("🏆 You are this week's\nTOP PERFORMER!\n+50 Bonus Stars!", "🏆⭐🌟");
+    // Mark as read
+    await fm.updateDoc(fm.doc(db,"praise",doc.id), {read:true});
+    // Refresh stars
+    setTimeout(() => refreshKidDashboard(), 2000);
+  } catch(e) {}
+}
+
 window.checkForActiveRush = async (kid) => {
   try {
     console.log("checkForActiveRush for:", kid.name, "parentId:", kid.parentId);

@@ -1941,46 +1941,145 @@ window.removeRushTask = (idx) => {
   renderEditRushTasks();
 };
 
-// ── Change kid photo ─────────────────────────────────────────
-window.changeKidPhoto = async (kidId) => {
+// ── Photo Crop Tool ──────────────────────────────────────────
+let _cropKidId  = null;
+let _cropImg    = null;
+let _cropDrag   = false;
+let _cropX      = 0, _cropY = 0;
+let _cropStartX = 0, _cropStartY = 0;
+let _cropImgX   = 0, _cropImgY = 0;
+
+window.changeKidPhoto = (kidId) => {
+  _cropKidId = kidId;
   const input = document.createElement("input");
   input.type  = "file";
   input.accept = "image/*";
-  input.onchange = async (e) => {
+  input.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        // Compress to 400px circle
-        const img = new Image();
-        img.onload = async () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = canvas.height = 400;
-          const ctx = canvas.getContext("2d");
-          // Draw circular crop
-          ctx.beginPath();
-          ctx.arc(200, 200, 200, 0, Math.PI * 2);
-          ctx.clip();
-          const size = Math.min(img.width, img.height);
-          const sx = (img.width - size) / 2;
-          const sy = (img.height - size) / 2;
-          ctx.drawImage(img, sx, sy, size, size, 0, 0, 400, 400);
-          const compressed = canvas.toDataURL("image/jpeg", 0.65);
-          // Save to Firestore
-          const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-          await updateDoc(doc(db,"kids",kidId), { photoURL: compressed });
-          toast("Photo updated! ✅", "success");
-          // Reload kids
-          kidsList = await getKidsForParent(currentParent.uid);
-          renderKidsList();
-        };
-        img.src = ev.target.result;
-      } catch(err) { toast("Failed to update photo.", "error"); }
-    };
+    reader.onload = (ev) => openCropModal(ev.target.result);
     reader.readAsDataURL(file);
   };
   input.click();
+};
+
+function openCropModal(src) {
+  const modal    = document.getElementById("modal-photo-crop");
+  const imgEl    = document.getElementById("crop-image");
+  const zoomEl   = document.getElementById("crop-zoom");
+  const container = document.getElementById("crop-container");
+  if (!modal || !imgEl) return;
+
+  _cropImg = new Image();
+  _cropImg.onload = () => {
+    imgEl.src = src;
+    _cropX = 0; _cropY = 0;
+    zoomEl.value = 130;
+    applyCropTransform();
+    modal.classList.add("open");
+  };
+  _cropImg.src = src;
+
+  // Zoom slider
+  zoomEl.oninput = applyCropTransform;
+
+  // Mouse drag
+  container.onmousedown = (e) => {
+    _cropDrag = true; _cropStartX = e.clientX; _cropStartY = e.clientY;
+    _cropImgX = _cropX; _cropImgY = _cropY;
+    container.style.cursor = "grabbing";
+    e.preventDefault();
+  };
+  document.onmousemove = (e) => {
+    if (!_cropDrag) return;
+    _cropX = _cropImgX + (e.clientX - _cropStartX);
+    _cropY = _cropImgY + (e.clientY - _cropStartY);
+    applyCropTransform();
+  };
+  document.onmouseup = () => { _cropDrag = false; container.style.cursor = "grab"; };
+
+  // Touch drag
+  container.ontouchstart = (e) => {
+    const t = e.touches[0];
+    _cropDrag = true; _cropStartX = t.clientX; _cropStartY = t.clientY;
+    _cropImgX = _cropX; _cropImgY = _cropY;
+    e.preventDefault();
+  };
+  container.ontouchmove = (e) => {
+    if (!_cropDrag) return;
+    const t = e.touches[0];
+    _cropX = _cropImgX + (t.clientX - _cropStartX);
+    _cropY = _cropImgY + (t.clientY - _cropStartY);
+    applyCropTransform();
+    e.preventDefault();
+  };
+  container.ontouchend = () => { _cropDrag = false; };
+}
+
+function applyCropTransform() {
+  const imgEl  = document.getElementById("crop-image");
+  const zoomEl = document.getElementById("crop-zoom");
+  if (!imgEl || !_cropImg) return;
+  const zoom   = parseInt(zoomEl.value) / 100;
+  const w      = _cropImg.naturalWidth  * zoom;
+  const h      = _cropImg.naturalHeight * zoom;
+  // Center initially
+  const cSize  = 260;
+  const baseX  = (cSize - w) / 2;
+  const baseY  = (cSize - h) / 2;
+  imgEl.style.width  = w + "px";
+  imgEl.style.height = h + "px";
+  imgEl.style.left   = (baseX + _cropX) + "px";
+  imgEl.style.top    = (baseY + _cropY) + "px";
+}
+
+window.closeCropModal = () => {
+  document.getElementById("modal-photo-crop")?.classList.remove("open");
+  _cropKidId = null; _cropImg = null; _cropDrag = false;
+  _cropX = 0; _cropY = 0;
+};
+
+window.saveCroppedPhoto = async () => {
+  if (!_cropKidId || !_cropImg) return;
+  const btn = document.querySelector("#modal-photo-crop .btn--primary");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const imgEl  = document.getElementById("crop-image");
+    const zoomEl = document.getElementById("crop-zoom");
+    const zoom   = parseInt(zoomEl.value) / 100;
+    const cSize  = 260;
+    const w      = _cropImg.naturalWidth  * zoom;
+    const h      = _cropImg.naturalHeight * zoom;
+    const baseX  = (cSize - w) / 2;
+    const baseY  = (cSize - h) / 2;
+    const offX   = baseX + _cropX;
+    const offY   = baseY + _cropY;
+
+    // Draw cropped circle to canvas
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 400;
+    const ctx    = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(200, 200, 200, 0, Math.PI * 2);
+    ctx.clip();
+    const scale  = 400 / cSize;
+    ctx.drawImage(_cropImg, offX * scale, offY * scale, w * scale, h * scale);
+    const compressed = canvas.toDataURL("image/jpeg", 0.72);
+
+    // Save to Firestore
+    const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await fm.updateDoc(fm.doc(db,"kids",_cropKidId), { photoURL: compressed });
+    toast("Photo updated! ✅", "success");
+    closeCropModal();
+    kidsList = await getKidsByParent(currentParent.uid);
+    renderKidsList();
+  } catch(err) {
+    toast("Failed to save photo.", "error");
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "✅ Save Photo"; }
+  }
 };
 
 window.renderCustomRushSessions = function() {

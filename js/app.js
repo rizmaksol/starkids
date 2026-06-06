@@ -63,10 +63,11 @@ async function startRush(parentId, sessionId, kidIds, tasks, windowMinutes) {
   );
   const rushId    = `${parentId}_${sessionId}_${Date.now()}`;
   const startAtMs = Date.now();
+  const endAtMs   = startAtMs + ((windowMinutes || 30) * 60 * 1000);
   await setDoc(fsDoc(db, "activeRush", rushId), {
     rushId, parentId, sessionId, kidIds, tasks,
     windowMinutes: windowMinutes || 30,
-    startAtMs, status:"active", progress:{}, startAt: fsts()
+    startAtMs, endAtMs, status:"active", progress:{}, startAt: fsts()
   });
   return rushId;
 }
@@ -2503,18 +2504,23 @@ function showKidRushOverlay(kid, rush) {
   overlay.style.display = "block";
 
   function render() {
-    const progress  = kidRushData.progress?.[kid.id] || {};
-    // startAtMs must be a valid past timestamp — fallback to now minus 1s if missing
-    const startAtMs = (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000)
-      ? kidRushData.startAtMs
-      : (Date.now() - 1000);
+    const progress   = kidRushData.progress?.[kid.id] || {};
     const windowMins = kidRushData.windowMinutes || session.windowMinutes || 30;
     const totalSec   = windowMins * 60;
-    const elapsed    = Math.floor((Date.now() - startAtMs) / 1000);
-    // Guard: if elapsed is negative or absurdly large, something is wrong — use 1s
-    const safeElapsed = (elapsed < 0 || elapsed > totalSec + 60) ? 1 : elapsed;
-    const remaining  = Math.max(0, totalSec - safeElapsed);
-    console.log("Rush timer — startAtMs:", startAtMs, "elapsed:", safeElapsed, "remaining:", remaining, "total:", totalSec);
+    const now        = Date.now();
+
+    // Use endAtMs directly if available (most reliable)
+    let remaining;
+    if (kidRushData.endAtMs && kidRushData.endAtMs > 1000000000000) {
+      remaining = Math.max(0, Math.floor((kidRushData.endAtMs - now) / 1000));
+    } else if (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) {
+      const elapsed = Math.floor((now - kidRushData.startAtMs) / 1000);
+      remaining = Math.max(0, totalSec - elapsed);
+    } else {
+      // No valid time data — give full window as safe fallback
+      remaining = totalSec;
+    }
+    console.log("Rush timer — endAtMs:", kidRushData.endAtMs, "remaining:", remaining, "total:", totalSec);
     const mins      = Math.floor(remaining / 60);
     const secs      = remaining % 60;
     const pctLeft   = Math.max(0, (remaining / totalSec) * 100);
@@ -2578,9 +2584,16 @@ function showKidRushOverlay(kid, rush) {
     const allDone   = rush.tasks.every(t => progress[t.id]?.done);
     const startAtMs = kidRushData.startAtMs || Date.now();
     const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
-    const startMs2  = (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) ? kidRushData.startAtMs : (Date.now()-1000);
-    const elapsed   = Math.max(0, Math.floor((Date.now() - startMs2) / 1000));
-    const timeUp    = elapsed >= totalSec && totalSec > 0;
+    const now2     = Date.now();
+    let timeUp;
+    if (kidRushData.endAtMs && kidRushData.endAtMs > 1000000000000) {
+      timeUp = now2 >= kidRushData.endAtMs;
+    } else if (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) {
+      const elapsed2 = Math.floor((now2 - kidRushData.startAtMs) / 1000);
+      timeUp = elapsed2 >= totalSec && totalSec > 0;
+    } else {
+      timeUp = false;
+    }
 
     if (allDone) {
       clearInterval(kidRushInterval);

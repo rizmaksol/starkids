@@ -1506,60 +1506,244 @@ async function loadWeeklyReports() {
     return;
   }
 
-  // Period selector
   const period = document.getElementById("report-period-select")?.value || "week";
+  el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--color-muted);">Loading reports...</div>`;
 
-  const rows = await Promise.all(kidsList.map(async kid => {
+  const data = await Promise.all(kidsList.map(async kid => {
     const report  = await getWeeklyReport(kid.id);
     const monthly = await getMonthlyStats(kid.id);
-    const money   = starsToMoney(report.starsEarned, financeSettings);
-    const moneyM  = starsToMoney(monthly.starsMonth, financeSettings);
-    const av      = kid.photoURL
-      ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />`
-      : `<span class="wallet-avatar-emoji">${kid.avatarEmoji||"🌟"}</span>`;
-
-    return `
-      <div class="report-card">
-        <div class="report-header">
-          <div class="wallet-avatar">${av}</div>
-          <div>
-            <div class="wallet-name">${kid.name}</div>
-            <div style="font-size:0.78rem;color:var(--color-muted);">Performance summary</div>
-          </div>
-        </div>
-
-        <div class="report-period-tabs">
-          <button class="report-tab ${period==="week"?"active":""}" onclick="switchReportPeriod('week')">📅 This Week</button>
-          <button class="report-tab ${period==="month"?"active":""}" onclick="switchReportPeriod('month')">🗓 This Month</button>
-        </div>
-
-        ${period==="week" ? `
-        <div class="report-stats">
-          <div class="report-stat"><div class="report-stat__value">${report.tasksCompleted}</div><div class="report-stat__label">Tasks Done</div></div>
-          <div class="report-stat"><div class="report-stat__value">⭐ ${report.starsEarned}</div><div class="report-stat__label">Stars Earned</div></div>
-          <div class="report-stat"><div class="report-stat__value">💰 ${money}</div><div class="report-stat__label">Value</div></div>
-          <div class="report-stat"><div class="report-stat__value">${report.faithTasks}</div><div class="report-stat__label">🕌 Prayers</div></div>
-          <div class="report-stat"><div class="report-stat__value">${report.jobsDone}</div><div class="report-stat__label">💼 Jobs</div></div>
-          <div class="report-stat"><div class="report-stat__value">⭐ ${report.totalStars}</div><div class="report-stat__label">Total Stars</div></div>
-        </div>
-        ${report.topTask?`<div class="report-top-task">⭐ Best: <strong>${report.topTask}</strong></div>`:""}
-        ${report.pendingTasks>0?`<div class="report-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?'s':''} waiting your approval</div>`:""}
-        ` : `
-        <div class="report-stats">
-          <div class="report-stat"><div class="report-stat__value">${monthly.total}</div><div class="report-stat__label">Tasks Done</div></div>
-          <div class="report-stat"><div class="report-stat__value">⭐ ${monthly.starsMonth}</div><div class="report-stat__label">Stars Earned</div></div>
-          <div class="report-stat"><div class="report-stat__value">💰 ${moneyM}</div><div class="report-stat__label">Value</div></div>
-          <div class="report-stat"><div class="report-stat__value">${monthly.activeDays}</div><div class="report-stat__label">Active Days</div></div>
-          <div class="report-stat"><div class="report-stat__value">${monthly.avgPerDay}</div><div class="report-stat__label">Tasks/Day</div></div>
-          <div class="report-stat"><div class="report-stat__value">${monthly.faithMonth}</div><div class="report-stat__label">🕌 Prayers</div></div>
-        </div>
-        <div class="report-top-task">📊 Active ${monthly.activeDays} out of 30 days this month</div>
-        `}
-      </div>`;
+    return { kid, report, monthly };
   }));
 
-  el.innerHTML = rows.join("");
+  // ── Find top performer ──────────────────────────────────────
+  const ranked = [...data].sort((a,b) => {
+    const sa = period==="week" ? a.report.starsEarned : a.monthly.starsMonth;
+    const sb = period==="week" ? b.report.starsEarned : b.monthly.starsMonth;
+    return sb - sa;
+  });
+  const topKid    = ranked[0];
+  const topStars  = period==="week" ? topKid.report.starsEarned : topKid.monthly.starsMonth;
+  // Weekly key — Monday resets each week
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1);
+  const weekKey = weekStart.toDateString();
+  const alreadyAwarded = localStorage.getItem(`sk_top_award_${period}_${weekKey}_${topKid.kid.id}`);
+
+  // Build HTML
+  let html = "";
+
+  // ── Family Summary Card ──
+  const totalStarsWeek  = data.reduce((s,d) => s + (d.report.starsEarned||0), 0);
+  const totalTasksWeek  = data.reduce((s,d) => s + (d.report.tasksCompleted||0), 0);
+  const totalStarsMonth = data.reduce((s,d) => s + (d.monthly.starsMonth||0), 0);
+  const totalTasksMonth = data.reduce((s,d) => s + (d.monthly.total||0), 0);
+
+  html += `
+  <div class="rpt-family-summary">
+    <div class="rpt-summary-title">📊 Family Overview — ${period==="week"?"This Week":"This Month"}</div>
+    <div class="rpt-summary-grid">
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">${period==="week"?totalTasksWeek:totalTasksMonth}</div>
+        <div class="rpt-summary-lbl">Tasks Done</div>
+      </div>
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">⭐ ${period==="week"?totalStarsWeek:totalStarsMonth}</div>
+        <div class="rpt-summary-lbl">Stars Earned</div>
+      </div>
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">💰 ${starsToMoney(period==="week"?totalStarsWeek:totalStarsMonth, financeSettings)}</div>
+        <div class="rpt-summary-lbl">Family Value</div>
+      </div>
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">${data.length}</div>
+        <div class="rpt-summary-lbl">Active Kids</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Top Performer Banner ──
+  if (topStars > 0) {
+    const topAv = topKid.kid.photoURL
+      ? `<img src="${topKid.kid.photoURL}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid #FFD93D;" />`
+      : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;">${topKid.kid.avatarEmoji||"🌟"}</div>`;
+    html += `
+    <div class="rpt-top-performer">
+      <div class="rpt-top-badge">🏆 Top Performer</div>
+      <div class="rpt-top-body">
+        ${topAv}
+        <div style="flex:1;">
+          <div class="rpt-top-name">${topKid.kid.name}</div>
+          <div class="rpt-top-stars">⭐ ${topStars} stars this ${period==="week"?"week":"month"}</div>
+        </div>
+        ${!alreadyAwarded ? `
+        <button class="rpt-award-btn" onclick="awardTopPerformer('${topKid.kid.id}','${topKid.kid.name}','${period}')">
+          🎁 Award +50⭐
+        </button>` : `
+        <div class="rpt-awarded-badge">✅ Awarded!</div>`}
+      </div>
+    </div>`;
+  }
+
+  // ── Period Tabs ──
+  html += `
+  <div class="report-period-tabs" style="margin-bottom:16px;">
+    <button class="report-tab ${period==="week"?"active":""}" onclick="switchReportPeriod('week')">📅 This Week</button>
+    <button class="report-tab ${period==="month"?"active":""}" onclick="switchReportPeriod('month')">🗓 This Month</button>
+  </div>`;
+
+  // ── Per Kid Cards ──
+  data.forEach(({kid, report, monthly}, kidIndex) => {
+    const r     = period === "week" ? report : monthly;
+    const tasks = period === "week" ? r.tasksCompleted : r.total;
+    const stars = period === "week" ? r.starsEarned    : r.starsMonth;
+    const money = starsToMoney(stars, financeSettings);
+    const faith = period === "week" ? r.faithTasks     : r.faithMonth;
+    const jobs  = period === "week" ? (r.jobsDone||0)  : 0;
+    const days  = period === "week" ? (r.activeDays||0): r.activeDays;
+    const maxDays = period === "week" ? 7 : 30;
+
+    // Progress percentages
+    const taskGoal   = 20; // reasonable weekly goal
+    const taskPct    = Math.min(100, Math.round((tasks / taskGoal) * 100));
+    const starGoal   = 50;
+    const starPct    = Math.min(100, Math.round((stars / starGoal) * 100));
+    const activePct  = Math.round((days / maxDays) * 100);
+    const faithGoal  = period==="week" ? 35 : 150;
+    const faithPct   = Math.min(100, Math.round((faith / faithGoal) * 100));
+
+    // Bar colors
+    const getColor = (pct) => pct >= 80 ? "#1a936f" : pct >= 50 ? "#FF9F43" : "#FF6B6B";
+
+    const av = kid.photoURL
+      ? `<img src="${kid.photoURL}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);" />`
+      : `<div style="width:48px;height:48px;border-radius:50%;background:var(--color-bg);border:3px solid var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">${kid.avatarEmoji||"🌟"}</div>`;
+
+    const chartId = `chart_${kidIndex}_${Date.now()}`;
+
+    html += `
+    <div class="rpt-kid-card">
+      <div class="rpt-kid-header">
+        ${av}
+        <div style="flex:1;">
+          <div class="rpt-kid-name">${kid.name}</div>
+          <div class="rpt-kid-age">Age ${kid.age||"–"} · ${period==="week"?"Weekly":"Monthly"} Report</div>
+        </div>
+        <div class="rpt-kid-score">
+          <div class="rpt-score-val">⭐ ${stars}</div>
+          <div class="rpt-score-lbl">stars</div>
+        </div>
+      </div>
+
+      <!-- Metric cards row -->
+      <div class="rpt-metrics">
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${tasks}</div>
+          <div class="rpt-metric-lbl">Tasks</div>
+        </div>
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${money}</div>
+          <div class="rpt-metric-lbl">Earned</div>
+        </div>
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${faith}</div>
+          <div class="rpt-metric-lbl">Prayers</div>
+        </div>
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${days}/${maxDays}</div>
+          <div class="rpt-metric-lbl">Active Days</div>
+        </div>
+      </div>
+
+      <!-- Progress bars -->
+      <div class="rpt-bars">
+        <div class="rpt-bar-row">
+          <div class="rpt-bar-label">📋 Tasks <span class="rpt-bar-pct">${taskPct}%</span></div>
+          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${taskPct}%;background:${getColor(taskPct)};"></div></div>
+        </div>
+        <div class="rpt-bar-row">
+          <div class="rpt-bar-label">⭐ Stars <span class="rpt-bar-pct">${starPct}%</span></div>
+          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${starPct}%;background:${getColor(starPct)};"></div></div>
+        </div>
+        <div class="rpt-bar-row">
+          <div class="rpt-bar-label">📅 Active Days <span class="rpt-bar-pct">${activePct}%</span></div>
+          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${activePct}%;background:${getColor(activePct)};"></div></div>
+        </div>
+        ${faith > 0 ? `
+        <div class="rpt-bar-row">
+          <div class="rpt-bar-label">🕌 Prayers <span class="rpt-bar-pct">${faithPct}%</span></div>
+          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${faithPct}%;background:${getColor(faithPct)};"></div></div>
+        </div>` : ""}
+      </div>
+
+      <!-- Donut chart -->
+      <div style="display:flex;align-items:center;gap:16px;padding:12px 0 4px;">
+        <canvas id="${chartId}" width="90" height="90" style="flex-shrink:0;"></canvas>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem;font-weight:700;color:var(--color-text);margin-bottom:6px;">Breakdown</div>
+          <div class="rpt-legend-item"><span style="background:#6C63FF;"></span>Tasks — ${tasks}</div>
+          <div class="rpt-legend-item"><span style="background:#FF9F43;"></span>Prayers — ${faith}</div>
+          <div class="rpt-legend-item"><span style="background:#1a936f;"></span>Jobs — ${jobs}</div>
+        </div>
+      </div>
+
+      ${report.topTask ? `<div class="rpt-top-task">🏆 Best this ${period==="week"?"week":"month"}: <strong>${report.topTask}</strong></div>` : ""}
+      ${report.pendingTasks > 0 ? `<div class="rpt-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} waiting approval</div>` : ""}
+    </div>`;
+
+    // Draw donut after render
+    setTimeout(() => {
+      const canvas = document.getElementById(chartId);
+      if (!canvas) return;
+      const ctx    = canvas.getContext("2d");
+      const vals   = [Math.max(tasks,1), Math.max(faith,0), Math.max(jobs,0)];
+      const colors = ["#6C63FF","#FF9F43","#1a936f"];
+      const total  = vals.reduce((s,v)=>s+v,0);
+      let start    = -Math.PI/2;
+      const cx = 45, cy = 45, r = 38, inner = 22;
+      ctx.clearRect(0,0,90,90);
+      vals.forEach((v,i) => {
+        const angle = (v/total)*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r,start,start+angle);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        start += angle;
+      });
+      // Inner circle (donut hole)
+      ctx.beginPath();
+      ctx.arc(cx,cy,inner,0,Math.PI*2);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--color-surface")||"#fff";
+      ctx.fill();
+      // Center text
+      ctx.fillStyle = "#333";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(stars+"⭐", cx, cy);
+    }, 100);
+  });
+
+  el.innerHTML = html;
 }
+
+// ── Award top performer ──────────────────────────────────────
+window.awardTopPerformer = async (kidId, kidName, period) => {
+  const btn = document.querySelector(".rpt-award-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Awarding…"; }
+  try {
+    await addBonusStars(kidId, 50);
+    const now2 = new Date();
+    const ws = new Date(now2); ws.setDate(now2.getDate() - now2.getDay() + 1);
+    const key = `sk_top_award_${period}_${ws.toDateString()}_${kidId}`;
+    localStorage.setItem(key, "1");
+    toast(`🏆 +50 bonus stars awarded to ${kidName}!`, "success");
+    celebrate(`🏆 ${kidName} is the Top Performer!
++50 Bonus Stars Awarded!`, "🏆⭐🌟");
+    setTimeout(() => loadWeeklyReports(), 1000);
+  } catch(e) { toast("Failed to award stars.", "error"); console.error(e); }
+};
 
 window.switchReportPeriod = (period) => {
   const sel = document.getElementById("report-period-select");

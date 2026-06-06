@@ -2683,6 +2683,15 @@ document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
   toast("See you soon! 👋","info");
 });
 
+// ── Exit Rush Overlay (without ending the session) ────────────
+// Hides the overlay so the kid can tap Home or Switch Kid.
+// The rush session keeps running in Firestore — re-entering shows it again.
+window.exitRushEarly = () => {
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  // Keep kidRushInterval running so timer stays alive in background
+  // If kid comes back via Switch, checkForActiveRush will re-show overlay
+};
+
 // Photo fullscreen
 window.showPhotoFull = (url) => {
   const el = document.getElementById("photo-fullscreen");

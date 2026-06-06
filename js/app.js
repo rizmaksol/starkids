@@ -2073,7 +2073,7 @@ window.saveCroppedPhoto = async () => {
     toast("Photo updated! ✅", "success");
     closeCropModal();
     kidsList = await getKidsByParent(currentParent.uid);
-    renderKidsList();
+    renderKids();
   } catch(err) {
     toast("Failed to save photo.", "error");
     console.error(err);

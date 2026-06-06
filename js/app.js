@@ -744,7 +744,7 @@ window.showTab = (tab) => {
   if (tab==="values")    loadValuesTab();
   if (tab==="report")    loadWeeklyReports();
   if (tab==="profile")   loadProfileTab();
-  if (tab==="rush")      loadRushTab();
+  if (tab==="rush")      { loadRushTab(); loadRushHistory(); }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1660,6 +1660,10 @@ async function loadRushTab() {
 // ── Start rush ────────────────────────────────────────────────
 window.startRushSession = async (sessionId) => {
   if (!kidsList.length) { toast("Add kids first!", "error"); return; }
+  if (getRushDoneToday(sessionId)) {
+    toast("This rush was already done today! ✅ Resets at midnight.", "info");
+    return;
+  }
   const session = DEFAULT_RUSH_SESSIONS[sessionId] || customRushSessions.find(s=>s.id===sessionId);
   if (!session) return;
   currentSession  = session;
@@ -1739,6 +1743,12 @@ function startRushMonitor(session, rushId) {
         celebrate("🏆 All kids finished the rush!", "🌅🏆🌟");
         toast("🏆 All kids completed the rush!", "success");
         await endRush(rushId);
+        if (currentSession) {
+          markRushDoneToday(currentSession.id);
+          saveRushHistory(rush, currentSession, progress);
+        }
+        loadRushTab();
+        loadRushHistory();
       } else if (remaining === 0) {
         clearInterval(rushIntervalId);
         toast("⏰ Rush time\'s up!", "info");
@@ -1748,10 +1758,21 @@ function startRushMonitor(session, rushId) {
 }
 
 window.stopRushSession = async () => {
-  if (activeRushId) await endRush(activeRushId);
+  if (activeRushId) {
+    // Save history before ending
+    try {
+      const fm   = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const snap = await fm.getDoc(fm.doc(db,"activeRush",activeRushId));
+      if (snap.exists() && currentSession) saveRushHistory(snap.data(), currentSession, snap.data().progress||{});
+    } catch(e){}
+    await endRush(activeRushId);
+  }
+  if (currentSession) markRushDoneToday(currentSession.id);
   activeRushId = null; currentSession = null;
   if (rushIntervalId) clearInterval(rushIntervalId);
   document.getElementById("rush-monitor").style.display = "none";
+  loadRushTab();
+  loadRushHistory();
   toast("Rush ended.", "info");
 };
 
@@ -1915,6 +1936,48 @@ window.removeRushTask = (idx) => {
   renderEditRushTasks();
 };
 
+// ── Change kid photo ─────────────────────────────────────────
+window.changeKidPhoto = async (kidId) => {
+  const input = document.createElement("input");
+  input.type  = "file";
+  input.accept = "image/*";
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        // Compress to 400px circle
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = 400;
+          const ctx = canvas.getContext("2d");
+          // Draw circular crop
+          ctx.beginPath();
+          ctx.arc(200, 200, 200, 0, Math.PI * 2);
+          ctx.clip();
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 400, 400);
+          const compressed = canvas.toDataURL("image/jpeg", 0.65);
+          // Save to Firestore
+          const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+          await updateDoc(doc(db,"kids",kidId), { photoURL: compressed });
+          toast("Photo updated! ✅", "success");
+          // Reload kids
+          kidsList = await getKidsForParent(currentParent.uid);
+          renderKidsList();
+        };
+        img.src = ev.target.result;
+      } catch(err) { toast("Failed to update photo.", "error"); }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+};
+
 window.renderCustomRushSessions = function() {
   const container = document.getElementById("custom-rush-sessions");
   if (!container) return;
@@ -2003,6 +2066,77 @@ window.deleteRushSession = async (sessionId) => {
 };
 
 window.editRushSession = window.openEditRush;
+
+// ── Rush History ─────────────────────────────────────────────
+function saveRushHistory(rush, session, progress) {
+  try {
+    const history = JSON.parse(localStorage.getItem("sk_rush_history")||"[]");
+    const entry = {
+      date:      new Date().toLocaleDateString(),
+      time:      new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}),
+      sessionId: session.id,
+      label:     session.label,
+      emoji:     session.emoji,
+      kids: kidsList.map(kid => {
+        const kp    = progress[kid.id] || {};
+        const done  = Object.values(kp).filter(p=>p.done).length;
+        const stars = Object.values(kp).reduce((s,p)=>s+(p.stars||0),0);
+        return { name:kid.name, done, total:(rush.tasks||[]).length, stars };
+      })
+    };
+    history.unshift(entry); // newest first
+    // Keep last 30 entries
+    localStorage.setItem("sk_rush_history", JSON.stringify(history.slice(0,30)));
+  } catch(e) { console.error("saveRushHistory:", e); }
+}
+
+function loadRushHistory() {
+  const el = document.getElementById("rush-history-list");
+  if (!el) return;
+  try {
+    const history = JSON.parse(localStorage.getItem("sk_rush_history")||"[]");
+    if (!history.length) { el.innerHTML = "<p style='color:var(--color-muted);font-size:0.82rem;text-align:center;padding:12px;'>No rush history yet. Complete your first rush!</p>"; return; }
+    el.innerHTML = history.map(h => `
+      <div class="rush-history-entry">
+        <div class="rush-history-header">
+          <span class="rush-history-emoji">${h.emoji}</span>
+          <div>
+            <div class="rush-history-label">${h.label}</div>
+            <div class="rush-history-date">${h.date} at ${h.time}</div>
+          </div>
+        </div>
+        <div class="rush-history-kids">
+          ${h.kids.map(k => `
+            <div class="rush-history-kid">
+              <span>${k.name}</span>
+              <span class="${k.done===k.total?"rush-kid-done":"rush-kid-partial"}">${k.done===k.total?"✅":"⚠️"} ${k.done}/${k.total} tasks</span>
+              <span class="rush-kid-stars">⭐ ${k.stars}</span>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+  } catch(e) { el.innerHTML = ""; }
+}
+
+// ── Daily Rush Tracking ──────────────────────────────────────
+function getRushDoneToday(sessionId) {
+  try {
+    const key  = "sk_rush_done_" + sessionId;
+    const data = JSON.parse(localStorage.getItem(key) || "{}");
+    const today = new Date().toDateString();
+    return data.date === today;
+  } catch(e) { return false; }
+}
+
+function markRushDoneToday(sessionId) {
+  try {
+    const key  = "sk_rush_done_" + sessionId;
+    localStorage.setItem(key, JSON.stringify({ date: new Date().toDateString() }));
+  } catch(e) {}
+}
+
+function clearRushDoneToday(sessionId) {
+  localStorage.removeItem("sk_rush_done_" + sessionId);
+}
 
 // ── Rush start sound ─────────────────────────────────────────
 function playRushStartSound() {

@@ -735,7 +735,13 @@ window.addRushTask = window.addRushTask || function() {
 
 <!-- ══════════════════════════ KID DASHBOARD ═════════════════ -->
 <section class="screen" id="screen-kid-dashboard">
-  <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">Exit</button></div>
+  <div class="app-bar w-full">
+    <span class="app-logo">Star<span>Kids</span></span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="btn-switch-kid" class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="showSwitchKidPanel()" title="Switch Kid">👤 Switch</button>
+      <button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">🏠 Home</button>
+    </div>
+  </div>
 
   <div class="kid-dashboard-hero w-full">
     <div id="prayer-times-bar" class="prayer-times-bar" style="display:none;"></div>
@@ -978,6 +984,16 @@ window.addRushTask = window.addRushTask || function() {
       <input type="hidden" id="praise-emoji-select" value="💛" />
     </div>
     <div class="modal-actions"><button class="btn btn--secondary" onclick="closeSendPraise()">Cancel</button><button class="btn btn--primary" id="btn-send-praise">Send Praise 💛</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SWITCH KID PANEL ═════════════════ -->
+<div id="switch-kid-panel" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.6);" onclick="hideSwitchKidPanel()">
+  <div style="position:absolute;bottom:0;left:0;right:0;background:var(--color-surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;" onclick="event.stopPropagation()">
+    <div style="width:40px;height:4px;background:var(--color-border);border-radius:2px;margin:0 auto 16px;"></div>
+    <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;margin-bottom:16px;text-align:center;">Switch Kid</div>
+    <div id="switch-kid-list" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;"></div>
+    <button class="btn btn--secondary" style="width:100%;margin-top:16px;" onclick="hideSwitchKidPanel()">Cancel</button>
   </div>
 </div>
 

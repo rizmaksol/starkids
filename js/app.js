@@ -225,7 +225,12 @@ function renderKids() {
   if (!list) return;
   if (!kidsList.length) { list.innerHTML = `<p class="empty-state">No kids yet. Add your first kid! 👶</p>`; return; }
   list.innerHTML = kidsList.map(kid => {
-    const av = kid.photoURL ? `<img src="${kid.photoURL}" class="kid-card__photo" />` : `<div class="kid-card__avatar">${kid.avatarEmoji||"🌟"}</div>`;
+    const av = kid.photoURL
+      ? `<img src="${kid.photoURL}" class="kid-card__photo" onclick="changeKidPhoto('${kid.id}')" title="Tap to change photo" style="cursor:pointer;" />`
+      : `<div class="kid-card__avatar" onclick="changeKidPhoto('${kid.id}')" title="Tap to add photo" style="cursor:pointer;">
+           <span>${kid.avatarEmoji||"🌟"}</span>
+           <span class="kid-photo-add">📷</span>
+         </div>`;
     return `<div class="kid-card" data-id="${kid.id}">${av}
       <div class="kid-card__info">
         <div class="kid-card__name">${kid.name}</div>

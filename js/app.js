@@ -36,6 +36,17 @@ const DEFAULT_RUSH_SESSIONS = {
       {id:"a4",title:"Pack School Bag",emoji:"🎒", stars:3},
       {id:"a5",title:"Rest Time",      emoji:"😴", stars:2},
     ]
+  },
+  bedtime: {
+    id:"bedtime", label:"🌙 Bed Time", emoji:"🌙",
+    color:"#114b5f", windowMinutes: 30,
+    tasks:[
+      {id:"b1",title:"Have Dinner",    emoji:"🍽", stars:2},
+      {id:"b2",title:"Brush Teeth",    emoji:"🦷", stars:2},
+      {id:"b3",title:"Put on Pyjamas", emoji:"👕", stars:1},
+      {id:"b4",title:"Tidy Your Room", emoji:"🧹", stars:3},
+      {id:"b5",title:"Read or Quran",  emoji:"📖", stars:3},
+    ]
   }
 };
 
@@ -757,11 +768,9 @@ onAuthChange(async user => {
 });
 
 function goToParentDashboard() {
-  // Load custom rush sessions in background
+  // Load custom rush sessions silently — don't auto-save anything
   loadCustomRushSessions().then(() => {
-    if (document.getElementById("tab-rush")?.classList.contains("active")) {
-      renderCustomRushSessions();
-    }
+    renderCustomRushSessions();
   }).catch(()=>{});
   document.getElementById("parent-name-display").textContent = `Welcome, ${currentParent.name}! 👋`;
   showScreen("screen-parent-dashboard"); showTab("kids"); loadKids();
@@ -1631,7 +1640,7 @@ let kidRushInterval = null;
 
 // ── Load rush tab ─────────────────────────────────────────────
 async function loadRushTab() {
-  ["morning","afterschool"].forEach(sid => {
+  ["morning","afterschool","bedtime"].forEach(sid => {
     const s  = DEFAULT_RUSH_SESSIONS[sid];
     const el = document.getElementById(`rush-${sid}-tasks`);
     if (!el) return;

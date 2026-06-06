@@ -2169,6 +2169,30 @@ function openCropModal(src) {
   // Zoom slider
   zoomEl.oninput = applyCropTransform;
 
+  // Pinch to zoom on mobile
+  let _pinchDist = 0;
+  container.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 2) {
+      _pinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, {passive:true});
+  container.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = dist - _pinchDist;
+      _pinchDist  = dist;
+      const cur   = parseInt(zoomEl.value);
+      zoomEl.value = Math.min(300, Math.max(100, cur + delta * 0.5));
+      applyCropTransform();
+    }
+  }, {passive:true});
+
   // Mouse drag
   container.onmousedown = (e) => {
     _cropDrag = true; _cropStartX = e.clientX; _cropStartY = e.clientY;
@@ -2654,6 +2678,9 @@ function clearKidSession()    { localStorage.removeItem("sk_kid"); }
 
 document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
   clearKidSession(); currentKid=null;
+  if (window._rushPollInterval) clearInterval(window._rushPollInterval);
+  if (kidRushInterval) clearInterval(kidRushInterval);
+  document.getElementById("kid-rush-overlay").style.display="none";
   document.getElementById("kid-code-input").value="";
   showScreen("screen-home");
   renderSavedKidsSelector();

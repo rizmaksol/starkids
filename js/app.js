@@ -76,13 +76,10 @@ async function getActiveRushForKid(parentId) {
   // Use getDocs from tasks.js import chain (already loaded)
   const firestoreModule = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
   const { getDocs, collection, query, where } = firestoreModule;
-  console.log("Checking activeRush for parentId:", parentId);
   const q    = query(collection(db,"activeRush"), where("parentId","==",parentId), where("status","==","active"));
   const snap = await getDocs(q);
-  console.log("Active rush docs found:", snap.size);
   if (snap.empty) return null;
   const data = {id:snap.docs[0].id, ...snap.docs[0].data()};
-  console.log("Rush data:", data.sessionId, "kidIds:", data.kidIds, "status:", data.status);
   return data;
 }
 
@@ -2497,18 +2494,17 @@ async function checkTopPerformerAward(kid) {
 
 window.checkForActiveRush = async (kid) => {
   try {
-    console.log("checkForActiveRush for:", kid.name, "parentId:", kid.parentId);
     const rush = await getActiveRushForKid(kid.parentId);
-    if (!rush) { console.log("No active rush found"); return; }
-    if (!rush.kidIds?.includes(kid.id)) { console.log("Kid not in rush kidIds:", rush.kidIds); return; }
-    if (rush.status !== "active") { console.log("Rush status:", rush.status); return; }
+    if (!rush) return;
+    if (!rush.kidIds?.includes(kid.id)) return;
+    if (rush.status !== "active") return;
     const progress  = rush.progress?.[kid.id] || {};
     const rushTasks = rush.tasks || [];
     // Only consider done if there are tasks AND all are completed
     const allDone   = rushTasks.length > 0 && rushTasks.every(t => progress[t?.id]?.done);
-    if (allDone) { console.log("Kid already finished rush"); return; }
-    if (rushTasks.length === 0) { console.log("Rush has no tasks — skipping"); return; }
-    if (kidRushId === rush.id) { console.log("Rush already showing"); return; }
+    if (allDone) return;
+    if (rushTasks.length === 0) return;
+    if (kidRushId === rush.id) return;
     console.log("✅ Showing rush overlay for:", kid.name);
     kidRushId   = rush.id;
     kidRushData = rush;
@@ -2747,6 +2743,42 @@ window.removeSavedKidProfile = (kidId) => {
   removeSavedKid(kidId);
   if (currentKid?.id === kidId) clearKidSession();
   renderSavedKidsSelector();
+};
+
+// ── Switch Kid Panel ───────────────────────────────────────────
+window.showSwitchKidPanel = () => {
+  const panel = document.getElementById("switch-kid-panel");
+  const list  = document.getElementById("switch-kid-list");
+  if (!panel || !list) return;
+
+  const kids = window.SK ? window.SK.getKids() : [];
+  if (!kids.length) { toast("No saved kids. Use the home screen to add kids.", "info"); return; }
+
+  list.innerHTML = kids.map(k => {
+    const av = k.photo
+      ? `<img src="${k.photo}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);" />`
+      : `<span style="font-size:2rem;">${k.emoji || "🌟"}</span>`;
+    const isCurrent = currentKid && currentKid.id === k.id;
+    return `<div onclick="window.switchToKid('${k.id}','${k.code}')"
+      style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;opacity:${isCurrent ? "0.5" : "1"};">
+      <div style="width:60px;height:60px;border-radius:50%;background:var(--color-bg-2);display:flex;align-items:center;justify-content:center;overflow:hidden;">${av}</div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--color-text);">${k.name}${isCurrent ? " ✓" : ""}</div>
+    </div>`;
+  }).join("");
+
+  panel.style.display = "block";
+};
+
+window.hideSwitchKidPanel = () => {
+  const panel = document.getElementById("switch-kid-panel");
+  if (panel) panel.style.display = "none";
+};
+
+window.switchToKid = async (kidId, code) => {
+  window.hideSwitchKidPanel();
+  if (currentKid && currentKid.id === kidId) return; // already on this kid
+  toast("Switching kid…", "info");
+  await window.loginSavedKid(kidId, code);
 };
 
 

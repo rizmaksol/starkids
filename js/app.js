@@ -2567,7 +2567,7 @@ function showKidRushOverlay(kid, rush) {
               <div style="color:#fff;font-weight:600;font-size:0.9rem;">${t.title}</div>
               <div style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:2px;">up to ${t.stars*3}⭐</div>
             </div>
-            <button onclick="completeKidRushTask('${t.id}',${t.stars},${startAtMs},${totalSec})"
+            <button onclick="completeKidRushTask('${t.id}',${t.stars},${kidRushData.endAtMs||0},${totalSec})"
               style="background:#FF9F43;border:none;border-radius:10px;padding:8px 14px;color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;">
               ✅ Done!
             </button>
@@ -2626,11 +2626,13 @@ You earned ${totalStars}⭐!`, "🌅🏆🌟");
   }, 1000);
 }
 
-window.completeKidRushTask = async (taskId, baseStars, startAtMs, totalSecs) => {
+window.completeKidRushTask = async (taskId, baseStars, endAtMs, totalSecs) => {
   if (!kidRushId || !currentKid) return;
   try {
-    const elapsed = Math.floor((Date.now() - startAtMs) / 1000);
-    const earned  = calculateRushStars(baseStars, elapsed, totalSecs);
+    // Calculate elapsed from endAtMs — works reliably across all devices
+    const remaining = Math.max(0, Math.floor((endAtMs - Date.now()) / 1000));
+    const elapsed   = Math.max(0, totalSecs - remaining);
+    const earned    = calculateRushStars(baseStars, elapsed, totalSecs);
     const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await updateDoc(fsDoc(db, "activeRush", kidRushId), {
       [`progress.${currentKid.id}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}

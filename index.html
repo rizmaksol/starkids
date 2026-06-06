@@ -556,6 +556,23 @@ window.addRushTask = window.addRushTask || function() {
         </div>
       </div>
 
+      <!-- Bed Time -->
+      <div class="rush-card rush-card--bedtime">
+        <div class="rush-card-top" style="background:#114b5f;">
+          <div class="rush-card-icon">🌙</div>
+          <div class="rush-card-info">
+            <div class="rush-card-title">Bed Time</div>
+            <div class="rush-card-sub">Evening wind-down routine</div>
+          </div>
+        </div>
+        <div class="rush-card-window" id="rush-bedtime-window">⏱ 30 min shared window</div>
+        <div class="rush-tasks-preview" id="rush-bedtime-tasks"></div>
+        <div class="rush-card-actions">
+          <button class="rush-btn-edit" onclick="openEditRush('bedtime')">✏️ Edit</button>
+          <button class="rush-btn-start" onclick="startRushSession('bedtime')">▶ Start Rush</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- Custom Rush Sessions -->

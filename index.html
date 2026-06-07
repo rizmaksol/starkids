@@ -270,7 +270,7 @@ window.addRushTask = window.addRushTask || function() {
   <div id="saved-kids-row" style="display:none;" class="w-full" style="max-width:480px;"></div>
 
   <div class="home-buttons">
-    <button class="btn btn--primary" onclick="goToParentAuth('login')">👨‍👩‍👧 I'm a Parent</button>
+    <button class="btn btn--primary" onclick="openParentPIN()">🔒 Parent Portal</button>
     <div class="divider">— or —</div>
     <button class="btn btn--kid" onclick="goToKidLogin()">⭐ I'm a Kid!</button>
   </div>
@@ -1140,7 +1140,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=23"></script>
+<script type="module" src="./js/app.js?v=24"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately
@@ -1228,6 +1228,70 @@ window.addRushTask = window.addRushTask || function() {
   };
   document.getElementById("kid-code-input")?.addEventListener("input", e => { if(e.target.value.length>6) e.target.value=e.target.value.slice(0,6); });
 </script>
+<!-- ══════════════════════ PIN OVERLAY ═══════════════════════ -->
+<div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--color-bg);border-radius:24px;padding:28px 24px;max-width:320px;width:100%;text-align:center;position:relative;">
+    <button onclick="closePINOverlay()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--color-muted);">✕</button>
+    <div style="font-size:2rem;margin-bottom:8px;">🔒</div>
+    <div id="pin-overlay-title" style="font-size:1.1rem;font-weight:800;color:var(--color-text);margin-bottom:4px;">Parent Portal</div>
+    <div id="pin-overlay-sub" style="font-size:0.8rem;color:var(--color-muted);margin-bottom:20px;">Enter your 4-digit PIN</div>
+    <!-- PIN dots -->
+    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:24px;" id="pin-dots">
+      <div class="pin-dot" id="pin-dot-0"></div>
+      <div class="pin-dot" id="pin-dot-1"></div>
+      <div class="pin-dot" id="pin-dot-2"></div>
+      <div class="pin-dot" id="pin-dot-3"></div>
+    </div>
+    <!-- Number pad -->
+    <div class="pin-pad" id="pin-pad">
+      <button class="pin-btn" onclick="pinInput('1')">1</button>
+      <button class="pin-btn" onclick="pinInput('2')">2</button>
+      <button class="pin-btn" onclick="pinInput('3')">3</button>
+      <button class="pin-btn" onclick="pinInput('4')">4</button>
+      <button class="pin-btn" onclick="pinInput('5')">5</button>
+      <button class="pin-btn" onclick="pinInput('6')">6</button>
+      <button class="pin-btn" onclick="pinInput('7')">7</button>
+      <button class="pin-btn" onclick="pinInput('8')">8</button>
+      <button class="pin-btn" onclick="pinInput('9')">9</button>
+      <button class="pin-btn pin-btn--ghost" onclick="pinForgot()" id="pin-forgot-btn">Forgot?</button>
+      <button class="pin-btn" onclick="pinInput('0')">0</button>
+      <button class="pin-btn pin-btn--ghost" onclick="pinBackspace()">⌫</button>
+    </div>
+    <div id="pin-error" style="color:#FF6B6B;font-size:0.8rem;margin-top:12px;min-height:20px;"></div>
+    <div id="pin-lockout" style="display:none;color:#FF6B6B;font-size:0.85rem;margin-top:8px;font-weight:700;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ PIN SETUP OVERLAY ═════════════════════ -->
+<div id="pin-setup-overlay" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--color-bg);border-radius:24px;padding:28px 24px;max-width:320px;width:100%;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">🔐</div>
+    <div id="pin-setup-title" style="font-size:1.1rem;font-weight:800;color:var(--color-text);margin-bottom:4px;">Set Your Parent PIN</div>
+    <div id="pin-setup-sub" style="font-size:0.8rem;color:var(--color-muted);margin-bottom:20px;">Choose a 4-digit PIN to protect the parent portal</div>
+    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:24px;" id="pin-setup-dots">
+      <div class="pin-dot" id="pin-setup-dot-0"></div>
+      <div class="pin-dot" id="pin-setup-dot-1"></div>
+      <div class="pin-dot" id="pin-setup-dot-2"></div>
+      <div class="pin-dot" id="pin-setup-dot-3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinSetupInput('1')">1</button>
+      <button class="pin-btn" onclick="pinSetupInput('2')">2</button>
+      <button class="pin-btn" onclick="pinSetupInput('3')">3</button>
+      <button class="pin-btn" onclick="pinSetupInput('4')">4</button>
+      <button class="pin-btn" onclick="pinSetupInput('5')">5</button>
+      <button class="pin-btn" onclick="pinSetupInput('6')">6</button>
+      <button class="pin-btn" onclick="pinSetupInput('7')">7</button>
+      <button class="pin-btn" onclick="pinSetupInput('8')">8</button>
+      <button class="pin-btn" onclick="pinSetupInput('9')">9</button>
+      <button class="pin-btn pin-btn--ghost" onclick="pinSetupBack()">←</button>
+      <button class="pin-btn" onclick="pinSetupInput('0')">0</button>
+      <button class="pin-btn pin-btn--ghost" onclick="pinSetupBackspace()">⌫</button>
+    </div>
+    <div id="pin-setup-error" style="color:#FF6B6B;font-size:0.8rem;margin-top:12px;min-height:20px;"></div>
+  </div>
+</div>
+
 <script>
 // ── Emoji Picker ──────────────────────────────────────────────
 const EMOJI_CATS = {

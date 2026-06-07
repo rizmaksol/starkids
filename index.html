@@ -409,7 +409,21 @@ window.addRushTask = window.addRushTask || function() {
       </div>
       <div class="form-group"><label>Kid's Name</label><input id="kid-name" type="text" placeholder="e.g. Ahmed" /></div>
       <div class="form-group"><label>Age</label><input id="kid-age" type="number" min="1" max="18" placeholder="e.g. 8" /></div>
-      <div class="form-group"><label>Fallback Emoji</label><div class="avatar-row"><input id="kid-avatar" type="text" value="🌟" maxlength="2" /><span class="avatar-preview" id="avatar-preview">🌟</span></div></div>
+      <div class="form-group">
+        <label>Avatar Emoji <span style="font-size:0.8rem;color:var(--color-text-2);">(used if no photo)</span></label>
+        <div class="emoji-picker-wrap">
+          <div class="emoji-picker-selected" id="emoji-picker-selected">🌟</div>
+          <input type="hidden" id="kid-avatar" value="🌟" />
+          <div class="emoji-picker-cats">
+            <button type="button" class="emoji-cat-btn active" onclick="showEmojiCat('faces',this)">😊</button>
+            <button type="button" class="emoji-cat-btn" onclick="showEmojiCat('animals',this)">🐯</button>
+            <button type="button" class="emoji-cat-btn" onclick="showEmojiCat('stars',this)">⭐</button>
+            <button type="button" class="emoji-cat-btn" onclick="showEmojiCat('sports',this)">⚽</button>
+            <button type="button" class="emoji-cat-btn" onclick="showEmojiCat('food',this)">🍕</button>
+          </div>
+          <div class="emoji-picker-grid" id="emoji-picker-grid"></div>
+        </div>
+      </div>
       <button id="btn-add-kid" class="btn btn--accent mt-8">Add Kid</button>
     </div>
   </div>
@@ -1093,7 +1107,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=17"></script>
+<script type="module" src="./js/app.js?v=19"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately
@@ -1180,6 +1194,40 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("praise-emoji-select").value = emoji;
   };
   document.getElementById("kid-code-input")?.addEventListener("input", e => { if(e.target.value.length>6) e.target.value=e.target.value.slice(0,6); });
+</script>
+<script>
+// ── Emoji Picker ──────────────────────────────────────────────
+const EMOJI_CATS = {
+  faces:   ["😊","😄","😎","🤩","😍","🥳","😇","🤗","😜","😏","🤓","😋","🥰","😬","🤪","😤","😴","🥹","😌","🫡","🤭","🫶","👶","🧒","👦","👧","🧑","👩","👨","🧔","👸","🤴"],
+  animals: ["🐯","🦁","🐻","🐼","🐨","🦊","🐺","🐸","🐵","🦄","🐲","🦋","🦅","🦜","🐙","🦈","🐬","🦒","🦓","🐘","🦘","🐆","🦝","🦔","🐧","🦩","🐢","🦎","🦀","🐡"],
+  stars:   ["🌟","⭐","💫","✨","🏆","🥇","🎖","👑","🎯","🎪","🎨","🎭","🎬","🪄","🎠","🏅","🥈","🥉","🎗","🎀","🎁","🎊","🎉","🎈","🔥","⚡","💥","🌈","☀️","🌙"],
+  sports:  ["⚽","🏀","🏈","⚾","🎾","🏐","🏉","🎱","🏓","🏸","🥊","🏋️","🤸","⛹️","🏊","🚴","🧗","🤺","🏇","🛹","🛼","🛷","🎿","🏒","🥋","🤼","🧘","🏄","🤽","🚵"],
+  food:    ["🍕","🍔","🍟","🌮","🌯","🍜","🍣","🍦","🎂","🍰","🧁","🍩","🍪","🍫","🍬","🍭","🍓","🍕","🍉","🍇","🥑","🥕","🌽","🍄","🧀","🥚","🍳","🥞","🧇","🍱"]
+};
+
+function showEmojiCat(cat, btn) {
+  // Update active tab
+  document.querySelectorAll(".emoji-cat-btn").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  // Render grid
+  const grid = document.getElementById("emoji-picker-grid");
+  if (!grid) return;
+  grid.innerHTML = EMOJI_CATS[cat].map(e =>
+    `<button type="button" class="emoji-grid-btn" onclick="selectKidEmoji('${e}')">${e}</button>`
+  ).join("");
+}
+
+function selectKidEmoji(emoji) {
+  document.getElementById("kid-avatar").value = emoji;
+  document.getElementById("emoji-picker-selected").textContent = emoji;
+  // highlight selected
+  document.querySelectorAll(".emoji-grid-btn").forEach(b => {
+    b.classList.toggle("emoji-grid-btn--active", b.textContent === emoji);
+  });
+}
+
+// Init on load
+document.addEventListener("DOMContentLoaded", () => showEmojiCat("faces", null));
 </script>
 </body>
 </html>

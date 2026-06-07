@@ -269,7 +269,32 @@ async function loadPendingApprovals() {
   const el    = document.getElementById("approvals-list");
   const badge = document.getElementById("approvals-badge");
   const total = pending.length + allGoals.length;
-  if (badge) { badge.textContent = total||""; badge.style.display = total?"inline-flex":"none"; }
+
+  // ── Notification: sound + toast when new approvals arrive ──
+  const prevCount = window._lastApprovalCount ?? -1;
+  if (total > 0 && total > prevCount) {
+    playApprovalDing();
+    if (prevCount >= 0) {
+      // New submission came in while parent was on dashboard
+      const newCount = total - prevCount;
+      toast(`🔔 ${newCount} new task${newCount>1?"s":""} waiting for your approval!`, "info");
+    } else if (prevCount === -1) {
+      // First load — just show toast, don't be too noisy
+      setTimeout(() => toast(`🔔 ${total} task${total>1?"s":""} waiting for approval!`, "info"), 800);
+    }
+  }
+  window._lastApprovalCount = total;
+
+  if (badge) {
+    badge.textContent = total || "";
+    badge.style.display = total ? "inline-flex" : "none";
+    // Pulse animation when there are pending items
+    if (total > 0) {
+      badge.classList.add("badge--pulse");
+    } else {
+      badge.classList.remove("badge--pulse");
+    }
+  }
   if (!el) return;
   let html = "";
   if (pending.length) {
@@ -854,6 +879,7 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
 document.getElementById("btn-logout")?.addEventListener("click", async () => {
   clearCredentials();
   clearKidSession();
+  window._lastApprovalCount = -1;
   await logoutParent();
   toast("Logged out!", "info");
 });
@@ -2619,6 +2645,27 @@ function playRushStartSound() {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + times[i] + 0.14);
       osc.start(ctx.currentTime + times[i]);
       osc.stop(ctx.currentTime + times[i] + 0.15);
+    });
+  } catch(e) {}
+}
+
+// ── Approval notification ding ────────────────────────────────
+function playApprovalDing() {
+  try {
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    // Warm two-tone ding — friendly, not alarming
+    const notes = [880, 1108];
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.18);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.18 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.5);
+      osc.start(ctx.currentTime + i * 0.18);
+      osc.stop(ctx.currentTime + i * 0.18 + 0.55);
     });
   } catch(e) {}
 }

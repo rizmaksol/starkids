@@ -791,9 +791,14 @@ onAuthChange(async user => {
       currentParent = { uid: user.uid, name: "Parent", email: user.email };
       console.error("Profile load error:", e);
     }
-    goToParentDashboard();
+    if (window._justLoggedIn) {
+      window._justLoggedIn = false;
+      if (!hasPINSet()) openPINSetup();
+      else openParentPIN();
+    }
+    // else: stay on home screen — Firebase Auth restored silently in background
   } else { currentParent = null; showScreen("screen-home"); }
-});
+});;
 
 function goToParentDashboard() {
   // Load custom rush sessions silently — don't auto-save anything
@@ -851,7 +856,9 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
     await seedDefaultRewards(currentParent.uid);
     familyValues = await seedDefaultValues(currentParent.uid);
     toast("Account created! Welcome to StarKids! 🌟","success");
-    goToParentDashboard();
+    window._justLoggedIn = true;
+    if (!hasPINSet()) openPINSetup();
+    else goToParentDashboard();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
 
@@ -872,7 +879,10 @@ document.getElementById("btn-login")?.addEventListener("click", async () => {
     financeSettings=await getFinanceSettings(currentParent.uid);
     await seedDefaultRewards(currentParent.uid);
     familyValues = await seedDefaultValues(currentParent.uid);
-    toast("Welcome back! 🌟","success"); goToParentDashboard();
+    toast("Welcome back! 🌟","success");
+    window._justLoggedIn = false;
+    if (!hasPINSet()) openPINSetup();
+    else openParentPIN();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
 
@@ -1246,10 +1256,54 @@ async function loadTaskPhoto(taskId) {
   } catch(e) { console.error("loadTaskPhoto:", e); return null; }
 }
 
+// ── Offline queue ─────────────────────────────────────────────
+window._offlineQueue = JSON.parse(localStorage.getItem("sk_offline_queue")||"[]");
+
+function saveOfflineQueue() {
+  localStorage.setItem("sk_offline_queue", JSON.stringify(window._offlineQueue));
+}
+
+async function flushOfflineQueue() {
+  if (!navigator.onLine || !window._offlineQueue.length) return;
+  const queue = [...window._offlineQueue];
+  window._offlineQueue = [];
+  saveOfflineQueue();
+  for (const item of queue) {
+    try {
+      if (item.type === "submitTask") {
+        await submitTaskWithPhoto(item.taskId, item.photo || null);
+      }
+    } catch(e) {
+      // Re-queue if still failing
+      window._offlineQueue.push(item);
+      saveOfflineQueue();
+    }
+  }
+  if (queue.length) toast("✅ Synced offline tasks!", "success");
+}
+
+// Flush when connection returns
+window.addEventListener("online", () => {
+  toast("Back online — syncing... 🔄", "info");
+  setTimeout(flushOfflineQueue, 1000);
+});
+
 window.confirmSubmitTask = async () => {
   const btn  = document.getElementById("btn-confirm-submit-task");
   const file = document.getElementById("submit-task-photo-input")?.files[0];
   if(btn) { btn.disabled=true; btn.textContent="Sending…"; }
+
+  // ── Offline: queue and show optimistic UI ─────────────────
+  if (!navigator.onLine) {
+    window._offlineQueue.push({ type: "submitTask", taskId: submitTaskId, photo: null });
+    saveOfflineQueue();
+    closeSubmitTaskModal();
+    toast("📶 Offline — task queued and will sync when online!", "info");
+    // Optimistically update the UI
+    await loadKidTasks(currentKid);
+    if(btn) { btn.disabled=false; btn.textContent="Send for Approval"; }
+    return;
+  }
 
   try {
     // Step 1: Submit task first (no photo) — always succeeds
@@ -1263,7 +1317,6 @@ window.confirmSubmitTask = async () => {
         // Aggressive compression: 300px, 40% quality → ~30-50KB
         const b64 = await imageToBase64(file, 300, 0.4);
         const kb  = Math.round(b64.length / 1024);
-        console.log("Photo size after compression:", kb, "KB");
 
         if (b64.length <= 800000) {
           // Save to separate collection to avoid task doc size limit
@@ -2699,37 +2752,46 @@ window.checkForActiveRush = async (kid) => {
     if (!rush) return;
     if (!rush.kidIds?.includes(kid.id)) return;
     if (rush.status !== "active") return;
-    const progress  = rush.progress?.[kid.id] || {};
     const rushTasks = rush.tasks || [];
-    const allDone   = rushTasks.length > 0 && rushTasks.every(t => progress[t?.id]?.done);
-    if (allDone) return;
     if (rushTasks.length === 0) return;
+    // Check if ALL kids in rush are done — if so don't re-show
+    const allKids = window.SK ? window.SK.getKids().filter(k => rush.kidIds?.includes(k.id)) : [kid];
+    const totalTasks = rushTasks.length * allKids.length;
+    let totalDone = 0;
+    allKids.forEach(k => {
+      const prog = rush.progress?.[k.id] || {};
+      totalDone += rushTasks.filter(t => prog[t.id]?.done).length;
+    });
+    if (totalDone === totalTasks && totalTasks > 0) return;
     if (kidRushId === rush.id) return;
-    console.log("✅ Showing rush overlay for:", kid.name);
+    console.log("✅ Showing family rush overlay");
     kidRushId   = rush.id;
     kidRushData = rush;
     playRushStartSound();
-    showKidRushOverlay(kid, rush);
+    showKidRushOverlay(rush);
   } catch(e) { console.error("Rush check error:", e); }
 };
 
-function showKidRushOverlay(kid, rush) {
-  const session   = DEFAULT_RUSH_SESSIONS[rush.sessionId] || {};
+function showKidRushOverlay(rush) {
+  const session   = DEFAULT_RUSH_SESSIONS[rush.sessionId] || customRushSessions.find(s=>s.id===rush.sessionId) || {};
   const overlay   = document.getElementById("kid-rush-overlay");
   const container = document.getElementById("rush-tasks-container");
   if (!overlay || !container) return;
 
   document.getElementById("rush-overlay-emoji").textContent = session.emoji || "⚡";
-  document.getElementById("rush-overlay-title").textContent = session.label || "Rush!";
+  document.getElementById("rush-overlay-title").textContent = session.label || "Family Rush!";
   overlay.style.display = "block";
 
+  // Get all kids involved in this rush from localStorage
+  const allKids = window.SK ? window.SK.getKids() : [];
+  const rushKids = rush.kidIds
+    ? allKids.filter(k => rush.kidIds.includes(k.id))
+    : (currentKid ? [currentKid] : []);
+
   function render() {
-    const progress   = kidRushData.progress?.[kid.id] || {};
     const windowMins = kidRushData.windowMinutes || session.windowMinutes || 30;
     const totalSec   = windowMins * 60;
     const now        = Date.now();
-
-    // Use endAtMs directly if available (most reliable)
     let remaining;
     if (kidRushData.endAtMs && kidRushData.endAtMs > 1000000000000) {
       remaining = Math.max(0, Math.floor((kidRushData.endAtMs - now) / 1000));
@@ -2737,19 +2799,24 @@ function showKidRushOverlay(kid, rush) {
       const elapsed = Math.floor((now - kidRushData.startAtMs) / 1000);
       remaining = Math.max(0, totalSec - elapsed);
     } else {
-      // No valid time data — give full window as safe fallback
       remaining = totalSec;
     }
-    const mins      = Math.floor(remaining / 60);
-    const secs      = remaining % 60;
-    const pctLeft   = Math.max(0, (remaining / totalSec) * 100);
-    const timerCol  = remaining < 60 ? "#FF6B6B" : remaining < 180 ? "#FF9F43" : "#FFD93D";
-    const bonus     = pctLeft > 66 ? "🌟 3× stars if done now!" : pctLeft > 33 ? "⭐ 2× stars if done now!" : "✅ Finish before time runs out!";
-    const doneTasks = rush.tasks.filter(t => progress[t.id]?.done).length;
-    const allDone   = doneTasks === rush.tasks.length;
+    const mins     = Math.floor(remaining / 60);
+    const secs     = remaining % 60;
+    const pctLeft  = Math.max(0, (remaining / totalSec) * 100);
+    const timerCol = remaining < 60 ? "#FF6B6B" : remaining < 180 ? "#FF9F43" : "#FFD93D";
+    const bonus    = pctLeft > 66 ? "🌟 3× stars if done now!" : pctLeft > 33 ? "⭐ 2× stars if done now!" : "✅ Finish before time runs out!";
 
-    container.innerHTML = `
-      <div style="background:rgba(255,255,255,0.08);border-radius:16px;padding:16px;text-align:center;margin-bottom:16px;">
+    // Count total done across all kids
+    const totalTasks = rush.tasks.length * rushKids.length;
+    let totalDone = 0;
+    rushKids.forEach(k => {
+      const prog = kidRushData.progress?.[k.id] || {};
+      totalDone += rush.tasks.filter(t => prog[t.id]?.done).length;
+    });
+
+    let html = `
+      <div style="background:rgba(255,255,255,0.08);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px;">
         <div style="font-size:2.8rem;font-weight:700;color:${timerCol};font-variant-numeric:tabular-nums;">
           ${mins}:${String(secs).padStart(2,"0")}
         </div>
@@ -2759,85 +2826,108 @@ function showKidRushOverlay(kid, rush) {
         </div>
         <div style="font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:8px;">${bonus}</div>
       </div>
-      <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:10px;text-align:center;">
-        ${doneTasks}/${rush.tasks.length} done — complete in any order!
-      </div>
-      ${rush.tasks.map(t => {
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;text-align:center;">
+        ${totalDone}/${totalTasks} done across ${rushKids.length} kid${rushKids.length>1?"s":""}
+      </div>`;
+
+    // Render each kid's task list
+    rushKids.forEach(kid => {
+      const progress  = kidRushData.progress?.[kid.id] || {};
+      const kidDone   = rush.tasks.filter(t => progress[t.id]?.done).length;
+      const allKidDone = kidDone === rush.tasks.length;
+      const av = kid.photo
+        ? `<img src="${kid.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />`
+        : `<span style="font-size:1.2rem;">${kid.emoji||"🌟"}</span>`;
+
+      html += `
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,0.06);border-radius:12px;">
+            ${av}
+            <div style="flex:1;">
+              <div style="color:#fff;font-weight:700;font-size:0.9rem;">${kid.name}</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:0.72rem;">${kidDone}/${rush.tasks.length} done</div>
+            </div>
+            ${allKidDone ? `<span style="color:#6bcb77;font-weight:700;font-size:0.8rem;">🏆 Done!</span>` : ""}
+          </div>`;
+
+      rush.tasks.forEach(t => {
         const done   = progress[t.id]?.done;
         const earned = progress[t.id]?.stars || 0;
-        if (done) return `
-          <div style="background:rgba(26,147,111,0.2);border:1px solid #1a936f;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:1.8rem;">${t.emoji}</span>
-            <div style="flex:1;">
-              <div style="color:#fff;font-weight:600;font-size:0.9rem;">${t.title}</div>
-              <div style="color:#1a936f;font-size:0.8rem;margin-top:2px;">✅ Done! +${earned}⭐ earned</div>
-            </div>
-          </div>`;
-        if (remaining === 0) return `
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;opacity:0.5;">
-            <span style="font-size:1.8rem;">${t.emoji}</span>
-            <div style="flex:1;color:rgba(255,255,255,0.5);font-size:0.9rem;">${t.title}</div>
-            <span style="font-size:0.8rem;color:#FF6B6B;">⏰ Time up</span>
-          </div>`;
-        return `
-          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:1.8rem;">${t.emoji}</span>
-            <div style="flex:1;">
-              <div style="color:#fff;font-weight:600;font-size:0.9rem;">${t.title}</div>
-              <div style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:2px;">up to ${t.stars*3}⭐</div>
-            </div>
-            <button onclick="completeKidRushTask('${t.id}',${t.stars},${kidRushData.endAtMs||0},${totalSec})"
-              style="background:#FF9F43;border:none;border-radius:10px;padding:8px 14px;color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;">
+        if (done) {
+          html += `<div style="background:rgba(26,147,111,0.2);border:1px solid #1a936f;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.5rem;">${t.emoji}</span>
+            <div style="flex:1;"><div style="color:#fff;font-weight:600;font-size:0.85rem;">${t.title}</div>
+            <div style="color:#1a936f;font-size:0.75rem;">✅ Done! +${earned}⭐</div></div></div>`;
+        } else if (remaining === 0) {
+          html += `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;opacity:0.4;">
+            <span style="font-size:1.5rem;">${t.emoji}</span>
+            <div style="flex:1;color:rgba(255,255,255,0.5);font-size:0.85rem;">${t.title}</div>
+            <span style="font-size:0.75rem;color:#FF6B6B;">⏰</span></div>`;
+        } else {
+          html += `<div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.5rem;">${t.emoji}</span>
+            <div style="flex:1;"><div style="color:#fff;font-weight:600;font-size:0.85rem;">${t.title}</div>
+            <div style="color:rgba(255,255,255,0.5);font-size:0.72rem;">up to ${t.stars*3}⭐</div></div>
+            <button onclick="completeKidRushTask('${kid.id}','${t.id}',${t.stars},${kidRushData.endAtMs||0},${totalSec})"
+              style="background:#FF9F43;border:none;border-radius:10px;padding:7px 12px;color:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
               ✅ Done!
-            </button>
-          </div>`;
-      }).join("")}
-      ${allDone ? `<div style="text-align:center;padding:16px;color:#FFD93D;font-size:1rem;font-weight:700;">🏆 All done! Amazing!</div>` : ""}
-    `;
+            </button></div>`;
+        }
+      });
+      html += `</div>`;
+    });
+
+    const allFamilyDone = totalDone === totalTasks;
+    if (allFamilyDone) html += `<div style="text-align:center;padding:16px;color:#FFD93D;font-size:1rem;font-weight:700;">🏆 Everyone finished! Amazing family!</div>`;
+    container.innerHTML = html;
   }
 
   render();
   if (kidRushInterval) clearInterval(kidRushInterval);
   kidRushInterval = setInterval(() => {
-    const progress  = kidRushData.progress?.[kid.id] || {};
-    const allDone   = rush.tasks.every(t => progress[t.id]?.done);
-    const startAtMs = kidRushData.startAtMs || Date.now();
-    const totalSec  = (kidRushData.windowMinutes || session.windowMinutes || 30) * 60;
-    const now2     = Date.now();
+    const windowMins = (kidRushData.windowMinutes || session.windowMinutes || 30);
+    const totalSec   = windowMins * 60;
+    const now2       = Date.now();
     let timeUp;
     if (kidRushData.endAtMs && kidRushData.endAtMs > 1000000000000) {
       timeUp = now2 >= kidRushData.endAtMs;
     } else if (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) {
-      const elapsed2 = Math.floor((now2 - kidRushData.startAtMs) / 1000);
-      timeUp = elapsed2 >= totalSec && totalSec > 0;
+      timeUp = Math.floor((now2 - kidRushData.startAtMs) / 1000) >= totalSec && totalSec > 0;
     } else {
       timeUp = false;
     }
 
-    if (allDone) {
-      clearInterval(kidRushInterval);
-      kidRushInterval = null;
-      const totalStars = Object.values(progress).reduce((s,p)=>s+(p.stars||0),0);
-      // Show completion state briefly then close
+    // Check if all kids done
+    let totalDone = 0;
+    const totalTasks = rush.tasks.length * rushKids.length;
+    rushKids.forEach(k => {
+      const prog = kidRushData.progress?.[k.id] || {};
+      totalDone += rush.tasks.filter(t => prog[t.id]?.done).length;
+    });
+    const allFamilyDone = totalDone === totalTasks;
+
+    if (allFamilyDone) {
+      clearInterval(kidRushInterval); kidRushInterval = null;
       render();
       setTimeout(() => {
         overlay.style.display = "none";
-        kidRushId   = null;
-        kidRushData = null;
+        kidRushId = null; kidRushData = null;
+        let totalStars = 0;
+        rushKids.forEach(k => {
+          totalStars += Object.values(kidRushData?.progress?.[k.id]||{}).reduce((s,p)=>s+(p.stars||0),0);
+        });
         celebrate(`🏆 Rush Complete!
-You earned ${totalStars}⭐!`, "🌅🏆🌟");
-        refreshKidDashboard();
+Family earned stars!`);
+        if (currentKid) refreshKidDashboard();
       }, 2500);
     } else if (timeUp) {
-      clearInterval(kidRushInterval);
-      kidRushInterval = null;
+      clearInterval(kidRushInterval); kidRushInterval = null;
       render();
       setTimeout(() => {
         overlay.style.display = "none";
-        kidRushId   = null;
-        kidRushData = null;
+        kidRushId = null; kidRushData = null;
         toast("⏰ Rush time ended!", "info");
-        refreshKidDashboard();
+        if (currentKid) refreshKidDashboard();
       }, 2000);
     } else {
       render();
@@ -2845,22 +2935,22 @@ You earned ${totalStars}⭐!`, "🌅🏆🌟");
   }, 1000);
 }
 
-window.completeKidRushTask = async (taskId, baseStars, endAtMs, totalSecs) => {
-  if (!kidRushId || !currentKid) return;
+window.completeKidRushTask = async (kidId, taskId, baseStars, endAtMs, totalSecs) => {
+  if (!kidRushId) return;
   try {
-    // Calculate elapsed from endAtMs — works reliably across all devices
     const remaining = Math.max(0, Math.floor((endAtMs - Date.now()) / 1000));
     const elapsed   = Math.max(0, totalSecs - remaining);
     const earned    = calculateRushStars(baseStars, elapsed, totalSecs);
     const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await updateDoc(fsDoc(db, "activeRush", kidRushId), {
-      [`progress.${currentKid.id}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
+      [`progress.${kidId}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
     });
-    await addBonusStars(currentKid.id, earned);
+    // ── Stars credited instantly — Rush is self-reported ──────
+    await addBonusStars(kidId, earned);
     if (!kidRushData.progress) kidRushData.progress = {};
-    if (!kidRushData.progress[currentKid.id]) kidRushData.progress[currentKid.id] = {};
-    kidRushData.progress[currentKid.id][taskId] = {done:true, stars:earned};
-    toast(`+${earned}⭐ earned!`, "success");
+    if (!kidRushData.progress[kidId]) kidRushData.progress[kidId] = {};
+    kidRushData.progress[kidId][taskId] = {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned};
+    toast(`⭐ +${earned} stars earned!`, "success");
   } catch(e) { toast("Error. Try again.", "error"); console.error(e); }
 };
 
@@ -2987,6 +3077,219 @@ window.switchToKid = async (kidId, code) => {
   document.getElementById("kid-rush-overlay").style.display = "none";
   if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
   await window.loginSavedKid(kidId, code);
+};
+
+// ══════════════════════════════════════════════════════════════
+// PARENT PIN SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+// Simple hash — not cryptographic but prevents casual snooping
+function hashPIN(pin) {
+  let h = 0;
+  for (let i = 0; i < pin.length; i++) {
+    h = ((h << 5) - h) + pin.charCodeAt(i);
+    h |= 0;
+  }
+  return String(h);
+}
+
+function getPINKey() {
+  return currentParent ? `sk_pin_${currentParent.uid}` : "sk_pin";
+}
+
+function hasPINSet() {
+  return !!localStorage.getItem(getPINKey());
+}
+
+function verifyPIN(pin) {
+  const stored = localStorage.getItem(getPINKey());
+  return stored && stored === hashPIN(pin);
+}
+
+function savePIN(pin) {
+  localStorage.setItem(getPINKey(), hashPIN(pin));
+}
+
+// ── PIN entry state ───────────────────────────────────────────
+let _pinBuffer       = "";
+let _pinAttempts     = 0;
+let _pinLockoutUntil = 0;
+let _pinMode         = "enter"; // "enter" | "setup-first" | "setup-confirm"
+let _pinFirstEntry   = "";
+
+window.openParentPIN = () => {
+  // If not authenticated with Firebase at all, go to login first
+  if (!currentParent) {
+    // Check if Firebase Auth session exists
+    if (typeof goToParentAuth === "function") goToParentAuth("login");
+    else showScreen("screen-login");
+    return;
+  }
+  // If no PIN set yet — go to setup
+  if (!hasPINSet()) {
+    openPINSetup();
+    return;
+  }
+  // Show PIN entry
+  _pinBuffer = ""; _pinAttempts = 0;
+  updatePINDots("pin-dot", 0);
+  document.getElementById("pin-error").textContent = "";
+  document.getElementById("pin-overlay-title").textContent = "Parent Portal";
+  document.getElementById("pin-overlay-sub").textContent = "Enter your 4-digit PIN";
+  document.getElementById("pin-overlay").style.display = "flex";
+};
+
+window.closePINOverlay = () => {
+  document.getElementById("pin-overlay").style.display = "none";
+  _pinBuffer = "";
+  updatePINDots("pin-dot", 0);
+};
+
+function updatePINDots(prefix, count, error = false) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById(`${prefix}-${i}`);
+    if (!dot) continue;
+    dot.classList.remove("filled", "error");
+    if (i < count) dot.classList.add(error ? "error" : "filled");
+  }
+}
+
+window.pinInput = (digit) => {
+  // Check lockout
+  if (Date.now() < _pinLockoutUntil) {
+    const secs = Math.ceil((_pinLockoutUntil - Date.now()) / 1000);
+    document.getElementById("pin-lockout").textContent = `Too many attempts. Wait ${secs}s`;
+    document.getElementById("pin-lockout").style.display = "block";
+    return;
+  }
+  if (_pinBuffer.length >= 4) return;
+  _pinBuffer += digit;
+  updatePINDots("pin-dot", _pinBuffer.length);
+  if (_pinBuffer.length === 4) {
+    setTimeout(() => {
+      if (verifyPIN(_pinBuffer)) {
+        document.getElementById("pin-overlay").style.display = "none";
+        _pinBuffer = ""; _pinAttempts = 0;
+        updatePINDots("pin-dot", 0);
+        // Go to parent dashboard
+        goToParentDashboard();
+      } else {
+        _pinAttempts++;
+        updatePINDots("pin-dot", 4, true);
+        document.getElementById("pin-error").textContent =
+          `Wrong PIN. ${3 - _pinAttempts} attempt${3 - _pinAttempts === 1 ? "" : "s"} left.`;
+        if (_pinAttempts >= 3) {
+          _pinLockoutUntil = Date.now() + 30000;
+          document.getElementById("pin-lockout").style.display = "block";
+          document.getElementById("pin-lockout").textContent = "Too many attempts. Locked for 30s.";
+          // Count down
+          const timer = setInterval(() => {
+            const secs = Math.ceil((_pinLockoutUntil - Date.now()) / 1000);
+            if (secs <= 0) {
+              clearInterval(timer);
+              _pinAttempts = 0;
+              document.getElementById("pin-lockout").style.display = "none";
+              document.getElementById("pin-error").textContent = "";
+            } else {
+              document.getElementById("pin-lockout").textContent = `Too many attempts. Wait ${secs}s`;
+            }
+          }, 1000);
+        }
+        setTimeout(() => { _pinBuffer = ""; updatePINDots("pin-dot", 0); }, 600);
+      }
+    }, 150);
+  }
+};
+
+window.pinBackspace = () => {
+  if (_pinBuffer.length > 0) {
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    updatePINDots("pin-dot", _pinBuffer.length);
+  }
+};
+
+window.pinForgot = () => {
+  // Close PIN overlay, go to email/password login
+  document.getElementById("pin-overlay").style.display = "none";
+  _pinBuffer = "";
+  // After email login, re-prompt PIN setup
+  localStorage.removeItem(getPINKey());
+  showScreen("screen-login");
+  toast("Log in with email to reset your PIN", "info");
+};
+
+// ── PIN Setup ─────────────────────────────────────────────────
+let _setupBuffer = "";
+let _setupFirst  = "";
+let _setupStep   = 1; // 1 = enter new PIN, 2 = confirm
+
+function openPINSetup() {
+  _setupBuffer = ""; _setupFirst = ""; _setupStep = 1;
+  document.getElementById("pin-setup-title").textContent = "Set Your Parent PIN";
+  document.getElementById("pin-setup-sub").textContent = "Choose a 4-digit PIN to protect the parent portal";
+  document.getElementById("pin-setup-error").textContent = "";
+  updatePINDots("pin-setup-dot", 0);
+  document.getElementById("pin-setup-overlay").style.display = "flex";
+}
+
+window.pinSetupInput = (digit) => {
+  if (_setupBuffer.length >= 4) return;
+  _setupBuffer += digit;
+  updatePINDots("pin-setup-dot", _setupBuffer.length);
+  if (_setupBuffer.length === 4) {
+    setTimeout(() => {
+      if (_setupStep === 1) {
+        _setupFirst = _setupBuffer;
+        _setupBuffer = "";
+        _setupStep = 2;
+        document.getElementById("pin-setup-title").textContent = "Confirm Your PIN";
+        document.getElementById("pin-setup-sub").textContent = "Enter the same PIN again";
+        updatePINDots("pin-setup-dot", 0);
+      } else {
+        if (_setupBuffer === _setupFirst) {
+          savePIN(_setupBuffer);
+          document.getElementById("pin-setup-overlay").style.display = "none";
+          toast("PIN set! Parent portal is now protected 🔒", "success");
+          // Now go to parent dashboard
+          goToParentDashboard();
+        } else {
+          document.getElementById("pin-setup-error").textContent = "PINs don't match. Try again.";
+          updatePINDots("pin-setup-dot", 4, true);
+          setTimeout(() => {
+            _setupBuffer = ""; _setupStep = 1; _setupFirst = "";
+            document.getElementById("pin-setup-title").textContent = "Set Your Parent PIN";
+            document.getElementById("pin-setup-sub").textContent = "Choose a 4-digit PIN";
+            document.getElementById("pin-setup-error").textContent = "";
+            updatePINDots("pin-setup-dot", 0);
+          }, 800);
+        }
+      }
+    }, 150);
+  }
+};
+
+window.pinSetupBackspace = () => {
+  if (_setupBuffer.length > 0) {
+    _setupBuffer = _setupBuffer.slice(0, -1);
+    updatePINDots("pin-setup-dot", _setupBuffer.length);
+  }
+};
+
+window.pinSetupBack = () => {
+  if (_setupStep === 2) {
+    _setupStep = 1; _setupFirst = ""; _setupBuffer = "";
+    document.getElementById("pin-setup-title").textContent = "Set Your Parent PIN";
+    document.getElementById("pin-setup-sub").textContent = "Choose a 4-digit PIN";
+    updatePINDots("pin-setup-dot", 0);
+  } else {
+    document.getElementById("pin-setup-overlay").style.display = "none";
+  }
+};
+
+// Also add PIN change option inside parent settings
+window.changeParentPIN = () => {
+  localStorage.removeItem(getPINKey());
+  openPINSetup();
 };
 
 // ── Logout All Kids (clears all saved profiles from this device) ──

@@ -1386,7 +1386,7 @@ async function loadKidJobsSection(kidId) {
       <span class="job-emoji">${j.emoji}</span>
       <div class="job-info">
         <div class="job-title">${j.title}</div>
-        ${j.description?`<div class="job-desc">${j.description}`:""}
+        ${j.description?`<div class="job-desc">${j.description}</div>`:""}
         <div class="job-stars">⭐ ${j.stars} = ${starsToMoney(j.stars,financeSettings)}</div>
       </div>
       ${isClaimed

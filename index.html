@@ -768,19 +768,33 @@ window.addRushTask = window.addRushTask || function() {
   </div>
 
   <div class="tab-bar w-full" style="max-width:480px;">
-    <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks"  onclick="showKidTab('tasks')">📋 Tasks</button>
-    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals"  onclick="showKidTab('goals')">🎯 My Goal</button>
-    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-praise"        onclick="showKidTab('praise')">💛 Praise <span id="kid-praise-badge" class="badge" style="display:none;"></span></button>
+    <button class="tab-btn kid-tab-btn active" id="kid-tab-btn-tasks"        onclick="showKidTab('tasks')">📋 Tasks</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-jobs"         onclick="showKidTab('jobs')">💼 Jobs <span id="kid-jobs-badge" class="badge" style="display:none;"></span></button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-earnings"     onclick="showKidTab('earnings')">💰 Earnings</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-goals"        onclick="showKidTab('goals')">🎯 Goal</button>
+    <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-praise"       onclick="showKidTab('praise')">💛 Praise <span id="kid-praise-badge" class="badge" style="display:none;"></span></button>
     <button class="tab-btn kid-tab-btn"        id="kid-tab-btn-achievements" onclick="showKidTab('achievements')">🏆 Awards</button>
   </div>
 
   <div class="kid-tab-panel active w-full" id="kid-tab-tasks">
     <div class="card"><h3 class="kids-list-header">My Tasks 📋</h3><div id="kid-tasks-list"><p class="empty-state">Loading…</p></div></div>
+  </div>
+
+  <!-- Jobs Tab -->
+  <div class="kid-tab-panel w-full" id="kid-tab-jobs">
     <div class="card">
-      <h3 class="kids-list-header">💼 Entrepreneur Jobs</h3>
-      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:10px;">Pick up extra jobs to earn more stars and money!</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 class="kids-list-header" style="margin:0;">💼 Entrepreneur Jobs</h3>
+        <span style="background:#ff9f43;color:#fff;border-radius:20px;padding:3px 10px;font-size:0.75rem;font-weight:800;">Earn More ⭐</span>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:12px;">Pick a job, do it well, earn stars and real money! 💰</p>
       <div id="kid-jobs-list"><p class="empty-state">Loading…</p></div>
     </div>
+  </div>
+
+  <!-- Earnings Tab -->
+  <div class="kid-tab-panel w-full" id="kid-tab-earnings">
+    <div id="kid-earnings-view"><p class="empty-state">Loading…</p></div>
   </div>
   <div class="kid-tab-panel w-full" id="kid-tab-goals">
     <div class="card"><h3 class="kids-list-header">My Goal 🎯</h3><div id="kid-goals-list"><p class="empty-state">Loading…</p></div></div>
@@ -1071,6 +1085,25 @@ window.addRushTask = window.addRushTask || function() {
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: FIRST SALARY 🎉 ════════════════ -->
+<div id="modal-first-salary" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:linear-gradient(135deg,#1a1040,#302b63);border-radius:24px;padding:32px 24px;max-width:340px;width:100%;text-align:center;position:relative;">
+    <div id="first-salary-emoji" style="font-size:4rem;margin-bottom:12px;">🎉</div>
+    <div style="font-size:1.5rem;font-weight:900;color:#FFD93D;margin-bottom:8px;">First Salary!</div>
+    <div style="font-size:0.9rem;color:rgba(255,255,255,0.8);margin-bottom:6px;" id="first-salary-name"></div>
+    <div style="font-size:2rem;font-weight:900;color:#fff;margin:12px 0;" id="first-salary-amount"></div>
+    <div style="font-size:0.82rem;color:rgba(255,255,255,0.6);margin-bottom:20px;line-height:1.5;">You didn't get this — you <strong style="color:#6bcb77;">earned</strong> it!<br>That's what entrepreneurs do. 🚀</div>
+    <div style="background:rgba(255,255,255,0.08);border-radius:14px;padding:12px;margin-bottom:20px;">
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:4px;">YOUR FIRST EARNING</div>
+      <div id="first-salary-task" style="font-size:0.9rem;font-weight:700;color:#fff;"></div>
+      <div id="first-salary-stars" style="font-size:0.8rem;color:#FFD93D;margin-top:2px;"></div>
+    </div>
+    <button onclick="closeFirstSalary()" style="background:#6c63ff;color:#fff;border:none;border-radius:20px;padding:12px 32px;font-size:1rem;font-weight:800;cursor:pointer;width:100%;font-family:inherit;">
+      I'm an Entrepreneur! 💼
+    </button>
+  </div>
+</div>
+
 <!-- ═══════════════════════ PHOTO FULLSCREEN ════════════════ -->
 <div id="photo-fullscreen" onclick="closePhotoFull()"
   style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;cursor:pointer;">
@@ -1107,7 +1140,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=21"></script>
+<script type="module" src="./js/app.js?v=22"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

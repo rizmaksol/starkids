@@ -935,6 +935,14 @@ window.handleApprove = async (taskId,kidId,stars,title,currentStreak) => {
     const newStars=await getStarBalance(kidId);
     const completed=await checkGoalCompletion(kidId,newStars);
     completed.forEach(g=>celebrate(`🎉 Goal Reached!\n"${g.title}"`));
+    if (newStars === stars && !localStorage.getItem(`sk_first_salary_${kidId}`)) {
+      const savedKids = window.SK ? window.SK.getKids() : [];
+      const prevKid   = currentKid;
+      const matchKid  = savedKids.find(k => k.id === kidId);
+      if (matchKid) currentKid = matchKid;
+      showFirstSalary(title, stars);
+      currentKid = prevKid;
+    }
     loadPendingApprovals();
   } catch(err) { toast("Failed.","error"); console.error(err); }
 };
@@ -1367,6 +1375,10 @@ async function loadKidJobsSection(kidId) {
   const jobs    = await getEntrepreneurJobs(currentKid.parentId);
   const myTasks = await getTasksForKid(kidId);
   const claimed = myTasks.filter(t => t.isEntrepreneur && (t.status==="pending"||t.status==="submitted")).map(t => t.jobId);
+  // Show badge on Jobs tab with available job count
+  const available = jobs.filter(j => !claimed.includes(j.id)).length;
+  const badge = document.getElementById("kid-jobs-badge");
+  if (badge) { badge.textContent = available; badge.style.display = available > 0 ? "inline-flex" : "none"; }
   if (!jobs.length) { el.innerHTML=`<p class="empty-state">No jobs available yet.</p>`; return; }
   el.innerHTML = jobs.map(j => {
     const isClaimed = claimed.includes(j.id);
@@ -1374,7 +1386,7 @@ async function loadKidJobsSection(kidId) {
       <span class="job-emoji">${j.emoji}</span>
       <div class="job-info">
         <div class="job-title">${j.title}</div>
-        ${j.description?`<div class="job-desc">${j.description}</div>`:""}
+        ${j.description?`<div class="job-desc">${j.description}`:""}
         <div class="job-stars">⭐ ${j.stars} = ${starsToMoney(j.stars,financeSettings)}</div>
       </div>
       ${isClaimed
@@ -1383,6 +1395,126 @@ async function loadKidJobsSection(kidId) {
     </div>`;
   }).join("");
 }
+
+// ── Earnings Screen ───────────────────────────────────────────
+async function loadKidEarnings(kid) {
+  const el = document.getElementById("kid-earnings-view"); if (!el) return;
+  el.innerHTML = `<p class="empty-state">Loading earnings…</p>`;
+  try {
+    const allTasks   = await getTasksForKid(kid.id);
+    const approved   = allTasks.filter(t => t.status === "approved");
+    const totalStars = approved.reduce((s,t) => s+(t.stars||0), 0);
+    const totalMoney = starsToMoney(totalStars, financeSettings);
+    // This month
+    const now        = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonth  = approved.filter(t => {
+      if (!t.approvedAt) return false;
+      const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+      return d >= monthStart;
+    });
+    const monthStars = thisMonth.reduce((s,t) => s+(t.stars||0), 0);
+    const monthMoney = starsToMoney(monthStars, financeSettings);
+    // Entrepreneur earnings
+    const entrStars  = approved.filter(t => t.isEntrepreneur).reduce((s,t) => s+(t.stars||0), 0);
+    const entrMoney  = starsToMoney(entrStars, financeSettings);
+    // Faith earnings
+    const faithStars = approved.filter(t => t.isFaith).reduce((s,t) => s+(t.stars||0), 0);
+    const faithMoney = starsToMoney(faithStars, financeSettings);
+    // Regular task earnings
+    const regStars   = totalStars - entrStars - faithStars;
+    const regMoney   = starsToMoney(regStars, financeSettings);
+    // Current balance
+    const balance    = await getStarBalance(kid.id);
+    const balMoney   = starsToMoney(balance, financeSettings);
+
+    el.innerHTML = `
+    <div class="card" style="background:linear-gradient(135deg,#1a1040,#302b63);border:none;color:#fff;margin-bottom:12px;">
+      <div style="font-size:0.75rem;opacity:0.7;font-weight:700;letter-spacing:1px;margin-bottom:4px;">💰 TOTAL EARNED ALL TIME</div>
+      <div style="font-size:2.4rem;font-weight:900;color:#FFD93D;line-height:1;">${totalMoney}</div>
+      <div style="font-size:0.9rem;opacity:0.8;margin-top:4px;">= ${totalStars} ⭐ stars earned</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;">
+        <div>
+          <div style="font-size:0.7rem;opacity:0.6;">Current Balance</div>
+          <div style="font-size:1rem;font-weight:800;color:#6bcb77;">${balMoney}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.7rem;opacity:0.6;">This Month</div>
+          <div style="font-size:1rem;font-weight:800;color:#ff9f43;">${monthMoney}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--color-text);margin-bottom:12px;">📊 Earnings Breakdown</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">📋</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--color-text);">Daily Tasks</div>
+              <div style="font-size:0.72rem;color:var(--color-muted);">${regStars} stars</div>
+            </div>
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:var(--color-primary);">${regMoney}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">💼</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--color-text);">Entrepreneur Jobs</div>
+              <div style="font-size:0.72rem;color:var(--color-muted);">${entrStars} stars</div>
+            </div>
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:#ff9f43;">${entrMoney}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">🕌</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--color-text);">Faith Journey</div>
+              <div style="font-size:0.72rem;color:var(--color-muted);">${faithStars} stars</div>
+            </div>
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:#1a936f;">${faithMoney}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--color-text);margin-bottom:4px;">🚀 Entrepreneur Level</div>
+      <div style="font-size:0.75rem;color:var(--color-muted);margin-bottom:12px;">Keep completing jobs to level up!</div>
+      <div style="background:var(--color-bg-2);border-radius:12px;padding:12px;text-align:center;">
+        ${entrStars === 0
+          ? `<div style="font-size:1.8rem;">🌱</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Beginner</div><div style="font-size:0.72rem;color:var(--color-muted);">Complete your first job to start!</div>`
+          : entrStars < 50
+          ? `<div style="font-size:1.8rem;">⚡</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Rising Star</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs so far!</div>`
+          : entrStars < 150
+          ? `<div style="font-size:1.8rem;">💼</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Junior Entrepreneur</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs!</div>`
+          : `<div style="font-size:1.8rem;">🚀</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Future CEO!</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs — incredible!</div>`}
+      </div>
+    </div>`;
+  } catch(e) { el.innerHTML=`<p class="empty-state">Could not load earnings.</p>`; console.error(e); }
+}
+
+// ── First Salary Celebration ──────────────────────────────────
+function showFirstSalary(taskTitle, stars) {
+  const key = `sk_first_salary_${currentKid?.id}`;
+  if (localStorage.getItem(key)) return; // already shown
+  localStorage.setItem(key, "1");
+  const modal = document.getElementById("modal-first-salary");
+  if (!modal) return;
+  document.getElementById("first-salary-name").textContent = `Congratulations, ${currentKid?.name}! 🌟`;
+  document.getElementById("first-salary-amount").textContent = starsToMoney(stars, financeSettings);
+  document.getElementById("first-salary-task").textContent = `"${taskTitle}"`;
+  document.getElementById("first-salary-stars").textContent = `⭐ ${stars} stars earned`;
+  modal.style.display = "flex";
+}
+
+window.closeFirstSalary = () => {
+  const modal = document.getElementById("modal-first-salary");
+  if (modal) modal.style.display = "none";
+};
 
 window.handleClaimJob = async (jobId) => {
   const jobs = await getEntrepreneurJobs(currentKid.parentId);
@@ -1445,9 +1577,13 @@ window.showKidTab=(tab)=>{
     const badge = document.getElementById("kid-praise-badge");
     if (badge) badge.style.display = "none";
   }
-  // Load entrepreneur jobs when tasks tab is opened
-  if (tab==="tasks" && currentKid) {
+  // Load jobs tab
+  if (tab==="jobs" && currentKid) {
     loadKidJobsSection(currentKid.id);
+  }
+  // Load earnings tab
+  if (tab==="earnings" && currentKid) {
+    loadKidEarnings(currentKid);
   }
 };
 

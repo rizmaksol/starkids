@@ -56,20 +56,16 @@ window.SK = {
       var idx = kids.findIndex(function(k){return k.id===kid.id;});
       var p = {id:kid.id,name:kid.name,emoji:kid.avatarEmoji||"🌟",photo:kid.photoURL||null,code:kid.code,parentId:kid.parentId};
       if (idx>=0) kids[idx]=p; else kids.push(p);
-      // Write to both keys for compatibility
       localStorage.setItem("sk_kids", JSON.stringify(kids));
       localStorage.setItem("sk_saved_kids", JSON.stringify(kids));
       localStorage.setItem("sk_current_kid", JSON.stringify(p));
       localStorage.setItem("sk_kid", JSON.stringify(p));
-      console.log("Kid saved:", kid.name);
     } catch(e){ console.error("saveKid error:",e); }
   },
   getKids: function() {
     try {
-      // Read from both old key (sk_saved_kids) and new key (sk_kids)
       var fromNew = JSON.parse(localStorage.getItem("sk_kids")||"[]");
       var fromOld = JSON.parse(localStorage.getItem("sk_saved_kids")||"[]");
-      // Merge, preferring new
       var merged = fromNew.length ? fromNew : fromOld;
       return merged;
     } catch(e){return [];}
@@ -188,7 +184,6 @@ window.SK_saveKidDirect = function(id, name, emoji, photo, code, parentId) {
     localStorage.setItem("sk_saved_kids", str);
     localStorage.setItem("sk_current_kid", JSON.stringify(p));
     localStorage.setItem("sk_kid", JSON.stringify(p));
-    console.log("SK_saveKidDirect:", name, "total:", kids.length);
     SK_renderKids();
     return true;
   } catch(e) { console.error("SK_saveKidDirect failed:", e); return false; }
@@ -754,6 +749,7 @@ window.addRushTask = window.addRushTask || function() {
     <div style="display:flex;gap:8px;align-items:center;">
       <button id="btn-switch-kid" class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="showSwitchKidPanel()" title="Switch Kid">👤 Switch</button>
       <button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">🏠 Home</button>
+      <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;color:#FF6B6B;" onclick="logoutAllKids()" title="Logout All">🚪 All</button>
     </div>
   </div>
 
@@ -1050,15 +1046,19 @@ window.addRushTask = window.addRushTask || function() {
 
 <!-- ══════════════════════ KID RUSH OVERLAY ═════════════════ -->
 <div id="kid-rush-overlay" style="display:none;position:fixed;inset:0;z-index:8000;background:linear-gradient(160deg,#0f0c29,#302b63);overflow-y:auto;">
-  <!-- Top bar: Home + Switch Kid -->
+  <!-- Top bar: Home + Switch Kid + Logout All -->
   <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 0;max-width:480px;margin:0 auto;">
     <button onclick="if(typeof exitRushEarly==='function')exitRushEarly();else{document.getElementById('kid-rush-overlay').style.display='none';}"
-      style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+      style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
       🏠 Home
     </button>
     <button onclick="if(typeof showSwitchKidPanel==='function')showSwitchKidPanel();"
-      style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
-      👤 Switch Kid
+      style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+      👤 Switch
+    </button>
+    <button onclick="if(typeof logoutAllKids==='function')logoutAllKids();"
+      style="background:rgba(255,100,100,0.2);border:1px solid rgba(255,100,100,0.4);color:#ff9999;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+      🚪 All
     </button>
   </div>
   <div style="padding:4px 20px 20px;max-width:480px;margin:0 auto;">
@@ -1107,7 +1107,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=19"></script>
+<script type="module" src="./js/app.js?v=21"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

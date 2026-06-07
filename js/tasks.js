@@ -81,7 +81,6 @@ export async function resetRecurringTasks(kidId) {
 function getDefaultTasks(age) {
   const all = [
     // Daily
-    { title: "Brush teeth 🦷",            desc: "Morning and night — 2 minutes each!", stars: 1, minAge: 3, type: TASK_TYPE.DAILY   },
     { title: "Make your bed 🛏",           desc: "Straighten the blanket and pillow",   stars: 1, minAge: 4, type: TASK_TYPE.DAILY   },
     { title: "Tidy your room 🧹",          desc: "Put toys and clothes in their place",  stars: 2, minAge: 4, type: TASK_TYPE.DAILY   },
     { title: "Wash your hands 🤲",         desc: "Before meals and after bathroom",      stars: 1, minAge: 3, type: TASK_TYPE.DAILY   },

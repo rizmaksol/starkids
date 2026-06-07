@@ -6,7 +6,7 @@ import { db } from "./firebase.js?v=12";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=12";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=12";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
-import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=12";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=13";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=12";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=12";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=12";
@@ -1065,28 +1065,46 @@ async function loadKidTasks(kid) {
     const regular = active.filter(t => !t.isEntrepreneur);
     const jobs    = active.filter(t => t.isEntrepreneur);
     if (regular.length) {
-      html += `<div class="task-section-title">📋 My Tasks</div>`;
       // Separate faith tasks from regular tasks
       const faithTasks   = regular.filter(t => t.isFaith);
       const normalTasks  = regular.filter(t => !t.isFaith);
 
       if (faithTasks.length) {
-        html += `<div class="task-section-title faith-section-title">🕌 Faith Journey</div>`;
-        html += faithTasks.map(t => {
-          const streakBadge = (t.streak&&t.streak>1)?`<span class="streak-badge">🔥 ${t.streak}</span>`:"";
-          const rejReason   = t.status===STATUS.REJECTED && t.rejectionReason
-            ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
-          return `<div class="task-card task-card--faith ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
-            <div class="task-card__info">
-              <div class="task-card__title-row"><span class="type-badge type-badge--faith">🕌 Faith</span>${streakBadge}</div>
-              <div class="task-card__title">${t.title}</div>
-              ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
-              <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
-              ${rejReason}
-            </div>
-            <button class="btn btn--sm btn--faith" onclick="handleJobDone('${t.id}')">✅ Done!</button>
-          </div>`;
-        }).join("");
+        // Sort by Islamic daily order
+        const FAITH_ORDER = [
+          "fajr","morning dhikr","morning","duha","dhuhr","zuhr","zohar","zuhur",
+          "asr","maghrib","evening dhikr","evening","isha","night","quran","dua","learn"
+        ];
+        const faithSorted = [...faithTasks].sort((a, b) => {
+          const ai = FAITH_ORDER.findIndex(k => a.title.toLowerCase().includes(k));
+          const bi = FAITH_ORDER.findIndex(k => b.title.toLowerCase().includes(k));
+          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+        const faithDone  = faithSorted.filter(t => t.status === STATUS.APPROVED || t.status === STATUS.SUBMITTED).length;
+        const faithTotal = faithSorted.length;
+        html += `
+        <div class="faith-strip">
+          <div class="faith-strip__header">
+            <span class="faith-strip__title">🕌 Faith Journey</span>
+            <span class="faith-strip__progress">${faithDone}/${faithTotal} done</span>
+          </div>
+          <div class="faith-strip__scroll">
+            ${faithSorted.map(t => {
+              const done = t.status === STATUS.APPROVED || t.status === STATUS.SUBMITTED;
+              const emojiMatch = t.title.match(/\p{Emoji_Presentation}/u);
+              const emoji = emojiMatch ? emojiMatch[0] : "🕌";
+              const nameClean = t.title.replace(/\p{Emoji_Presentation}/gu,"").trim();
+              return `<div class="faith-pill ${done ? "faith-pill--done" : ""}">
+                <div class="faith-pill__emoji">${emoji}</div>
+                <div class="faith-pill__name">${nameClean}</div>
+                <div class="faith-pill__stars">⭐ ${t.stars}</div>
+                ${done
+                  ? `<div class="faith-pill__btn faith-pill__btn--done">✅ Done!</div>`
+                  : `<button class="faith-pill__btn" onclick="handleJobDone('${t.id}')">Tap Done</button>`}
+              </div>`;
+            }).join("")}
+          </div>
+        </div>`;
       }
 
       if (normalTasks.length) {

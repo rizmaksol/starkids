@@ -2686,16 +2686,20 @@ window.completeKidRushTask = async (taskId, baseStars, endAtMs, totalSecs) => {
 // ═══════════════════════════════════════════════════════════════
 function saveKidSession(kid)  { localStorage.setItem("sk_kid", JSON.stringify(kid)); }
 function loadKidSession()     { try { const d=localStorage.getItem("sk_kid"); return d?JSON.parse(d):null; } catch(e){return null;} }
-function clearKidSession()    { localStorage.removeItem("sk_kid"); }
+function clearKidSession() {
+  localStorage.removeItem("sk_kid");
+  localStorage.removeItem("sk_current_kid");
+}
 
 document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
   clearKidSession(); currentKid=null;
   if (window._rushPollInterval) clearInterval(window._rushPollInterval);
   if (kidRushInterval) clearInterval(kidRushInterval);
+  kidRushId = null; kidRushData = null;
   document.getElementById("kid-rush-overlay").style.display="none";
   document.getElementById("kid-code-input").value="";
   showScreen("screen-home");
-  renderSavedKidsSelector();
+  SK_renderKids();
   toast("See you soon! 👋","info");
 });
 
@@ -2800,6 +2804,26 @@ window.switchToKid = async (kidId, code) => {
   document.getElementById("kid-rush-overlay").style.display = "none";
   if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
   await window.loginSavedKid(kidId, code);
+};
+
+// ── Logout All Kids (clears all saved profiles from this device) ──
+window.logoutAllKids = () => {
+  if (!confirm("Remove all kid profiles from this device?")) return;
+  // Clear all kid data from localStorage
+  localStorage.removeItem("sk_kids");
+  localStorage.removeItem("sk_saved_kids");
+  localStorage.removeItem("sk_current_kid");
+  localStorage.removeItem("sk_kid");
+  // Clear session state
+  clearKidSession(); currentKid = null;
+  if (window._rushPollInterval) clearInterval(window._rushPollInterval);
+  if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
+  kidRushId = null; kidRushData = null;
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  document.getElementById("kid-code-input").value = "";
+  showScreen("screen-home");
+  SK_renderKids();
+  toast("All kids removed from this device 🚪", "info");
 };
 
 // ── Exit Rush Overlay without ending the session ──────────────

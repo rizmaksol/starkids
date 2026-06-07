@@ -386,6 +386,64 @@ input:focus, select:focus {
   text-align: center;
 }
 
+/* ── Emoji Picker ─────────────────────────────────────────── */
+.emoji-picker-wrap {
+  background: var(--color-bg-2);
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+}
+.emoji-picker-selected {
+  font-size: 2.8rem;
+  text-align: center;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+.emoji-picker-cats {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  justify-content: center;
+}
+.emoji-cat-btn {
+  background: var(--color-bg);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 1.3rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.emoji-cat-btn.active {
+  border-color: var(--color-primary);
+  background: rgba(108,99,255,0.1);
+}
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.emoji-grid-btn {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 1.4rem;
+  padding: 4px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.1s;
+  text-align: center;
+}
+.emoji-grid-btn:hover { background: var(--color-bg); }
+.emoji-grid-btn--active {
+  border-color: var(--color-primary);
+  background: rgba(108,99,255,0.15);
+}
+
 /* ── Parent Dashboard ─────────────────────────────────────── */
 .dashboard-welcome {
   font-family: var(--font-display);
@@ -1817,17 +1875,100 @@ input:focus, select:focus {
 .prayer-next { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .prayer-countdown { font-size: 0.78rem; opacity: 0.85; font-weight: 600; }
 
-/* ── Faith task card ──────────────────────────────────────── */
-.faith-section-title {
-  color: #1a936f !important;
+/* ── Faith Strip (horizontal scroll) ─────────────────────── */
+.faith-strip {
+  background: linear-gradient(135deg, #0d3b2e, #1a6b4a);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
 }
-.type-badge--faith {
-  background: #d4f4ea;
-  color: #1a936f;
+.faith-strip__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
-.task-card--faith {
-  border-color: #1a936f !important;
-  background: linear-gradient(135deg, #f0fff8, #ffffff);
+.faith-strip__title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+.faith-strip__progress {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+}
+.faith-strip__scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+.faith-strip__scroll::-webkit-scrollbar { display: none; }
+
+.faith-pill {
+  flex: 0 0 auto;
+  width: 90px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.faith-pill--done {
+  background: rgba(255,255,255,0.18);
+  border-color: #4ade80;
+  opacity: 0.75;
+}
+.faith-pill__emoji {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.faith-pill__name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-word;
+}
+.faith-pill__stars {
+  font-size: 0.65rem;
+  color: #ffd93d;
+  font-weight: 600;
+}
+.faith-pill__btn {
+  margin-top: 4px;
+  background: #1a936f;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.faith-pill__btn:active { background: #0d6b50; }
+.faith-pill__btn--done {
+  background: rgba(74,222,128,0.25);
+  color: #4ade80;
+  cursor: default;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 5px 8px;
+  width: 100%;
+  text-align: center;
 }
 
 /* ── Prayer alert overlay ─────────────────────────────────── */

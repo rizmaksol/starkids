@@ -304,10 +304,25 @@ async function loadPendingApprovals() {
       const av  = kid?.photoURL ? `<img src="${kid.photoURL}" class="approval-avatar-img" />` : `<span>${kid?.avatarEmoji||"🌟"}</span>`;
       const typeLabel = task.taskType==="daily"?"🔄":task.taskType==="weekly"?"📅":task.isEntrepreneur?"💼":"1️⃣";
       const streakInfo = task.streak ? ` · 🔥 ${task.streak} streak` : "";
+      // ── Submitted date/time label ───────────────────────────
+      let submittedLabel = "";
+      if (task.submittedAt) {
+        const subDate = task.submittedAt.toDate ? task.submittedAt.toDate() : new Date(task.submittedAt);
+        const now     = new Date();
+        const diffMs  = now - subDate;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffHr  = Math.floor(diffMs / 3600000);
+        const diffDay = Math.floor(diffMs / 86400000);
+        if (diffMin < 1)        submittedLabel = "just now";
+        else if (diffMin < 60)  submittedLabel = `${diffMin}m ago`;
+        else if (diffHr < 24)   submittedLabel = `${diffHr}h ago`;
+        else if (diffDay === 1) submittedLabel = "yesterday";
+        else                    submittedLabel = `${diffDay} days ago`;
+      }
       return `<div class="approval-card">
         <div class="approval-avatar">${av}</div>
         <div class="approval-info">
-          <div class="approval-kid">${kid?.name||"?"}</div>
+          <div class="approval-kid">${kid?.name||"?"} ${submittedLabel ? `<span style="font-size:0.72rem;color:var(--color-muted);font-weight:500;">· ${submittedLabel}</span>` : ""}</div>
           <div class="approval-task">${typeLabel} ${task.title}${streakInfo}</div>
           <div class="approval-stars">⭐ ${task.stars} stars = ${starsToMoney(task.stars, financeSettings)}</div>
           <div id="photo-wrap-${task.id}" class="task-photo-wrap"></div>
@@ -1115,6 +1130,7 @@ async function showKidDashboard(kid) {
   }
   // Load achievements
   await loadKidAchievements(kid.id);
+  scheduleMidnightRefresh();
   showScreen("screen-kid-dashboard");
 }
 
@@ -3011,6 +3027,7 @@ function loadKidSession()     { try { const d=localStorage.getItem("sk_kid"); re
 function clearKidSession() {
   localStorage.removeItem("sk_kid");
   localStorage.removeItem("sk_current_kid");
+  if (window._midnightTimer) { clearTimeout(window._midnightTimer); window._midnightTimer = null; }
 }
 
 document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
@@ -3340,6 +3357,27 @@ window.changeParentPIN = () => {
   localStorage.removeItem(getPINKey());
   openPINSetup();
 };
+
+// ── Midnight auto-refresh ─────────────────────────────────────
+// Schedules a dashboard refresh at exactly 00:00 so daily tasks
+// reset automatically without the kid needing to reload the page
+function scheduleMidnightRefresh() {
+  const now       = new Date();
+  const midnight  = new Date(now);
+  midnight.setHours(24, 0, 5, 0); // 00:00:05 next day (5s buffer)
+  const msUntil   = midnight - now;
+  if (window._midnightTimer) clearTimeout(window._midnightTimer);
+  window._midnightTimer = setTimeout(async () => {
+    if (currentKid) {
+      toast("🌙 New day! Refreshing your tasks...", "info");
+      await resetRecurringTasks(currentKid.id);
+      await loadKidTasks(currentKid);
+      await loadKidJobsSection(currentKid.id);
+    }
+    // Schedule again for the next midnight
+    scheduleMidnightRefresh();
+  }, msUntil);
+}
 
 // ── Logout All Kids (clears all saved profiles from this device) ──
 window.logoutAllKids = () => {

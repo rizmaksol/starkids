@@ -370,7 +370,11 @@ window.addRushTask = window.addRushTask || function() {
 
 <!-- ══════════════════════ PARENT DASHBOARD ══════════════════ -->
 <section class="screen" id="screen-parent-dashboard">
-  <div class="app-bar w-full"><span class="app-logo">Star<span>Kids</span></span><button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button></div>
+  <div class="app-bar w-full">
+    <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="lockParentPortal()">🏠 Home</button>
+    <span class="app-logo">Star<span>Kids</span></span>
+    <button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button>
+  </div>
   <p class="dashboard-welcome w-full" id="parent-name-display">Welcome! 👋</p>
 
   <div class="tab-bar w-full">
@@ -1140,7 +1144,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=26"></script>
+<script type="module" src="./js/app.js?v=27"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

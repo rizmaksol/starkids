@@ -816,13 +816,49 @@ onAuthChange(async user => {
 });;
 
 function goToParentDashboard() {
-  // Load custom rush sessions silently — don't auto-save anything
   loadCustomRushSessions().then(() => {
     renderCustomRushSessions();
   }).catch(()=>{});
   document.getElementById("parent-name-display").textContent = `Welcome, ${currentParent.name}! 👋`;
+  autoSyncKidsToLocalStorage();
   showScreen("screen-parent-dashboard"); showTab("kids"); loadKids();
+  // ── Auto-detect running rush on any device ─────────────────
+  setTimeout(async () => {
+    try {
+      const rush = await getActiveRushForKid(currentParent.uid);
+      if (rush) {
+        const session = DEFAULT_RUSH_SESSIONS[rush.sessionId] ||
+          customRushSessions.find(s=>s.id===rush.sessionId) || {};
+        activeRushId   = rush.id;
+        currentSession = session;
+        document.getElementById("rush-monitor").style.display = "block";
+        document.getElementById("rush-monitor-title").textContent =
+          `${session.emoji||"⚡"} ${session.label||"Rush"} — Live`;
+        startRushMonitor(session, rush.id);
+        toast(`${session.emoji||"⚡"} Rush already running — reconnected!`, "info");
+      }
+    } catch(e) {}
+  }, 1500);
 }
+
+// ── Auto-sync kids from Firestore → localStorage thumbnails ───
+async function autoSyncKidsToLocalStorage() {
+  try {
+    const kids = await getKidsByParent(currentParent.uid);
+    kids.forEach(kid => {
+      if (typeof window.SK_saveKidDirect === "function") {
+        window.SK_saveKidDirect(kid.id, kid.name, kid.avatarEmoji||"🌟", kid.photoURL||null, kid.code, kid.parentId);
+      }
+    });
+    if (typeof window.SK_renderKids === "function") window.SK_renderKids();
+  } catch(e) {}
+}
+
+// ── Lock parent portal — go home without logging out ──────────
+window.lockParentPortal = () => {
+  showScreen("screen-home");
+  SK_renderKids();
+};
 
 // ── Signup step navigation ───────────────────────────────────
 window.goToSignupStep2 = function() {
@@ -1311,9 +1347,17 @@ async function flushOfflineQueue() {
     try {
       if (item.type === "submitTask") {
         await submitTaskWithPhoto(item.taskId, item.photo || null);
+      } else if (item.type === "rushTask") {
+        const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await updateDoc(fsDoc(db, "activeRush", item.rushId), {
+          [`progress.${item.kidId}.${item.taskId}`]: {
+            done:true, doneAtMs:Date.now(),
+            elapsedSecs:item.elapsed, stars:item.earned
+          }
+        });
+        await addBonusStars(item.kidId, item.earned);
       }
     } catch(e) {
-      // Re-queue if still failing
       window._offlineQueue.push(item);
       saveOfflineQueue();
     }
@@ -2123,6 +2167,23 @@ window.startRushSession = async (sessionId) => {
     toast("This rush was already done today! ✅ Resets at midnight.", "info");
     return;
   }
+
+  // ── Single Rush rule — check if one already running ────────
+  const existingRush = await getActiveRushForKid(currentParent.uid).catch(()=>null);
+  if (existingRush) {
+    toast("A Rush is already running! End it first before starting a new one.", "info");
+    // Show the existing rush monitor
+    const existingSession = DEFAULT_RUSH_SESSIONS[existingRush.sessionId] ||
+      customRushSessions.find(s=>s.id===existingRush.sessionId) || {};
+    document.getElementById("rush-monitor").style.display = "block";
+    document.getElementById("rush-monitor-title").textContent =
+      `${existingSession.emoji||"⚡"} ${existingSession.label||"Rush"} — Live`;
+    activeRushId   = existingRush.id;
+    currentSession = existingSession;
+    startRushMonitor(existingSession, existingRush.id);
+    return;
+  }
+
   const session = DEFAULT_RUSH_SESSIONS[sessionId] || customRushSessions.find(s=>s.id===sessionId);
   if (!session) return;
   currentSession  = session;
@@ -2139,8 +2200,7 @@ window.startRushSession = async (sessionId) => {
   };
   localStorage.setItem("sk_rush_broadcast", JSON.stringify(broadcastData));
 
-  // ── Same-tab direct trigger (storage event doesn't fire same tab) ──
-  // If a kid is currently on this device, show rush immediately
+  // ── Same-tab direct trigger ────────────────────────────────
   if (currentKid && kidIds.includes(currentKid.id) && kidRushId !== activeRushId) {
     setTimeout(async () => {
       try {
@@ -2155,7 +2215,6 @@ window.startRushSession = async (sessionId) => {
     }, 500);
   }
 
-  // Show live monitor
   document.getElementById("rush-monitor").style.display = "block";
   document.getElementById("rush-monitor-title").textContent = `${session.emoji} ${session.label} — Live`;
   startRushMonitor(session, activeRushId);
@@ -3006,16 +3065,29 @@ window.completeKidRushTask = async (kidId, taskId, baseStars, endAtMs, totalSecs
     const remaining = Math.max(0, Math.floor((endAtMs - Date.now()) / 1000));
     const elapsed   = Math.max(0, totalSecs - remaining);
     const earned    = calculateRushStars(baseStars, elapsed, totalSecs);
+
+    // ── Optimistic UI update immediately ──────────────────────
+    if (!kidRushData.progress)          kidRushData.progress = {};
+    if (!kidRushData.progress[kidId])   kidRushData.progress[kidId] = {};
+    kidRushData.progress[kidId][taskId] = {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned};
+    toast(`⭐ +${earned} stars earned!`, "success");
+
+    if (!navigator.onLine) {
+      // Queue for sync when back online
+      window._offlineQueue.push({
+        type: "rushTask", rushId: kidRushId,
+        kidId, taskId, elapsed, earned
+      });
+      saveOfflineQueue();
+      return;
+    }
+
     const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await updateDoc(fsDoc(db, "activeRush", kidRushId), {
       [`progress.${kidId}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
     });
-    // ── Stars credited instantly — Rush is self-reported ──────
+    // Stars credited instantly — Rush is self-reported
     await addBonusStars(kidId, earned);
-    if (!kidRushData.progress) kidRushData.progress = {};
-    if (!kidRushData.progress[kidId]) kidRushData.progress[kidId] = {};
-    kidRushData.progress[kidId][taskId] = {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned};
-    toast(`⭐ +${earned} stars earned!`, "success");
   } catch(e) { toast("Error. Try again.", "error"); console.error(e); }
 };
 
@@ -3149,7 +3221,7 @@ window.switchToKid = async (kidId, code) => {
 // PARENT PIN SYSTEM
 // ══════════════════════════════════════════════════════════════
 
-// Simple hash — not cryptographic but prevents casual snooping
+// ── PIN stored in Firestore parent profile (travels across devices) ──
 function hashPIN(pin) {
   let h = 0;
   for (let i = 0; i < pin.length; i++) {
@@ -3159,21 +3231,20 @@ function hashPIN(pin) {
   return String(h);
 }
 
-function getPINKey() {
-  return currentParent ? `sk_pin_${currentParent.uid}` : "sk_pin";
-}
-
 function hasPINSet() {
-  return !!localStorage.getItem(getPINKey());
+  // Check Firestore profile (already loaded into currentParent)
+  return !!(currentParent?.pinHash);
 }
 
 function verifyPIN(pin) {
-  const stored = localStorage.getItem(getPINKey());
-  return stored && stored === hashPIN(pin);
+  return currentParent?.pinHash && currentParent.pinHash === hashPIN(pin);
 }
 
-function savePIN(pin) {
-  localStorage.setItem(getPINKey(), hashPIN(pin));
+async function savePIN(pin) {
+  const hash = hashPIN(pin);
+  // Save to Firestore so it works on all devices
+  await updateParentProfile(currentParent.uid, { pinHash: hash });
+  currentParent.pinHash = hash;
 }
 
 // ── PIN entry state ───────────────────────────────────────────
@@ -3275,11 +3346,13 @@ window.pinBackspace = () => {
 };
 
 window.pinForgot = () => {
-  // Close PIN overlay, go to email/password login
   document.getElementById("pin-overlay").style.display = "none";
   _pinBuffer = "";
-  // After email login, re-prompt PIN setup
-  localStorage.removeItem(getPINKey());
+  // Clear PIN from Firestore — parent must reset after email login
+  if (currentParent) {
+    updateParentProfile(currentParent.uid, { pinHash: null }).catch(()=>{});
+    currentParent.pinHash = null;
+  }
   showScreen("screen-login");
   toast("Log in with email to reset your PIN", "info");
 };
@@ -3313,10 +3386,9 @@ window.pinSetupInput = (digit) => {
         updatePINDots("pin-setup-dot", 0);
       } else {
         if (_setupBuffer === _setupFirst) {
-          savePIN(_setupBuffer);
+          await savePIN(_setupBuffer);
           document.getElementById("pin-setup-overlay").style.display = "none";
           toast("PIN set! Parent portal is now protected 🔒", "success");
-          // Now go to parent dashboard
           goToParentDashboard();
         } else {
           document.getElementById("pin-setup-error").textContent = "PINs don't match. Try again.";
@@ -3354,7 +3426,7 @@ window.pinSetupBack = () => {
 
 // Also add PIN change option inside parent settings
 window.changeParentPIN = () => {
-  localStorage.removeItem(getPINKey());
+  if (currentParent) currentParent.pinHash = null;
   openPINSetup();
 };
 

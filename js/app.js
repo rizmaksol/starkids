@@ -1090,6 +1090,29 @@ async function showKidDashboard(kid) {
   window._rushPollInterval = setInterval(() => {
     if (currentKid) checkForActiveRush(currentKid).catch(()=>{});
   }, 30000);
+
+  // ── Instant rush trigger via localStorage broadcast ────────
+  // Fires immediately when parent taps Start on the SAME device/browser
+  if (!window._rushBroadcastListener) {
+    window._rushBroadcastListener = (e) => {
+      if (e.key !== "sk_rush_broadcast" || !e.newValue) return;
+      try {
+        const data = JSON.parse(e.newValue);
+        if (!currentKid) return;
+        if (!data.kidIds?.includes(currentKid.id)) return;
+        if (kidRushId === data.rushId) return;
+        // Fetch fresh rush data and show immediately
+        getActiveRushForKid(currentKid.parentId).then(rush => {
+          if (!rush) return;
+          kidRushId   = rush.id;
+          kidRushData = rush;
+          playRushStartSound();
+          showKidRushOverlay(rush);
+        }).catch(()=>{});
+      } catch(err) {}
+    };
+    window.addEventListener("storage", window._rushBroadcastListener);
+  }
   // Load achievements
   await loadKidAchievements(kid.id);
   showScreen("screen-kid-dashboard");
@@ -2089,6 +2112,32 @@ window.startRushSession = async (sessionId) => {
   currentSession  = session;
   const kidIds    = kidsList.map(k => k.id);
   activeRushId    = await startRush(currentParent.uid, sessionId, kidIds, session.tasks, session.windowMinutes);
+
+  // ── Broadcast to kid screens immediately via localStorage ──
+  const broadcastData = {
+    rushId:    activeRushId,
+    sessionId: sessionId,
+    parentId:  currentParent.uid,
+    kidIds:    kidIds,
+    startedAt: Date.now()
+  };
+  localStorage.setItem("sk_rush_broadcast", JSON.stringify(broadcastData));
+
+  // ── Same-tab direct trigger (storage event doesn't fire same tab) ──
+  // If a kid is currently on this device, show rush immediately
+  if (currentKid && kidIds.includes(currentKid.id) && kidRushId !== activeRushId) {
+    setTimeout(async () => {
+      try {
+        const rush = await getActiveRushForKid(currentParent.uid);
+        if (rush && kidRushId !== rush.id) {
+          kidRushId   = rush.id;
+          kidRushData = rush;
+          playRushStartSound();
+          showKidRushOverlay(rush);
+        }
+      } catch(e) {}
+    }, 500);
+  }
 
   // Show live monitor
   document.getElementById("rush-monitor").style.display = "block";

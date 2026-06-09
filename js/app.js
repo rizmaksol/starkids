@@ -3376,7 +3376,7 @@ window.pinSetupInput = async (digit) => {
   _setupBuffer += digit;
   updatePINDots("pin-setup-dot", _setupBuffer.length);
   if (_setupBuffer.length === 4) {
-    setTimeout(() => {
+    setTimeout(async () => {
       if (_setupStep === 1) {
         _setupFirst = _setupBuffer;
         _setupBuffer = "";

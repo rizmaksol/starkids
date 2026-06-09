@@ -73,13 +73,15 @@ async function startRush(parentId, sessionId, kidIds, tasks, windowMinutes) {
 }
 
 async function getActiveRushForKid(parentId) {
-  // Use getDocs from tasks.js import chain (already loaded)
   const firestoreModule = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
   const { getDocs, collection, query, where } = firestoreModule;
   const q    = query(collection(db,"activeRush"), where("parentId","==",parentId), where("status","==","active"));
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const data = {id:snap.docs[0].id, ...snap.docs[0].data()};
+  // Normalize timestamps — Firestore may return Timestamp objects or plain numbers
+  if (data.endAtMs?.toMillis)   data.endAtMs   = data.endAtMs.toMillis();
+  if (data.startAtMs?.toMillis) data.startAtMs = data.startAtMs.toMillis();
   return data;
 }
 
@@ -1433,32 +1435,33 @@ window.handleTaskDone = (taskId) => openSubmitTaskModal(taskId, "");
 // ─ Refresh kid dashboard ────────────────────────────────────────────────────────────
 window.refreshKidDashboard = async () => {
   if (!currentKid) return;
+  const kid = currentKid; // capture to prevent null mid-async
   const btn = document.getElementById("btn-kid-refresh");
   if (btn) { btn.textContent = "⏳ Checking…"; btn.disabled = true; }
   try {
-    await resetRecurringTasks(currentKid.id);
-    const stars = await getStarBalance(currentKid.id);
+    await resetRecurringTasks(kid.id);
+    const stars = await getStarBalance(kid.id);
     const money = starsToMoney(stars, financeSettings);
     document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
     document.getElementById("kid-dashboard-money").textContent = `💰 ${money}`;
     await loadKidTasks(currentKid);
-    await loadKidGoalsView(currentKid.id, stars);
+    await loadKidGoalsView(kid.id, stars);
     // Check achievements
     try {
-      const kidVals = familyValues.length ? familyValues : await getFamilyValues(currentKid.parentId).catch(()=>[]);
-      const stats   = await getKidStats(currentKid.id, kidVals);
-      const earned  = await checkAchievements(currentKid.id, stats);
+      const kidVals = familyValues.length ? familyValues : await getFamilyValues(kid.parentId).catch(()=>[]);
+      const stats   = await getKidStats(kid.id, kidVals);
+      const earned  = await checkAchievements(kid.id, stats);
       if (earned.length > 0) {
-        await loadKidAchievements(currentKid.id);
+        await loadKidAchievements(kid.id);
         // Award bonus stars for each achievement
         let bonusTotal = 0;
         for (const a of earned) {
           const bonus = 5; // 5 bonus stars per achievement
-          await addBonusStars(currentKid.id, bonus);
+          await addBonusStars(kid.id, bonus);
           bonusTotal += bonus;
         }
         // Refresh star display
-        const newStars = await getStarBalance(currentKid.id);
+        const newStars = await getStarBalance(kid.id);
         document.getElementById("kid-dashboard-stars").textContent = `⭐ ${newStars} Stars`;
         document.getElementById("kid-dashboard-money").textContent = `💰 ${starsToMoney(newStars, financeSettings)}`;
         earned.forEach((a, i) => setTimeout(() =>

@@ -838,6 +838,7 @@ function goToParentDashboard() {
           `${session.emoji||"⚡"} ${session.label||"Rush"} — Live`;
         startRushMonitor(session, rush.id);
         toast(`${session.emoji||"⚡"} Rush already running — reconnected!`, "info");
+        showParentRushOverlay(rush.id, session);
       }
     } catch(e) {}
   }, 1500);
@@ -1802,18 +1803,117 @@ async function getMonthlyStats(kidId) {
     const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
     return d >= oneMonthAgo;
   });
-  // Daily completion rate (tasks done per day this month)
+  // Daily map: date string → {tasks, stars}
   const dailyMap = {};
   monthTasks.forEach(t => {
     const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
     const key = d.toISOString().slice(0,10);
-    dailyMap[key] = (dailyMap[key]||0) + 1;
+    if (!dailyMap[key]) dailyMap[key] = { tasks: 0, stars: 0 };
+    dailyMap[key].tasks++;
+    dailyMap[key].stars += (t.stars||0);
   });
-  const activeDays   = Object.keys(dailyMap).length;
-  const avgPerDay    = activeDays ? (monthTasks.length/activeDays).toFixed(1) : 0;
-  const starsMonth   = monthTasks.reduce((s,t)=>s+(t.stars||0),0);
-  const faithMonth   = monthTasks.filter(t=>t.isFaith).length;
-  return { total: monthTasks.length, activeDays, avgPerDay, starsMonth, faithMonth };
+  const activeDays = Object.keys(dailyMap).length;
+  const avgPerDay  = activeDays ? (monthTasks.length/activeDays).toFixed(1) : 0;
+  const starsMonth = monthTasks.reduce((s,t)=>s+(t.stars||0),0);
+  const faithMonth = monthTasks.filter(t=>t.isFaith).length;
+  return { total: monthTasks.length, activeDays, avgPerDay, starsMonth, faithMonth, dailyMap };
+}
+
+// ── Progress Calendar ─────────────────────────────────────────
+function renderProgressCalendar(kidName, dailyMap, period) {
+  const today    = new Date();
+  const days     = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const months   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // ── Weekly heatmap strip (last 7 days) ──────────────────────
+  const weekDays = [];
+  for (let i = 6; i >= 0; i--) {
+    const d   = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    const data = dailyMap[key] || { tasks: 0, stars: 0 };
+    weekDays.push({ date: d, key, ...data });
+  }
+  const maxStars = Math.max(...weekDays.map(d => d.stars), 1);
+
+  const weekHTML = weekDays.map(d => {
+    const pct   = d.stars / maxStars;
+    const bg    = d.stars === 0 ? "var(--color-bg-2)"
+                : pct >= 0.8    ? "#1a936f"
+                : pct >= 0.4    ? "#FF9F43"
+                : "#6c63ff";
+    const isToday = d.key === today.toISOString().slice(0,10);
+    const dayName = days[(d.date.getDay() + 6) % 7];
+    const money   = d.stars > 0 ? starsToMoney(d.stars, financeSettings) : null;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="font-size:0.65rem;color:var(--color-muted);font-weight:${isToday?"800":"500"};">${dayName}</div>
+      <div title="${d.stars} stars · ${money||"0"}" style="width:100%;aspect-ratio:1;border-radius:6px;background:${bg};border:${isToday?"2px solid var(--color-primary)":"2px solid transparent"};display:flex;align-items:center;justify-content:center;cursor:default;">
+        ${d.stars > 0 ? `<span style="font-size:0.58rem;font-weight:800;color:#fff;">⭐${d.stars}</span>` : ""}
+      </div>
+      <div style="font-size:0.58rem;color:${d.stars>0?"var(--color-primary)":"var(--color-muted)"};text-align:center;line-height:1.2;">
+        ${money || "–"}
+      </div>
+    </div>`;
+  }).join("");
+
+  // ── Monthly calendar grid ───────────────────────────────────
+  const year  = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+  const totalDays = lastDay.getDate();
+
+  let calCells = "";
+  // Day headers
+  days.forEach(d => {
+    calCells += `<div style="font-size:0.6rem;color:var(--color-muted);font-weight:700;text-align:center;padding:2px 0;">${d.slice(0,1)}</div>`;
+  });
+  // Empty cells before month start
+  for (let i = 0; i < startDow; i++) {
+    calCells += `<div></div>`;
+  }
+  // Day cells
+  for (let d = 1; d <= totalDays; d++) {
+    const date  = new Date(year, month, d);
+    const key   = date.toISOString().slice(0,10);
+    const data  = dailyMap[key] || { tasks: 0, stars: 0 };
+    const isToday = d === today.getDate();
+    const isFuture = date > today;
+    const bg    = isFuture          ? "transparent"
+                : data.stars === 0  ? "var(--color-bg-2)"
+                : data.stars >= 15  ? "#1a936f"
+                : data.stars >= 8   ? "#6BCB77"
+                : data.stars >= 3   ? "#FF9F43"
+                : "#6c63ff";
+    const textCol = data.stars > 0 && !isFuture ? "#fff" : "var(--color-muted)";
+    const money   = data.stars > 0 ? starsToMoney(data.stars, financeSettings) : "";
+    calCells += `<div title="${key}: ⭐${data.stars} = ${money}"
+      style="aspect-ratio:1;border-radius:5px;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-size:0.58rem;font-weight:${isToday?"900":"500"};color:${textCol};
+      border:${isToday?"2px solid var(--color-primary)":"1px solid transparent"};cursor:default;padding:1px;">
+      <span>${d}</span>
+      ${data.stars > 0 && !isFuture ? `<span style="font-size:0.5rem;opacity:0.9;">⭐${data.stars}</span>` : ""}
+    </div>`;
+  }
+
+  return `
+  <div style="margin-top:14px;border-top:1px solid var(--color-border);padding-top:12px;">
+    <!-- Weekly strip -->
+    <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);margin-bottom:8px;">📅 This Week</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;">${weekHTML}</div>
+    <!-- Monthly grid -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);">🗓 ${months[month]} ${year}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:var(--color-muted);">
+        <span style="width:10px;height:10px;background:#6c63ff;border-radius:2px;display:inline-block;"></span>1–2⭐
+        <span style="width:10px;height:10px;background:#FF9F43;border-radius:2px;display:inline-block;"></span>3–7⭐
+        <span style="width:10px;height:10px;background:#6BCB77;border-radius:2px;display:inline-block;"></span>8–14⭐
+        <span style="width:10px;height:10px;background:#1a936f;border-radius:2px;display:inline-block;"></span>15+⭐
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">${calCells}</div>
+  </div>`;
 }
 
 async function loadWeeklyReports() {
@@ -2005,6 +2105,9 @@ async function loadWeeklyReports() {
 
       ${report.topTask ? `<div class="rpt-top-task">🏆 Best this ${period==="week"?"week":"month"}: <strong>${report.topTask}</strong></div>` : ""}
       ${report.pendingTasks > 0 ? `<div class="rpt-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} waiting approval</div>` : ""}
+
+      <!-- ── Progress Calendar ──────────────────────────────── -->
+      ${renderProgressCalendar(kid.name, monthly.dailyMap||{}, period)}
     </div>`;
 
     // Draw donut after render
@@ -2223,6 +2326,47 @@ window.startRushSession = async (sessionId) => {
   startRushMonitor(session, activeRushId);
   toast(`${session.emoji} ${session.label} started! Kids see it now 🚀`, "success");
   playRushStartSound();
+  // ── Show rush overlay on parent portal too ─────────────────
+  showParentRushOverlay(activeRushId, session);
+};
+
+// ── Parent Rush Overlay ───────────────────────────────────────
+// Shows the same multi-kid Rush overlay on the parent portal
+// so parent can watch live and tap Done for any kid
+async function showParentRushOverlay(rushId, session) {
+  try {
+    const rush = await getActiveRushForKid(currentParent.uid);
+    if (!rush) return;
+    // Temporarily set kidRushId/Data so the overlay renders
+    kidRushId   = rush.id;
+    kidRushData = rush;
+    // Switch the top bar to parent mode buttons
+    const overlay = document.getElementById("kid-rush-overlay");
+    if (!overlay) return;
+    overlay.style.display = "block";
+    showKidRushOverlay(rush);
+    // Replace top bar buttons for parent context
+    const topBar = overlay.querySelector(".rush-parent-topbar");
+    if (topBar) {
+      topBar.innerHTML = `
+        <button onclick="closeParentRushOverlay()"
+          style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          ✕ Close
+        </button>
+        <div style="font-size:0.85rem;font-weight:800;color:#FFD93D;">${session.emoji} ${session.label}</div>
+        <button onclick="handleEndRushEarly();closeParentRushOverlay();"
+          style="background:rgba(255,80,80,0.3);border:1px solid rgba(255,80,80,0.5);color:#ff9999;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          ⏹ End Rush
+        </button>`;
+    }
+  } catch(e) { console.error("Parent rush overlay:", e); }
+}
+
+window.closeParentRushOverlay = () => {
+  const overlay = document.getElementById("kid-rush-overlay");
+  if (overlay) overlay.style.display = "none";
+  if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
+  // Don't clear kidRushId — rush is still running
 };
 
 function startRushMonitor(session, rushId) {

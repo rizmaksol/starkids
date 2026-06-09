@@ -3371,7 +3371,7 @@ function openPINSetup() {
   document.getElementById("pin-setup-overlay").style.display = "flex";
 }
 
-window.pinSetupInput = (digit) => {
+window.pinSetupInput = async (digit) => {
   if (_setupBuffer.length >= 4) return;
   _setupBuffer += digit;
   updatePINDots("pin-setup-dot", _setupBuffer.length);

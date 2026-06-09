@@ -1065,7 +1065,7 @@ window.addRushTask = window.addRushTask || function() {
 <!-- ══════════════════════ KID RUSH OVERLAY ═════════════════ -->
 <div id="kid-rush-overlay" style="display:none;position:fixed;inset:0;z-index:8000;background:linear-gradient(160deg,#0f0c29,#302b63);overflow-y:auto;">
   <!-- Top bar: Home + Switch Kid + Logout All -->
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 0;max-width:480px;margin:0 auto;">
+  <div class="rush-parent-topbar" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 0;max-width:480px;margin:0 auto;">
     <button onclick="if(typeof exitRushEarly==='function')exitRushEarly();else{document.getElementById('kid-rush-overlay').style.display='none';}"
       style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
       🏠 Home
@@ -1144,7 +1144,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=29"></script>
+<script type="module" src="./js/app.js?v=31"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

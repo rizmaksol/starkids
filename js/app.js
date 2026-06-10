@@ -2100,32 +2100,21 @@ async function loadWeeklyReports() {
 
   // ── Per Kid Cards ──
   data.forEach(({kid, report, monthly}, kidIndex) => {
-    const r     = period === "week" ? report : monthly;
-    const tasks = period === "week" ? r.tasksCompleted : r.total;
-    const stars = period === "week" ? r.starsEarned    : r.starsMonth;
-    const money = starsToMoney(stars, financeSettings);
-    const faith = period === "week" ? r.faithTasks     : r.faithMonth;
-    const jobs  = period === "week" ? (r.jobsDone||0)  : 0;
-    const days  = period === "week" ? (r.activeDays||0): r.activeDays;
-    const maxDays = period === "week" ? 7 : 30;
-
-    // Progress percentages
-    const taskGoal   = 20; // reasonable weekly goal
-    const taskPct    = Math.min(100, Math.round((tasks / taskGoal) * 100));
-    const starGoal   = 50;
-    const starPct    = Math.min(100, Math.round((stars / starGoal) * 100));
-    const activePct  = Math.round((days / maxDays) * 100);
-    const faithGoal  = period==="week" ? 35 : 150;
-    const faithPct   = Math.min(100, Math.round((faith / faithGoal) * 100));
-
-    // Bar colors
-    const getColor = (pct) => pct >= 80 ? "#1a936f" : pct >= 50 ? "#FF9F43" : "#FF6B6B";
+    const r          = period === "week" ? report : monthly;
+    const tasks      = period === "week" ? r.tasksCompleted : r.total;
+    const periodStars= period === "week" ? r.starsEarned    : r.starsMonth;
+    const walletStars= report.totalStars || 0; // wallet balance — source of truth
+    const money      = starsToMoney(walletStars, financeSettings);
+    const periodMoney= starsToMoney(periodStars, financeSettings);
+    const faith      = period === "week" ? r.faithTasks     : r.faithMonth;
+    const jobs       = period === "week" ? (r.jobsDone||0)  : 0;
+    const days       = period === "week" ? (r.activeDays||0): r.activeDays;
+    const maxDays    = period === "week" ? 7 : 30;
 
     const av = kid.photoURL
       ? `<img src="${kid.photoURL}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);" />`
       : `<div style="width:48px;height:48px;border-radius:50%;background:var(--color-bg);border:3px solid var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">${kid.avatarEmoji||"🌟"}</div>`;
 
-    const chartId = `chart_${kidIndex}_${Date.now()}`;
 
     html += `
     <div class="rpt-kid-card">
@@ -2149,7 +2138,7 @@ async function loadWeeklyReports() {
         </div>
         <div class="rpt-metric">
           <div class="rpt-metric-val">${money}</div>
-          <div class="rpt-metric-lbl">Earned</div>
+          <div class="rpt-metric-lbl" style="font-size:0.65rem;">Balance</div>
         </div>
         <div class="rpt-metric">
           <div class="rpt-metric-val">${faith}</div>
@@ -2160,79 +2149,15 @@ async function loadWeeklyReports() {
           <div class="rpt-metric-lbl">Active Days</div>
         </div>
       </div>
+      ${periodStars > 0 ? `<div style="font-size:0.72rem;color:var(--color-muted);margin-bottom:8px;">⭐ ${periodStars} earned this ${period==="week"?"week":"month"} = ${periodMoney}</div>` : ""}
 
-      <!-- Progress bars -->
-      <div class="rpt-bars">
-        <div class="rpt-bar-row">
-          <div class="rpt-bar-label">📋 Tasks <span class="rpt-bar-pct">${taskPct}%</span></div>
-          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${taskPct}%;background:${getColor(taskPct)};"></div></div>
-        </div>
-        <div class="rpt-bar-row">
-          <div class="rpt-bar-label">⭐ Stars <span class="rpt-bar-pct">${starPct}%</span></div>
-          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${starPct}%;background:${getColor(starPct)};"></div></div>
-        </div>
-        <div class="rpt-bar-row">
-          <div class="rpt-bar-label">📅 Active Days <span class="rpt-bar-pct">${activePct}%</span></div>
-          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${activePct}%;background:${getColor(activePct)};"></div></div>
-        </div>
-        ${faith > 0 ? `
-        <div class="rpt-bar-row">
-          <div class="rpt-bar-label">🕌 Prayers <span class="rpt-bar-pct">${faithPct}%</span></div>
-          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${faithPct}%;background:${getColor(faithPct)};"></div></div>
-        </div>` : ""}
-      </div>
-
-      <!-- Donut chart -->
-      <div style="display:flex;align-items:center;gap:16px;padding:12px 0 4px;">
-        <canvas id="${chartId}" width="90" height="90" style="flex-shrink:0;"></canvas>
-        <div style="flex:1;">
-          <div style="font-size:0.75rem;font-weight:700;color:var(--color-text);margin-bottom:6px;">Breakdown</div>
-          <div class="rpt-legend-item"><span style="background:#6C63FF;"></span>Tasks — ${tasks}</div>
-          <div class="rpt-legend-item"><span style="background:#FF9F43;"></span>Prayers — ${faith}</div>
-          <div class="rpt-legend-item"><span style="background:#1a936f;"></span>Jobs — ${jobs}</div>
-        </div>
-      </div>
-
-      ${report.topTask ? `<div class="rpt-top-task">🏆 Best this ${period==="week"?"week":"month"}: <strong>${report.topTask}</strong></div>` : ""}
+      ${report.topTask ? `<div class="rpt-top-task">🏆 Best: <strong>${report.topTask}</strong></div>` : ""}
       ${report.pendingTasks > 0 ? `<div class="rpt-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} waiting approval</div>` : ""}
 
       <!-- ── Progress Calendar ──────────────────────────────── -->
       ${renderProgressCalendar(kid.name, monthly.dailyMap||{}, period)}
     </div>`;
 
-    // Draw donut after render
-    setTimeout(() => {
-      const canvas = document.getElementById(chartId);
-      if (!canvas) return;
-      const ctx    = canvas.getContext("2d");
-      const vals   = [Math.max(tasks,1), Math.max(faith,0), Math.max(jobs,0)];
-      const colors = ["#6C63FF","#FF9F43","#1a936f"];
-      const total  = vals.reduce((s,v)=>s+v,0);
-      let start    = -Math.PI/2;
-      const cx = 45, cy = 45, r = 38, inner = 22;
-      ctx.clearRect(0,0,90,90);
-      vals.forEach((v,i) => {
-        const angle = (v/total)*Math.PI*2;
-        ctx.beginPath();
-        ctx.moveTo(cx,cy);
-        ctx.arc(cx,cy,r,start,start+angle);
-        ctx.closePath();
-        ctx.fillStyle = colors[i];
-        ctx.fill();
-        start += angle;
-      });
-      // Inner circle (donut hole)
-      ctx.beginPath();
-      ctx.arc(cx,cy,inner,0,Math.PI*2);
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--color-surface")||"#fff";
-      ctx.fill();
-      // Center text
-      ctx.fillStyle = "#333";
-      ctx.font = "bold 13px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(stars+"⭐", cx, cy);
-    }, 100);
   });
 
   el.innerHTML = html;

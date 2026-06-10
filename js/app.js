@@ -1569,30 +1569,52 @@ async function loadKidEarnings(kid) {
   try {
     const allTasks   = await getTasksForKid(kid.id);
     const approved   = allTasks.filter(t => t.status === "approved");
-    const totalStars = approved.reduce((s,t) => s+(t.stars||0), 0);
-    const totalMoney = starsToMoney(totalStars, financeSettings);
-    // This month
-    const now        = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisMonth  = approved.filter(t => {
-      if (!t.approvedAt) return false;
-      const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
-      return d >= monthStart;
-    });
-    const monthStars = thisMonth.reduce((s,t) => s+(t.stars||0), 0);
-    const monthMoney = starsToMoney(monthStars, financeSettings);
-    // Entrepreneur earnings
-    const entrStars  = approved.filter(t => t.isEntrepreneur).reduce((s,t) => s+(t.stars||0), 0);
-    const entrMoney  = starsToMoney(entrStars, financeSettings);
-    // Faith earnings
-    const faithStars = approved.filter(t => t.isFaith).reduce((s,t) => s+(t.stars||0), 0);
-    const faithMoney = starsToMoney(faithStars, financeSettings);
-    // Regular task earnings
-    const regStars   = totalStars - entrStars - faithStars;
-    const regMoney   = starsToMoney(regStars, financeSettings);
-    // Current balance
+
+    // ── Use wallet balance as source of truth ─────────────────
     const balance    = await getStarBalance(kid.id);
     const balMoney   = starsToMoney(balance, financeSettings);
+
+    // Rush stars from activeRush collection
+    let rushStarsTotal = 0;
+    let rushStarsMonth = 0;
+    try {
+      const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const rushSnap = await getDocs(query(collection(db,"activeRush"), where("kidIds","array-contains",kid.id)));
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      rushSnap.docs.forEach(d => {
+        const prog = d.data().progress?.[kid.id] || {};
+        Object.values(prog).forEach(p => {
+          if (!p.done) return;
+          rushStarsTotal += (p.stars||0);
+          if (p.doneAtMs && new Date(p.doneAtMs) >= monthStart) rushStarsMonth += (p.stars||0);
+        });
+      });
+    } catch(e) {}
+
+    // Task-based earnings
+    const taskStarsTotal = approved.reduce((s,t) => s+(t.stars||0), 0);
+    const now            = new Date();
+    const monthStart2    = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonth      = approved.filter(t => {
+      if (!t.approvedAt) return false;
+      const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+      return d >= monthStart2;
+    });
+    const taskMonthStars = thisMonth.reduce((s,t) => s+(t.stars||0), 0);
+
+    // Combined totals
+    const totalStars = taskStarsTotal + rushStarsTotal;
+    const totalMoney = starsToMoney(totalStars, financeSettings);
+    const monthStars = taskMonthStars + rushStarsMonth;
+    const monthMoney = starsToMoney(monthStars, financeSettings);
+
+    // Breakdown by type (task-based only — Rush is separate)
+    const entrStars  = approved.filter(t => t.isEntrepreneur).reduce((s,t) => s+(t.stars||0), 0);
+    const entrMoney  = starsToMoney(entrStars, financeSettings);
+    const faithStars = approved.filter(t => t.isFaith).reduce((s,t) => s+(t.stars||0), 0);
+    const faithMoney = starsToMoney(faithStars, financeSettings);
+    const regStars   = approved.filter(t => !t.isEntrepreneur && !t.isFaith).reduce((s,t) => s+(t.stars||0), 0) + rushStarsTotal;
+    const regMoney   = starsToMoney(regStars, financeSettings);
 
     el.innerHTML = `
     <div class="card" style="background:linear-gradient(135deg,#1a1040,#302b63);border:none;color:#fff;margin-bottom:12px;">
@@ -2002,12 +2024,12 @@ async function loadWeeklyReports() {
 
   // ── Find top performer ──────────────────────────────────────
   const ranked = [...data].sort((a,b) => {
-    const sa = period==="week" ? a.report.starsEarned : a.monthly.starsMonth;
-    const sb = period==="week" ? b.report.starsEarned : b.monthly.starsMonth;
+    const sa = a.report.totalStars || 0;
+    const sb = b.report.totalStars || 0;
     return sb - sa;
   });
-  const topKid    = ranked[0];
-  const topStars  = period==="week" ? topKid.report.starsEarned : topKid.monthly.starsMonth;
+  const topKid   = ranked[0];
+  const topStars = topKid.report.totalStars || 0;
   // Weekly key — Monday resets each week
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1);

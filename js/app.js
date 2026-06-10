@@ -11,7 +11,7 @@ import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, 
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=12";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=12";
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=12";
-import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=12";
+import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=13";
 
 // ── Rush Sessions (inline — no separate module needed) ────────
 const DEFAULT_RUSH_SESSIONS = {
@@ -1803,6 +1803,7 @@ async function getMonthlyStats(kidId) {
     const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
     return d >= oneMonthAgo;
   });
+
   // Daily map: date string → {tasks, stars}
   const dailyMap = {};
   monthTasks.forEach(t => {
@@ -1812,11 +1813,33 @@ async function getMonthlyStats(kidId) {
     dailyMap[key].tasks++;
     dailyMap[key].stars += (t.stars||0);
   });
+
+  // ── Include Rush stars in daily map ──────────────────────
+  try {
+    const rushSnap = await getDocs(query(
+      collection(db,"activeRush"), where("kidIds","array-contains",kidId)
+    ));
+    rushSnap.docs.forEach(d => {
+      const rush = d.data();
+      const prog = rush.progress?.[kidId] || {};
+      Object.values(prog).forEach(p => {
+        if (!p.done || !p.doneAtMs) return;
+        const date = new Date(p.doneAtMs);
+        if (date < oneMonthAgo) return;
+        const key = date.toISOString().slice(0,10);
+        if (!dailyMap[key]) dailyMap[key] = { tasks: 0, stars: 0 };
+        dailyMap[key].tasks++;
+        dailyMap[key].stars += (p.stars||0);
+      });
+    });
+  } catch(e) {}
+
   const activeDays = Object.keys(dailyMap).length;
-  const avgPerDay  = activeDays ? (monthTasks.length/activeDays).toFixed(1) : 0;
-  const starsMonth = monthTasks.reduce((s,t)=>s+(t.stars||0),0);
+  const totalAll   = Object.values(dailyMap).reduce((s,d)=>s+d.tasks,0);
+  const avgPerDay  = activeDays ? (totalAll/activeDays).toFixed(1) : 0;
+  const starsMonth = Object.values(dailyMap).reduce((s,d)=>s+d.stars,0);
   const faithMonth = monthTasks.filter(t=>t.isFaith).length;
-  return { total: monthTasks.length, activeDays, avgPerDay, starsMonth, faithMonth, dailyMap };
+  return { total: totalAll, activeDays, avgPerDay, starsMonth, faithMonth, dailyMap };
 }
 
 // ── Progress Calendar ─────────────────────────────────────────

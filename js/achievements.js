@@ -160,27 +160,49 @@ export async function getWeeklyReport(kidId) {
   ));
   const allTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  const weekTasks     = allTasks.filter(t => {
+  const weekTasks = allTasks.filter(t => {
     if (!t.approvedAt) return false;
     const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
     return d >= oneWeekAgo;
   });
 
-  const walletSnap   = await getDoc(doc(db, "wallets", kidId));
-  const totalStars   = walletSnap.exists() ? (walletSnap.data().stars || 0) : 0;
+  const walletSnap = await getDoc(doc(db, "wallets", kidId));
+  const totalStars = walletSnap.exists() ? (walletSnap.data().stars || 0) : 0;
 
-  const starsThisWeek = weekTasks.reduce((sum, t) => sum + (t.stars || 0), 0);
-  const pendingTasks  = allTasks.filter(t => t.status === "submitted").length; // Only tasks submitted by kid awaiting parent approval
-  const faithThisWeek = weekTasks.filter(t => t.isFaith).length;
-  const jobsThisWeek  = weekTasks.filter(t => t.isEntrepreneur).length;
+  // ── Include Rush stars earned this week ───────────────────
+  let rushStarsWeek = 0;
+  let rushTasksWeek = 0;
+  try {
+    const rushSnap = await getDocs(query(
+      collection(db, "activeRush"),
+      where("kidIds", "array-contains", kidId)
+    ));
+    rushSnap.docs.forEach(d => {
+      const rush = d.data();
+      const prog = rush.progress?.[kidId] || {};
+      Object.values(prog).forEach(p => {
+        if (!p.done || !p.doneAtMs) return;
+        if (p.doneAtMs >= oneWeekAgo.getTime()) {
+          rushStarsWeek += (p.stars || 0);
+          rushTasksWeek++;
+        }
+      });
+    });
+  } catch(e) {}
+
+  const starsThisWeek  = weekTasks.reduce((sum,t)=>sum+(t.stars||0),0) + rushStarsWeek;
+  const tasksCompleted = weekTasks.length + rushTasksWeek;
+  const pendingTasks   = allTasks.filter(t => t.status === "submitted").length;
+  const faithThisWeek  = weekTasks.filter(t => t.isFaith).length;
+  const jobsThisWeek   = weekTasks.filter(t => t.isEntrepreneur).length;
 
   return {
-    tasksCompleted: weekTasks.length,
-    starsEarned:    starsThisWeek,
+    tasksCompleted,
+    starsEarned:  starsThisWeek,
     totalStars,
     pendingTasks,
-    faithTasks:     faithThisWeek,
-    jobsDone:       jobsThisWeek,
-    topTask:        weekTasks.sort((a,b)=>(b.stars||0)-(a.stars||0))[0]?.title || null
+    faithTasks:   faithThisWeek,
+    jobsDone:     jobsThisWeek,
+    topTask:      weekTasks.sort((a,b)=>(b.stars||0)-(a.stars||0))[0]?.title || null
   };
 }

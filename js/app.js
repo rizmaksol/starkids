@@ -1660,10 +1660,22 @@ async function loadKidEarnings(kid) {
           : `<div style="font-size:1.8rem;">🚀</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Future CEO!</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs — incredible!</div>`}
       </div>
     </div>`;
+
+    // ── Progress Calendar for kid ────────────────────────────
+    try {
+      const monthly = await getMonthlyStatsForKid(kid.id);
+      el.innerHTML += `<div class="card">${renderProgressCalendar(kid.name, monthly.dailyMap||{}, "week")}</div>`;
+    } catch(e) {}
+
   } catch(e) { el.innerHTML=`<p class="empty-state">Could not load earnings.</p>`; console.error(e); }
 }
 
 // ── First Salary Celebration ──────────────────────────────────
+// getMonthlyStatsForKid — alias so kid earnings tab can use the same function
+async function getMonthlyStatsForKid(kidId) {
+  return getMonthlyStats(kidId);
+}
+
 function showFirstSalary(taskTitle, stars) {
   const key = `sk_first_salary_${currentKid?.id}`;
   if (localStorage.getItem(key)) return; // already shown
@@ -2102,8 +2114,8 @@ async function loadWeeklyReports() {
           <div class="rpt-kid-age">Age ${kid.age||"–"} · ${period==="week"?"Weekly":"Monthly"} Report</div>
         </div>
         <div class="rpt-kid-score">
-          <div class="rpt-score-val">⭐ ${stars}</div>
-          <div class="rpt-score-lbl">stars</div>
+          <div class="rpt-score-val">⭐ ${report.totalStars||0}</div>
+          <div class="rpt-score-lbl">total balance</div>
         </div>
       </div>
 

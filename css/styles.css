@@ -1885,6 +1885,17 @@ input:focus, select:focus {
 .prayer-next { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .prayer-countdown { font-size: 0.78rem; opacity: 0.85; font-weight: 600; }
 
+/* ── Onboarding ───────────────────────────────────────────── */
+.ob-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-border);
+  transition: all 0.2s;
+}
+.ob-dot.active {
+  width: 24px; border-radius: 4px;
+  background: var(--color-primary);
+}
+
 /* ── PIN Overlay ──────────────────────────────────────────── */
 .pin-dot {
   width: 16px;

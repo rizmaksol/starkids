@@ -1821,99 +1821,128 @@ async function getMonthlyStats(kidId) {
 
 // ── Progress Calendar ─────────────────────────────────────────
 function renderProgressCalendar(kidName, dailyMap, period) {
-  const today    = new Date();
-  const days     = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-  const months   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const today  = new Date();
+  const days   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const uid    = kidName.replace(/\s+/g,"_") + "_" + Math.random().toString(36).slice(2,6);
 
-  // ── Weekly heatmap strip (last 7 days) ──────────────────────
-  const weekDays = [];
-  for (let i = 6; i >= 0; i--) {
-    const d   = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = d.toISOString().slice(0,10);
-    const data = dailyMap[key] || { tasks: 0, stars: 0 };
-    weekDays.push({ date: d, key, ...data });
+  function dayColor(stars) {
+    if (!stars)      return "var(--color-bg-2)";
+    if (stars >= 15) return "#1a936f";
+    if (stars >= 8)  return "#6BCB77";
+    if (stars >= 3)  return "#FF9F43";
+    return "#6c63ff";
   }
-  const maxStars = Math.max(...weekDays.map(d => d.stars), 1);
 
-  const weekHTML = weekDays.map(d => {
-    const pct   = d.stars / maxStars;
-    const bg    = d.stars === 0 ? "var(--color-bg-2)"
-                : pct >= 0.8    ? "#1a936f"
-                : pct >= 0.4    ? "#FF9F43"
-                : "#6c63ff";
-    const isToday = d.key === today.toISOString().slice(0,10);
-    const dayName = days[(d.date.getDay() + 6) % 7];
-    const money   = d.stars > 0 ? starsToMoney(d.stars, financeSettings) : null;
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-      <div style="font-size:0.65rem;color:var(--color-muted);font-weight:${isToday?"800":"500"};">${dayName}</div>
-      <div title="${d.stars} stars · ${money||"0"}" style="width:100%;aspect-ratio:1;border-radius:6px;background:${bg};border:${isToday?"2px solid var(--color-primary)":"2px solid transparent"};display:flex;align-items:center;justify-content:center;cursor:default;">
-        ${d.stars > 0 ? `<span style="font-size:0.58rem;font-weight:800;color:#fff;">⭐${d.stars}</span>` : ""}
-      </div>
-      <div style="font-size:0.58rem;color:${d.stars>0?"var(--color-primary)":"var(--color-muted)"};text-align:center;line-height:1.2;">
-        ${money || "–"}
-      </div>
-    </div>`;
-  }).join("");
-
-  // ── Monthly calendar grid ───────────────────────────────────
-  const year  = today.getFullYear();
-  const month = today.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay  = new Date(year, month + 1, 0);
-  const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
-  const totalDays = lastDay.getDate();
-
-  let calCells = "";
-  // Day headers
-  days.forEach(d => {
-    calCells += `<div style="font-size:0.6rem;color:var(--color-muted);font-weight:700;text-align:center;padding:2px 0;">${d.slice(0,1)}</div>`;
-  });
-  // Empty cells before month start
-  for (let i = 0; i < startDow; i++) {
-    calCells += `<div></div>`;
+  // ── Week view: last 7 days ────────────────────────────────
+  function buildWeekView() {
+    const weekDays = [];
+    for (let i = 6; i >= 0; i--) {
+      const d   = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().slice(0,10);
+      weekDays.push({ date:d, key, ...(dailyMap[key]||{tasks:0,stars:0}) });
+    }
+    return weekDays.map(d => {
+      const isToday  = d.key === today.toISOString().slice(0,10);
+      const dayLabel = days[(d.date.getDay()+6)%7];
+      const money    = d.stars > 0 ? starsToMoney(d.stars, financeSettings) : null;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;">
+        <div style="font-size:0.6rem;color:var(--color-muted);font-weight:${isToday?"800":"500"};">${dayLabel}</div>
+        <div style="font-size:0.58rem;color:var(--color-muted);">${d.date.getDate()}</div>
+        <div style="width:100%;aspect-ratio:1;border-radius:8px;background:${dayColor(d.stars)};
+          border:${isToday?"2px solid var(--color-primary)":"2px solid transparent"};
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          ${d.stars > 0
+            ? `<span style="font-size:0.6rem;font-weight:800;color:#fff;line-height:1;">⭐${d.stars}</span>`
+            : `<span style="font-size:0.65rem;color:rgba(255,255,255,0.15);">·</span>`}
+        </div>
+        <div style="font-size:0.55rem;color:${money?"var(--color-primary)":"var(--color-muted)"};text-align:center;line-height:1.2;">
+          ${money||"–"}
+        </div>
+      </div>`;
+    }).join("");
   }
-  // Day cells
-  for (let d = 1; d <= totalDays; d++) {
-    const date  = new Date(year, month, d);
-    const key   = date.toISOString().slice(0,10);
-    const data  = dailyMap[key] || { tasks: 0, stars: 0 };
-    const isToday = d === today.getDate();
-    const isFuture = date > today;
-    const bg    = isFuture          ? "transparent"
-                : data.stars === 0  ? "var(--color-bg-2)"
-                : data.stars >= 15  ? "#1a936f"
-                : data.stars >= 8   ? "#6BCB77"
-                : data.stars >= 3   ? "#FF9F43"
-                : "#6c63ff";
-    const textCol = data.stars > 0 && !isFuture ? "#fff" : "var(--color-muted)";
-    const money   = data.stars > 0 ? starsToMoney(data.stars, financeSettings) : "";
-    calCells += `<div title="${key}: ⭐${data.stars} = ${money}"
-      style="aspect-ratio:1;border-radius:5px;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;
-      font-size:0.58rem;font-weight:${isToday?"900":"500"};color:${textCol};
-      border:${isToday?"2px solid var(--color-primary)":"1px solid transparent"};cursor:default;padding:1px;">
-      <span>${d}</span>
-      ${data.stars > 0 && !isFuture ? `<span style="font-size:0.5rem;opacity:0.9;">⭐${data.stars}</span>` : ""}
-    </div>`;
+
+  // ── Month view: 4 week bars ───────────────────────────────
+  function buildMonthView() {
+    const weeks = [];
+    for (let w = 3; w >= 0; w--) {
+      const weekDays = [];
+      for (let d = 6; d >= 0; d--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - (w*7) - d);
+        const key  = date.toISOString().slice(0,10);
+        weekDays.push({ date, key, ...(dailyMap[key]||{tasks:0,stars:0}) });
+      }
+      const totalStars = weekDays.reduce((s,d)=>s+(d.stars||0),0);
+      const activeDays = weekDays.filter(d=>d.stars>0).length;
+      const start = `${weekDays[0].date.getDate()} ${months[weekDays[0].date.getMonth()]}`;
+      const end   = `${weekDays[6].date.getDate()} ${months[weekDays[6].date.getMonth()]}`;
+      weeks.push({ weekDays, totalStars, activeDays, start, end });
+    }
+    const maxStars = Math.max(...weeks.map(w=>w.totalStars), 1);
+
+    return weeks.map((wk, i) => {
+      const barPct = Math.round((wk.totalStars / maxStars) * 100);
+      const money  = starsToMoney(wk.totalStars, financeSettings);
+      const isCurrent = i === 3;
+      const dots = wk.weekDays.map(d =>
+        `<div title="${days[(d.date.getDay()+6)%7]}: ⭐${d.stars||0}"
+          style="width:11px;height:11px;border-radius:3px;background:${dayColor(d.stars||0)};flex-shrink:0;"></div>`
+      ).join("");
+
+      return `<div style="background:var(--color-bg-2);border-radius:12px;padding:10px 12px;margin-bottom:8px;
+        ${isCurrent?"border:1.5px solid var(--color-primary);":"border:1px solid transparent;"}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:0.72rem;font-weight:${isCurrent?"800":"600"};color:var(--color-text);">
+            ${isCurrent?"📅 ":""}<span style="color:var(--color-muted);font-weight:500;font-size:0.65rem;">${wk.start} – ${wk.end}</span>
+          </div>
+          <div style="font-size:0.75rem;font-weight:800;color:${wk.totalStars>0?"var(--color-primary)":"var(--color-muted)"};">
+            ${wk.totalStars > 0 ? `⭐ ${wk.totalStars} = ${money}` : "–"}
+          </div>
+        </div>
+        <div style="height:8px;background:var(--color-bg);border-radius:4px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${barPct}%;background:${dayColor(wk.totalStars)};border-radius:4px;transition:width 0.5s ease;"></div>
+        </div>
+        <div style="display:flex;gap:3px;align-items:center;">
+          ${dots}
+          <span style="font-size:0.6rem;color:var(--color-muted);margin-left:6px;">${wk.activeDays}/7 days</span>
+        </div>
+      </div>`;
+    }).join("");
   }
 
   return `
   <div style="margin-top:14px;border-top:1px solid var(--color-border);padding-top:12px;">
-    <!-- Weekly strip -->
-    <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);margin-bottom:8px;">📅 This Week</div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;">${weekHTML}</div>
-    <!-- Monthly grid -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);">🗓 ${months[month]} ${year}</div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:var(--color-muted);">
-        <span style="width:10px;height:10px;background:#6c63ff;border-radius:2px;display:inline-block;"></span>1–2⭐
-        <span style="width:10px;height:10px;background:#FF9F43;border-radius:2px;display:inline-block;"></span>3–7⭐
-        <span style="width:10px;height:10px;background:#6BCB77;border-radius:2px;display:inline-block;"></span>8–14⭐
-        <span style="width:10px;height:10px;background:#1a936f;border-radius:2px;display:inline-block;"></span>15+⭐
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);">📊 Progress</div>
+      <div style="display:flex;gap:4px;">
+        <button id="cal-week-btn-${uid}" onclick="window.showCalView_${uid}('week')"
+          style="background:var(--color-primary);color:#fff;border:none;border-radius:10px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          Week
+        </button>
+        <button id="cal-month-btn-${uid}" onclick="window.showCalView_${uid}('month')"
+          style="background:var(--color-bg-2);color:var(--color-muted);border:1px solid var(--color-border);border-radius:10px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          Month
+        </button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">${calCells}</div>
-  </div>`;
+    <div id="cal-week-${uid}"  style="display:flex;gap:6px;">${buildWeekView()}</div>
+    <div id="cal-month-${uid}" style="display:none;">${buildMonthView()}</div>
+  </div>
+  <script>
+    window.showCalView_${uid} = function(view) {
+      var w = document.getElementById("cal-week-${uid}");
+      var m = document.getElementById("cal-month-${uid}");
+      var wb = document.getElementById("cal-week-btn-${uid}");
+      var mb = document.getElementById("cal-month-btn-${uid}");
+      if (w) w.style.display  = view==="week"  ? "flex"  : "none";
+      if (m) m.style.display  = view==="month" ? "block" : "none";
+      if (wb) { wb.style.background=view==="week"?"var(--color-primary)":"var(--color-bg-2)"; wb.style.color=view==="week"?"#fff":"var(--color-muted)"; wb.style.border=view==="week"?"none":"1px solid var(--color-border)"; }
+      if (mb) { mb.style.background=view==="month"?"var(--color-primary)":"var(--color-bg-2)"; mb.style.color=view==="month"?"#fff":"var(--color-muted)"; mb.style.border=view==="month"?"none":"1px solid var(--color-border)"; }
+    };
+  <\/script>`;
 }
 
 async function loadWeeklyReports() {
@@ -3235,6 +3264,14 @@ window.completeKidRushTask = async (kidId, taskId, baseStars, endAtMs, totalSecs
     });
     // Stars credited instantly — Rush is self-reported
     await addBonusStars(kidId, earned);
+    // ── Update display if this is the current kid on screen ──
+    if (currentKid && currentKid.id === kidId) {
+      const newStars = await getStarBalance(kidId);
+      const el1 = document.getElementById("kid-dashboard-stars");
+      const el2 = document.getElementById("kid-dashboard-money");
+      if (el1) el1.textContent = `⭐ ${newStars} Stars`;
+      if (el2) el2.textContent = `💰 ${starsToMoney(newStars, financeSettings)}`;
+    }
   } catch(e) { toast("Error. Try again.", "error"); console.error(e); }
 };
 

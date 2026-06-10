@@ -2354,7 +2354,7 @@ async function showParentRushOverlay(rushId, session) {
           ✕ Close
         </button>
         <div style="font-size:0.85rem;font-weight:800;color:#FFD93D;">${session.emoji} ${session.label}</div>
-        <button onclick="handleEndRushEarly();closeParentRushOverlay();"
+        <button onclick="if(typeof stopRushSession==='function')stopRushSession();closeParentRushOverlay();"
           style="background:rgba(255,80,80,0.3);border:1px solid rgba(255,80,80,0.5);color:#ff9999;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
           ⏹ End Rush
         </button>`;

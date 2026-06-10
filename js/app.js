@@ -824,6 +824,7 @@ function goToParentDashboard() {
   document.getElementById("parent-name-display").textContent = `Welcome, ${currentParent.name}! 👋`;
   autoSyncKidsToLocalStorage();
   showScreen("screen-parent-dashboard"); showTab("kids"); loadKids();
+  setTimeout(checkAndSendEmailReports, 3000);
   // ── Auto-detect running rush on any device ─────────────────
   setTimeout(async () => {
     try {
@@ -856,6 +857,189 @@ async function autoSyncKidsToLocalStorage() {
     if (typeof window.SK_renderKids === "function") window.SK_renderKids();
   } catch(e) {}
 }
+
+// ══════════════════════════════════════════════════════════════
+// EMAIL REPORTS (EmailJS)
+// Replace YOUR_PUBLIC_KEY and YOUR_SERVICE_ID with your EmailJS credentials
+// ══════════════════════════════════════════════════════════════
+const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "starkids_report"; // create this template in EmailJS
+
+async function loadEmailJS() {
+  if (window.emailjs) return;
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  window.emailjs.init(EMAILJS_PUBLIC_KEY);
+}
+
+async function sendWeeklyEmailReport() {
+  if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") return; // not configured yet
+  if (!currentParent?.email) return;
+
+  // Check if already sent this week
+  const now       = new Date();
+  const weekKey   = `sk_email_week_${now.getFullYear()}_${getWeekNumber(now)}`;
+  if (localStorage.getItem(weekKey)) return;
+
+  try {
+    await loadEmailJS();
+    // Build report data
+    const kids   = await getKidsByParent(currentParent.uid);
+    const lines  = await Promise.all(kids.map(async k => {
+      const bal = await getStarBalance(k.id);
+      return `${k.name}: ⭐${bal} = ${starsToMoney(bal, financeSettings)}`;
+    }));
+
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     currentParent.email,
+      parent_name:  currentParent.name,
+      report_type:  "Weekly",
+      period:       `Week of ${now.toDateString()}`,
+      kids_summary: lines.join("\n"),
+      app_link:     "https://rizmaksol.github.io/starkids/"
+    });
+
+    localStorage.setItem(weekKey, "1");
+    console.log("Weekly report sent to", currentParent.email);
+  } catch(e) { console.error("Email report failed:", e); }
+}
+
+async function sendMonthlyEmailReport() {
+  if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") return;
+  if (!currentParent?.email) return;
+
+  const now       = new Date();
+  const monthKey  = `sk_email_month_${now.getFullYear()}_${now.getMonth()}`;
+  if (localStorage.getItem(monthKey)) return;
+
+  try {
+    await loadEmailJS();
+    const kids  = await getKidsByParent(currentParent.uid);
+    const lines = await Promise.all(kids.map(async k => {
+      const bal = await getStarBalance(k.id);
+      const tot = await getTotalEarned(k.id);
+      return `${k.name}: Balance ⭐${bal} | Total Earned ⭐${tot} = ${starsToMoney(tot, financeSettings)}`;
+    }));
+
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     currentParent.email,
+      parent_name:  currentParent.name,
+      report_type:  "Monthly",
+      period:       `${now.toLocaleString("default",{month:"long"})} ${now.getFullYear()}`,
+      kids_summary: lines.join("\n"),
+      app_link:     "https://rizmaksol.github.io/starkids/"
+    });
+
+    localStorage.setItem(monthKey, "1");
+    console.log("Monthly report sent to", currentParent.email);
+  } catch(e) { console.error("Monthly email report failed:", e); }
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+}
+
+// ── Trigger email checks on parent dashboard load ─────────────
+function checkAndSendEmailReports() {
+  const now = new Date();
+  if (now.getDay() === 1) sendWeeklyEmailReport();  // Monday
+  if (now.getDate() === 1) sendMonthlyEmailReport(); // 1st of month
+}
+
+// ── Onboarding Flow ───────────────────────────────────────────
+
+let _obStep    = 0;
+let _obKidCode = "";
+let _obKidName = "";
+
+function showOnboarding() {
+  _obStep = 0;
+  showScreen("screen-onboarding");
+  obUpdateDots();
+  document.getElementById("ob-step-0").style.display = "block";
+  document.getElementById("ob-step-1").style.display = "none";
+  document.getElementById("ob-step-2").style.display = "none";
+}
+
+function obUpdateDots() {
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById(`ob-dot-${i}`);
+    if (dot) dot.classList.toggle("active", i === _obStep);
+  }
+}
+
+window.obNext = () => {
+  document.getElementById(`ob-step-${_obStep}`).style.display = "none";
+  _obStep++;
+  document.getElementById(`ob-step-${_obStep}`).style.display = "block";
+  obUpdateDots();
+};
+
+window.obBack = () => {
+  document.getElementById(`ob-step-${_obStep}`).style.display = "none";
+  _obStep--;
+  document.getElementById(`ob-step-${_obStep}`).style.display = "block";
+  obUpdateDots();
+};
+
+window.obSelectEmoji = (emoji, btn) => {
+  document.getElementById("ob-kid-emoji").value = emoji;
+  document.querySelectorAll("#ob-emoji-row button").forEach(b => {
+    b.style.borderColor = "transparent";
+    b.style.background  = "var(--color-bg-2)";
+  });
+  btn.style.borderColor = "var(--color-primary)";
+  btn.style.background  = "rgba(108,99,255,0.12)";
+};
+
+window.obAddKid = async () => {
+  const name  = document.getElementById("ob-kid-name")?.value.trim();
+  const age   = parseInt(document.getElementById("ob-kid-age")?.value, 10);
+  const emoji = document.getElementById("ob-kid-emoji")?.value || "🌟";
+  if (!name) { toast("Please enter a name.", "error"); return; }
+  if (!age || age < 1 || age > 18) { toast("Please enter a valid age.", "error"); return; }
+  const btn = document.getElementById("ob-add-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Adding…"; }
+  try {
+    const kid = await addKid(currentParent.uid, name, age, emoji);
+    await createDefaultTasks(currentParent.uid, kid.id, age);
+    if (typeof window.SK_saveKidDirect === "function") {
+      window.SK_saveKidDirect(kid.id, kid.name, emoji, null, kid.code, kid.parentId);
+    }
+    _obKidCode = kid.code;
+    _obKidName = kid.name;
+    document.getElementById("ob-kid-code").textContent = kid.code;
+    document.getElementById("ob-kid-name-display").textContent = kid.name;
+    obNext();
+  } catch(e) {
+    toast("Failed to add kid. Try again.", "error"); console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Add Kid & Continue →"; }
+  }
+};
+
+window.obFinish = () => { goToParentDashboard(); };
+
+// ── Forgot Password — send reset email ───────────────────────
+window.sendPasswordReset = async () => {
+  if (!currentParent?.email) { toast("No email found.", "error"); return; }
+  try {
+    const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    await sendPasswordResetEmail(auth, currentParent.email);
+    toast(`📧 Reset link sent to ${currentParent.email}`, "success");
+  } catch(e) {
+    toast("Could not send reset email. Try again.", "error");
+    console.error(e);
+  }
+};
 
 // ── Lock parent portal — go home without logging out ──────────
 window.lockParentPortal = () => {
@@ -911,8 +1095,10 @@ document.getElementById("btn-signup")?.addEventListener("click", async () => {
     familyValues = await seedDefaultValues(currentParent.uid);
     toast("Account created! Welcome to StarKids! 🌟","success");
     window._justLoggedIn = true;
+    // New parent — show onboarding first, then PIN setup
+    window._pendingOnboarding = true;
     if (!hasPINSet()) openPINSetup();
-    else goToParentDashboard();
+    else showOnboarding();
   } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
 });
 
@@ -3559,7 +3745,13 @@ window.pinSetupInput = async (digit) => {
           await savePIN(_setupBuffer);
           document.getElementById("pin-setup-overlay").style.display = "none";
           toast("PIN set! Parent portal is now protected 🔒", "success");
-          goToParentDashboard();
+          // New parent → show onboarding; returning parent → go to dashboard
+          if (window._pendingOnboarding) {
+            window._pendingOnboarding = false;
+            showOnboarding();
+          } else {
+            goToParentDashboard();
+          }
         } else {
           document.getElementById("pin-setup-error").textContent = "PINs don't match. Try again.";
           updatePINDots("pin-setup-dot", 4, true);

@@ -1824,7 +1824,8 @@ function renderProgressCalendar(kidName, dailyMap, period) {
   const today  = new Date();
   const days   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const uid    = kidName.replace(/\s+/g,"_") + "_" + Math.random().toString(36).slice(2,6);
+  // Use stable uid from kidName only — no random — so it's consistent across renders
+  const uid    = kidName.replace(/[^a-zA-Z0-9]/g,"_");
 
   function dayColor(stars) {
     if (!stars)      return "var(--color-bg-2)";
@@ -1913,16 +1914,16 @@ function renderProgressCalendar(kidName, dailyMap, period) {
     }).join("");
   }
 
-  return `
+  const html = `
   <div style="margin-top:14px;border-top:1px solid var(--color-border);padding-top:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);">📊 Progress</div>
       <div style="display:flex;gap:4px;">
-        <button id="cal-week-btn-${uid}" onclick="window.showCalView_${uid}('week')"
+        <button id="cal-week-btn-${uid}" onclick="window['showCalView_${uid}']('week')"
           style="background:var(--color-primary);color:#fff;border:none;border-radius:10px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">
           Week
         </button>
-        <button id="cal-month-btn-${uid}" onclick="window.showCalView_${uid}('month')"
+        <button id="cal-month-btn-${uid}" onclick="window['showCalView_${uid}']('month')"
           style="background:var(--color-bg-2);color:var(--color-muted);border:1px solid var(--color-border);border-radius:10px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">
           Month
         </button>
@@ -1931,18 +1932,21 @@ function renderProgressCalendar(kidName, dailyMap, period) {
     <div id="cal-week-${uid}"  style="display:flex;gap:6px;">${buildWeekView()}</div>
     <div id="cal-month-${uid}" style="display:none;">${buildMonthView()}</div>
   </div>
-  <script>
-    window.showCalView_${uid} = function(view) {
-      var w = document.getElementById("cal-week-${uid}");
-      var m = document.getElementById("cal-month-${uid}");
-      var wb = document.getElementById("cal-week-btn-${uid}");
-      var mb = document.getElementById("cal-month-btn-${uid}");
-      if (w) w.style.display  = view==="week"  ? "flex"  : "none";
-      if (m) m.style.display  = view==="month" ? "block" : "none";
-      if (wb) { wb.style.background=view==="week"?"var(--color-primary)":"var(--color-bg-2)"; wb.style.color=view==="week"?"#fff":"var(--color-muted)"; wb.style.border=view==="week"?"none":"1px solid var(--color-border)"; }
-      if (mb) { mb.style.background=view==="month"?"var(--color-primary)":"var(--color-bg-2)"; mb.style.color=view==="month"?"#fff":"var(--color-muted)"; mb.style.border=view==="month"?"none":"1px solid var(--color-border)"; }
-    };
-  <\/script>`;
+`;
+  // Register toggle function immediately — before innerHTML is set
+  // Use setTimeout(0) so DOM elements exist when function first runs
+  window["showCalView_" + uid] = function(view) {
+    var w  = document.getElementById("cal-week-"  + uid);
+    var m  = document.getElementById("cal-month-" + uid);
+    var wb = document.getElementById("cal-week-btn-"  + uid);
+    var mb = document.getElementById("cal-month-btn-" + uid);
+    if (w)  w.style.display  = view==="week"  ? "flex"  : "none";
+    if (m)  m.style.display  = view==="month" ? "block" : "none";
+    if (wb) { wb.style.background=view==="week"?"var(--color-primary)":"var(--color-bg-2)"; wb.style.color=view==="week"?"#fff":"var(--color-muted)"; wb.style.border=view==="week"?"none":"1px solid var(--color-border)"; }
+    if (mb) { mb.style.background=view==="month"?"var(--color-primary)":"var(--color-bg-2)"; mb.style.color=view==="month"?"#fff":"var(--color-muted)"; mb.style.border=view==="month"?"none":"1px solid var(--color-border)"; }
+  };
+
+  return html;
 }
 
 async function loadWeeklyReports() {

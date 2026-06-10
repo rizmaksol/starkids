@@ -730,9 +730,114 @@ window.addRushTask = window.addRushTask || function() {
       </div>
 
       <button id="btn-save-profile" class="btn btn--primary mt-8" onclick="saveProfileSettings()">Save Changes ✅</button>
+
+      <!-- ── Security Section ── -->
+      <div class="card mt-16" style="margin-top:20px;">
+        <h3 style="font-size:0.95rem;font-weight:800;color:var(--color-text);margin-bottom:14px;">🔒 Security</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn--secondary" onclick="changeParentPIN()" style="text-align:left;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.2rem;">🔑</span>
+            <div>
+              <div style="font-size:0.85rem;font-weight:700;">Change PIN</div>
+              <div style="font-size:0.75rem;color:var(--color-muted);">Update your 4-digit parent PIN</div>
+            </div>
+          </button>
+          <button class="btn btn--secondary" onclick="sendPasswordReset()" style="text-align:left;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.2rem;">📧</span>
+            <div>
+              <div style="font-size:0.85rem;font-weight:700;">Forgot Password?</div>
+              <div style="font-size:0.75rem;color:var(--color-muted);">Send reset link to ${currentParent?.email||'your email'}</div>
+            </div>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
+</section>
+
+<!-- ═══════════════════════ ONBOARDING ══════════════════════ -->
+<section class="screen" id="screen-onboarding">
+  <div style="max-width:480px;margin:0 auto;padding:24px 20px;">
+    <!-- Progress dots -->
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:28px;">
+      <div class="ob-dot active" id="ob-dot-0"></div>
+      <div class="ob-dot" id="ob-dot-1"></div>
+      <div class="ob-dot" id="ob-dot-2"></div>
+    </div>
+
+    <!-- Step 0: Welcome -->
+    <div id="ob-step-0">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:4rem;margin-bottom:12px;">🌟</div>
+        <h2 style="font-family:var(--font-display);font-size:1.6rem;font-weight:900;color:var(--color-text);margin-bottom:8px;">Welcome to StarKids!</h2>
+        <p style="color:var(--color-muted);font-size:0.9rem;line-height:1.6;">The app that teaches your children that money is <strong>earned</strong>, not given.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+        <div style="display:flex;align-items:center;gap:12px;background:var(--color-bg-2);border-radius:14px;padding:12px 14px;">
+          <span style="font-size:1.6rem;">⏱</span>
+          <div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Rush Mode</div><div style="font-size:0.75rem;color:var(--color-muted);">Kids race the clock to complete morning routines</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--color-bg-2);border-radius:14px;padding:12px 14px;">
+          <span style="font-size:1.6rem;">⭐</span>
+          <div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Earn Stars</div><div style="font-size:0.75rem;color:var(--color-muted);">Every task earns real money value in SAR</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--color-bg-2);border-radius:14px;padding:12px 14px;">
+          <span style="font-size:1.6rem;">🕌</span>
+          <div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Faith Built In</div><div style="font-size:0.75rem;color:var(--color-muted);">Prayers and Dhikr in the correct daily order</div></div>
+        </div>
+      </div>
+      <button class="btn btn--primary" onclick="obNext()">Let's Get Started →</button>
+    </div>
+
+    <!-- Step 1: Add first kid -->
+    <div id="ob-step-1" style="display:none;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:3rem;margin-bottom:8px;">👶</div>
+        <h2 style="font-family:var(--font-display);font-size:1.4rem;font-weight:900;color:var(--color-text);margin-bottom:6px;">Add Your First Kid</h2>
+        <p style="color:var(--color-muted);font-size:0.85rem;">You can add more kids later from the dashboard.</p>
+      </div>
+      <div class="form-group"><label>Kid's Name</label><input id="ob-kid-name" type="text" placeholder="e.g. Ahmed" /></div>
+      <div class="form-group"><label>Age</label><input id="ob-kid-age" type="number" min="1" max="18" placeholder="e.g. 8" /></div>
+      <div class="form-group">
+        <label>Pick an Emoji Avatar</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="ob-emoji-row">
+          ${["🦁","🦋","🐯","🌟","🚀","🎯","⚡","🌈","🦊","🐼","🦄","🎮"].map(e =>
+            `<button type="button" onclick="obSelectEmoji('${e}',this)" style="font-size:1.6rem;background:var(--color-bg-2);border:2px solid transparent;border-radius:10px;padding:6px;cursor:pointer;transition:all 0.15s;">${e}</button>`
+          ).join("")}
+        </div>
+        <input type="hidden" id="ob-kid-emoji" value="🌟" />
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn--secondary" onclick="obBack()" style="flex:1;">← Back</button>
+        <button class="btn btn--primary" onclick="obAddKid()" style="flex:2;" id="ob-add-btn">Add Kid & Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Kid code -->
+    <div id="ob-step-2" style="display:none;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:3rem;margin-bottom:8px;">🎉</div>
+        <h2 style="font-family:var(--font-display);font-size:1.4rem;font-weight:900;color:var(--color-text);margin-bottom:6px;">All Set!</h2>
+        <p style="color:var(--color-muted);font-size:0.85rem;">Share this code with <span id="ob-kid-name-display" style="font-weight:700;color:var(--color-primary);"></span> to log in on the shared tablet.</p>
+      </div>
+      <div style="background:var(--color-primary);border-radius:20px;padding:24px;text-align:center;margin-bottom:20px;">
+        <div style="font-size:0.8rem;color:rgba(255,255,255,0.7);margin-bottom:8px;font-weight:600;letter-spacing:2px;">KID'S LOGIN CODE</div>
+        <div id="ob-kid-code" style="font-size:2.8rem;font-weight:900;color:#fff;letter-spacing:8px;font-variant-numeric:tabular-nums;">------</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);margin-top:8px;">Tap ⭐ I'm a Kid! on the home screen and enter this code</div>
+      </div>
+      <div style="background:var(--color-bg-2);border-radius:14px;padding:14px;margin-bottom:20px;">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--color-text);margin-bottom:8px;">✅ What's ready for your kid:</div>
+        <div style="font-size:0.8rem;color:var(--color-muted);line-height:1.8;">
+          • Default daily tasks added<br>
+          • Faith Journey set up<br>
+          • Rush Mode ready to start<br>
+          • Rewards catalog loaded
+        </div>
+      </div>
+      <button class="btn btn--primary" onclick="obFinish()">Go to Dashboard 🚀</button>
+    </div>
+  </div>
 </section>
 
 <!-- ════════════════════════════ KID LOGIN ═══════════════════ -->
@@ -1144,7 +1249,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=43"></script>
+<script type="module" src="./js/app.js?v=44"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

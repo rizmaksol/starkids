@@ -6,9 +6,9 @@ import { db } from "./firebase.js?v=12";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=12";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=12";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
-import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=13";
-import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=12";
-import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=12";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, getTotalEarned, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=14";
+import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=13";
+import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=13";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=12";
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=12";
 import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=13";
@@ -1567,20 +1567,31 @@ async function loadKidEarnings(kid) {
   const el = document.getElementById("kid-earnings-view"); if (!el) return;
   el.innerHTML = `<p class="empty-state">Loading earnings…</p>`;
   try {
+    // ── Wallet = single source of truth ───────────────────────
+    const balance      = await getStarBalance(kid.id);  // spendable balance
+    const totalEarned  = await getTotalEarned(kid.id);  // lifetime total, never decremented
+    const balMoney     = starsToMoney(balance, financeSettings);
+    const totalMoney   = starsToMoney(totalEarned, financeSettings);
+
+    // Task-based breakdown (for the breakdown section)
     const allTasks   = await getTasksForKid(kid.id);
     const approved   = allTasks.filter(t => t.status === "approved");
 
-    // ── Use wallet balance as source of truth ─────────────────
-    const balance    = await getStarBalance(kid.id);
-    const balMoney   = starsToMoney(balance, financeSettings);
+    // This month from approved tasks
+    const now        = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonth  = approved.filter(t => {
+      if (!t.approvedAt) return false;
+      const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+      return d >= monthStart;
+    });
 
-    // Rush stars from activeRush collection
-    let rushStarsTotal = 0;
+    // Rush stars this month
     let rushStarsMonth = 0;
+    let rushStarsTotal = 0;
     try {
       const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
       const rushSnap = await getDocs(query(collection(db,"activeRush"), where("kidIds","array-contains",kid.id)));
-      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
       rushSnap.docs.forEach(d => {
         const prog = d.data().progress?.[kid.id] || {};
         Object.values(prog).forEach(p => {
@@ -1591,40 +1602,29 @@ async function loadKidEarnings(kid) {
       });
     } catch(e) {}
 
-    // Task-based earnings
-    const taskStarsTotal = approved.reduce((s,t) => s+(t.stars||0), 0);
-    const now            = new Date();
-    const monthStart2    = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisMonth      = approved.filter(t => {
-      if (!t.approvedAt) return false;
-      const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
-      return d >= monthStart2;
-    });
     const taskMonthStars = thisMonth.reduce((s,t) => s+(t.stars||0), 0);
+    const monthStars     = taskMonthStars + rushStarsMonth;
+    const monthMoney     = starsToMoney(monthStars, financeSettings);
 
-    // Combined totals
-    const totalStars = taskStarsTotal + rushStarsTotal;
-    const totalMoney = starsToMoney(totalStars, financeSettings);
-    const monthStars = taskMonthStars + rushStarsMonth;
-    const monthMoney = starsToMoney(monthStars, financeSettings);
-
-    // Breakdown by type (task-based only — Rush is separate)
+    // Breakdown by type
     const entrStars  = approved.filter(t => t.isEntrepreneur).reduce((s,t) => s+(t.stars||0), 0);
     const entrMoney  = starsToMoney(entrStars, financeSettings);
     const faithStars = approved.filter(t => t.isFaith).reduce((s,t) => s+(t.stars||0), 0);
     const faithMoney = starsToMoney(faithStars, financeSettings);
-    const regStars   = approved.filter(t => !t.isEntrepreneur && !t.isFaith).reduce((s,t) => s+(t.stars||0), 0) + rushStarsTotal;
+    // Daily tasks = wallet total minus entrepreneur minus faith
+    const regStars   = Math.max(0, balance - entrStars - faithStars);
     const regMoney   = starsToMoney(regStars, financeSettings);
 
     el.innerHTML = `
     <div class="card" style="background:linear-gradient(135deg,#1a1040,#302b63);border:none;color:#fff;margin-bottom:12px;">
       <div style="font-size:0.75rem;opacity:0.7;font-weight:700;letter-spacing:1px;margin-bottom:4px;">💰 TOTAL EARNED ALL TIME</div>
       <div style="font-size:2.4rem;font-weight:900;color:#FFD93D;line-height:1;">${totalMoney}</div>
-      <div style="font-size:0.9rem;opacity:0.8;margin-top:4px;">= ${totalStars} ⭐ stars earned</div>
+      <div style="font-size:0.9rem;opacity:0.8;margin-top:4px;">= ${totalEarned} ⭐ stars earned through effort</div>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;">
         <div>
           <div style="font-size:0.7rem;opacity:0.6;">Current Balance</div>
           <div style="font-size:1rem;font-weight:800;color:#6bcb77;">${balMoney}</div>
+          ${totalEarned > balance ? `<div style="font-size:0.65rem;opacity:0.5;">Spent: ${starsToMoney(totalEarned-balance,financeSettings)}</div>` : ""}
         </div>
         <div style="text-align:right;">
           <div style="font-size:0.7rem;opacity:0.6;">This Month</div>

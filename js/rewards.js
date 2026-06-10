@@ -73,12 +73,14 @@ export async function requestRedemption(goalId, kidId, rewardTitle, starsCost) {
   });
 }
 
-// ── Parent approves redemption → deduct stars ─────────────────
+// ── Parent approves redemption → deduct stars only ────────────
+// totalEarned is NEVER deducted — it tracks lifetime earnings
 export async function approveRedemption(goalId, kidId, starsCost) {
   const walletRef = doc(db, "wallets", kidId);
   const snap      = await getDoc(walletRef);
   const current   = snap.exists() ? (snap.data().stars || 0) : 0;
   const newBal    = Math.max(0, current - starsCost);
+  // Only update stars (spendable balance), not totalEarned (lifetime)
   await updateDoc(walletRef, { stars: newBal, lastUpdated: serverTimestamp() });
   await updateDoc(doc(db, "goals", goalId), {
     status: "redeemed", redeemedAt: serverTimestamp()

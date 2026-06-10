@@ -61,8 +61,9 @@ export async function addBonusStars(kidId, stars) {
   const ref     = doc(db, "wallets", kidId);
   const snap    = await getDoc(ref);
   const current = snap.exists() ? (snap.data().stars || 0) : 0;
+  const currentTotal = snap.exists() ? (snap.data().totalEarned || current) : 0;
   const total   = current + stars;
-  if (snap.exists()) await updateDoc(ref, { stars: total, lastUpdated: serverTimestamp() });
-  else               await setDoc(ref,    { kidId, stars: total, lastUpdated: serverTimestamp() });
+  if (snap.exists()) await updateDoc(ref, { stars: total, totalEarned: currentTotal + stars, lastUpdated: serverTimestamp() });
+  else               await setDoc(ref,    { kidId, stars: total, totalEarned: total, lastUpdated: serverTimestamp() });
   return total;
 }

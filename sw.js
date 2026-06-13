@@ -1,20 +1,9 @@
 // StarKids V10 — Service Worker with smart app shell caching
-const CACHE = "starkids-v10-shell-v1";
+const CACHE = "starkids-v10-shell-v2";
 const SHELL = [
   "/starkids/",
   "/starkids/index.html",
   "/starkids/styles.css",
-  "/starkids/js/app.js?v=24",
-  "/starkids/js/tasks.js?v=13",
-  "/starkids/js/kid.js?v=12",
-  "/starkids/js/auth.js?v=12",
-  "/starkids/js/firebase.js?v=12",
-  "/starkids/js/rush.js?v=12",
-  "/starkids/js/rewards.js?v=12",
-  "/starkids/js/goals.js?v=12",
-  "/starkids/js/finance.js?v=12",
-  "/starkids/js/values.js?v=12",
-  "/starkids/js/achievements.js?v=12",
   "/starkids/manifest.json",
   "/starkids/icons/icon-192.png",
   "/starkids/icons/icon-512.png"
@@ -37,26 +26,30 @@ self.addEventListener("activate", e => {
 
 self.addEventListener("fetch", e => {
   const url = e.request.url;
-  // Never cache Firestore, Firebase Auth, or API calls
+  // Don't touch Firestore, Firebase, Auth, or external API calls AT ALL.
+  // Returning without calling respondWith lets the browser handle them
+  // natively — no service worker interference, no "Failed to fetch" errors.
   if (url.includes("firestore.googleapis.com") ||
       url.includes("firebase") ||
       url.includes("googleapis.com") ||
+      url.includes("identitytoolkit") ||
+      url.includes("securetoken") ||
       url.includes("aladhan.com") ||
       url.includes("gstatic.com")) {
-    e.respondWith(fetch(e.request));
-    return;
+    return; // browser handles it directly
   }
+  // Only intercept same-origin app-shell GET requests
+  if (e.request.method !== "GET") return;
   // Cache-first for app shell files
   e.respondWith(
     caches.match(e.request).then(cached => {
       return cached || fetch(e.request).then(resp => {
-        // Cache new shell files dynamically
-        if (resp.ok && (url.includes("/starkids/"))) {
+        if (resp.ok && url.includes("/starkids/")) {
           const clone = resp.clone();
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return resp;
-      }).catch(() => cached); // Return cached version if network fails
+      }).catch(() => cached); // fall back to cache if network fails
     })
   );
 });

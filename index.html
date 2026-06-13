@@ -115,7 +115,15 @@ function SK_renderKids() {
   if (!el) return;
   var kids = SK.getKids();
   console.log("SK_renderKids:", kids.length, "kids");
-  if (!kids.length) { el.style.display="none"; return; }
+  var switchLink = document.getElementById("home-switch-account");
+  if (!kids.length) {
+    el.style.display="none";
+    var hasParent = false;
+    try { var p = SK.loadParent && SK.loadParent(); hasParent = !!(p && p.email); } catch(e){}
+    if (switchLink) switchLink.style.display = hasParent ? "block" : "none";
+    return;
+  }
+  if (switchLink) switchLink.style.display = "block";
   el.style.display = "block";
   var html = "<div class='saved-kids-label'>👋 Welcome back!</div><div class='saved-kids-list'>";
   kids.forEach(function(k) {
@@ -276,6 +284,9 @@ window.addRushTask = window.addRushTask || function() {
   </div>
   <p class="mt-16" style="color:var(--color-muted);font-size:0.8rem;text-align:center;">
     New parent? <button onclick="goToParentAuth('signup')" style="background:none;border:none;color:var(--color-primary);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">Create a free account</button>
+  </p>
+  <p id="home-switch-account" style="display:none;text-align:center;margin-top:6px;">
+    <button onclick="fullLogoutFromHome()" style="background:none;border:none;color:#FF6B6B;font-weight:700;cursor:pointer;font-family:inherit;font-size:0.8rem;">🚪 Log out / Switch account</button>
   </p>
 
   <div id="pwa-install-bar" class="pwa-install-bar" style="display:none;">
@@ -1352,7 +1363,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=55"></script>
+<script type="module" src="./js/app.js?v=56"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

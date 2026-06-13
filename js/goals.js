@@ -15,6 +15,24 @@ export const GOAL_STATUS = {
   REDEEMED:  "redeemed"
 };
 
+// ── Create a direct redemption request (cart style) ───────────
+// Creates a goal already in "redemption_requested" status — does NOT
+// touch the kid's single active savings goal
+export async function createRedemptionRequest(kidId, reward) {
+  const ref = await addDoc(collection(db, "goals"), {
+    kidId,
+    rewardId:    reward.id,
+    title:       reward.title,
+    targetStars: reward.stars,
+    emoji:       reward.emoji,
+    status:      GOAL_STATUS.REQUESTED,
+    createdAt:   serverTimestamp(),
+    redemptionRequestedAt: serverTimestamp(),
+    completedAt: null, redeemedAt: null
+  });
+  return { id: ref.id, kidId, title: reward.title, targetStars: reward.stars, emoji: reward.emoji, status: GOAL_STATUS.REQUESTED };
+}
+
 // ── Create goal from a reward (replaces any existing active goal) ─
 export async function createGoalFromReward(kidId, reward) {
   // Cancel any existing active goal first

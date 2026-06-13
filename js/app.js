@@ -7,7 +7,7 @@ import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, s
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=13";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, getTotalEarned, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=15";
-import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=13";
+import { createGoalFromReward, createRedemptionRequest, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=14";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=13";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=12";
 import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=12";
@@ -1997,12 +1997,105 @@ window.handleRequestRedeem = async (goalId,title) => {
   catch(err) { toast("Something went wrong.","error"); console.error(err); }
 };
 
+// ── Reward cart state ─────────────────────────────────────────
+let _rewardCart = [];
+
 window.openPickGoal = async () => {
-  const el=document.getElementById("reward-picker-list"); el.innerHTML=`<p class="empty-state">Loading rewards…</p>`; document.getElementById("modal-pick-goal").classList.add("open");
+  _rewardCart = [];
+  const el=document.getElementById("reward-picker-list");
+  el.innerHTML=`<p class="empty-state">Loading rewards…</p>`;
+  document.getElementById("modal-pick-goal").classList.add("open");
   parentRewardsForKid=await getRewardsForParent(currentKid.parentId);
   if (!parentRewardsForKid.length) { el.innerHTML=`<p class="empty-state">Your parent hasn't added rewards yet!</p>`; return; }
-  const stars=await getStarBalance(currentKid.id); const sorted=[...parentRewardsForKid].sort((a,b)=>a.stars-b.stars);
-  el.innerHTML=sorted.map(r => {
+  renderRewardPicker();
+};
+
+function renderRewardPicker() {
+  const el = document.getElementById("reward-picker-list");
+  getStarBalance(currentKid.id).then(stars => {
+    const cartTotal = _rewardCart.reduce((s,r)=>s+r.stars, 0);
+    const remaining = stars - cartTotal;
+    const sorted    = [...parentRewardsForKid].sort((a,b)=>a.stars-b.stars);
+
+    let html = `
+      <div style="position:sticky;top:0;background:var(--color-surface);padding:10px 0;margin-bottom:8px;border-bottom:1px solid var(--color-border);z-index:2;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">⭐ ${stars} available</div>
+          ${cartTotal>0?`<div style="font-size:0.85rem;font-weight:700;color:var(--color-primary);">Cart: ${cartTotal}⭐ = ${starsToMoney(cartTotal,financeSettings)}</div>`:""}
+        </div>
+        ${cartTotal>0?`<div style="font-size:0.72rem;color:${remaining>=0?"var(--color-muted)":"#FF6B6B"};margin-top:2px;">${remaining>=0?`${remaining}⭐ left after this`:`⚠️ ${Math.abs(remaining)}⭐ too many!`}</div>`:""}
+      </div>`;
+
+    html += sorted.map(r => {
+      const inCart   = _rewardCart.filter(c=>c.id===r.id).length;
+      const canAfford= remaining >= r.stars;
+      const everAfford = stars >= r.stars;
+      return `<div class="reward-picker-item ${everAfford?"reward-picker-item--ready":""}" style="${inCart?"border:2px solid var(--color-primary);":""}">
+        <span class="reward-emoji">${r.emoji}</span>
+        <div class="reward-info">
+          <div class="reward-title">${r.title} ${inCart>1?`<span style="color:var(--color-primary);">×${inCart}</span>`:""}</div>
+          <div class="reward-stars">⭐ ${r.stars} = ${starsToMoney(r.stars,financeSettings)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${inCart>0?`<button onclick="removeFromCart('${r.id}')" style="width:30px;height:30px;border-radius:8px;border:none;background:#FF6B6B;color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;">−</button><span style="min-width:18px;text-align:center;font-weight:700;">${inCart}</span>`:""}
+          <button onclick="addToCart('${r.id}')" ${!canAfford?"disabled":""} style="width:30px;height:30px;border-radius:8px;border:none;background:${canAfford?"var(--color-primary)":"var(--color-border)"};color:#fff;font-size:1.1rem;font-weight:700;cursor:${canAfford?"pointer":"not-allowed"};">+</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    // Action buttons
+    if (cartTotal > 0) {
+      html += `<div style="position:sticky;bottom:0;background:var(--color-surface);padding:12px 0;margin-top:8px;border-top:1px solid var(--color-border);">
+        <button class="btn btn--success" onclick="requestCart()" style="width:100%;">🎁 Request ${_rewardCart.length} Reward${_rewardCart.length>1?"s":""} (${cartTotal}⭐)</button>
+      </div>`;
+    } else {
+      html += `<div style="text-align:center;font-size:0.78rem;color:var(--color-muted);margin-top:12px;padding:12px;">
+        Tap ➕ to add rewards to your cart, or set one as a savings goal below.
+      </div>
+      <div style="margin-top:4px;"><button class="btn btn--secondary" onclick="showSetGoalPicker()" style="width:100%;">🎯 Set a Savings Goal Instead</button></div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+window.addToCart = (rewardId) => {
+  const reward = parentRewardsForKid.find(r=>r.id===rewardId);
+  if (!reward) return;
+  _rewardCart.push(reward);
+  renderRewardPicker();
+};
+
+window.removeFromCart = (rewardId) => {
+  const idx = _rewardCart.findIndex(r=>r.id===rewardId);
+  if (idx>=0) _rewardCart.splice(idx,1);
+  renderRewardPicker();
+};
+
+window.requestCart = async () => {
+  if (!_rewardCart.length) return;
+  const stars = await getStarBalance(currentKid.id);
+  const total = _rewardCart.reduce((s,r)=>s+r.stars,0);
+  if (total > stars) { toast("Not enough stars for everything in your cart!", "error"); return; }
+  try {
+    for (const reward of _rewardCart) {
+      await createRedemptionRequest(currentKid.id, reward);
+    }
+    const count = _rewardCart.length;
+    _rewardCart = [];
+    closePickGoal();
+    toast(`🎁 ${count} reward${count>1?"s":""} requested! Ask your parent to approve.`, "success");
+    const s = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, s);
+  } catch(e) { toast("Something went wrong.", "error"); console.error(e); }
+};
+
+// ── Savings goal picker (the original single-goal flow) ───────
+window.showSetGoalPicker = async () => {
+  const el=document.getElementById("reward-picker-list");
+  const stars=await getStarBalance(currentKid.id);
+  const sorted=[...parentRewardsForKid].sort((a,b)=>a.stars-b.stars);
+  el.innerHTML = `<div style="font-size:0.8rem;color:var(--color-muted);margin-bottom:10px;text-align:center;">Pick ONE reward to save toward. You'll see your progress!</div>` +
+    sorted.map(r => {
     const can=stars>=r.stars; const pct=Math.min(100,Math.round((stars/r.stars)*100));
     return `<div class="reward-picker-item ${can?"reward-picker-item--ready":""}" onclick="handlePickGoal('${r.id}')">
       <span class="reward-emoji">${r.emoji}</span>
@@ -2013,8 +2106,10 @@ window.openPickGoal = async () => {
       </div>
       ${can?`<span class="ready-badge">Ready!</span>`:""}
     </div>`;
-  }).join("");
+  }).join("") +
+  `<div style="margin-top:12px;"><button class="btn btn--ghost" onclick="renderRewardPicker()" style="width:100%;">← Back to Cart</button></div>`;
 };
+
 window.closePickGoal=()=>document.getElementById("modal-pick-goal").classList.remove("open");
 window.handlePickGoal=async(rewardId)=>{
   const reward=parentRewardsForKid.find(r=>r.id===rewardId); if (!reward) return;

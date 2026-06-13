@@ -1504,7 +1504,9 @@ async function loadKidTasks(kid) {
             <span class="faith-strip__title">🕌 Faith Journey</span>
             <span class="faith-strip__progress">${faithDone}/${faithTotal} done${faithTotal > 4 ? ' · swipe →' : ''}</span>
           </div>
-          <div class="faith-strip__scroll">
+          <div style="position:relative;">
+            ${faithTotal > 4 ? `<button onclick="scrollFaith(-1)" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.25);color:#fff;font-size:1rem;cursor:pointer;backdrop-filter:blur(4px);">‹</button>` : ""}
+            <div class="faith-strip__scroll" id="faith-scroll">
             ${faithSorted.map(t => {
               const done = t.status === STATUS.APPROVED || t.status === STATUS.SUBMITTED;
               const emojiMatch = t.title.match(/\p{Emoji_Presentation}/u);
@@ -1519,6 +1521,8 @@ async function loadKidTasks(kid) {
                   : `<button class="faith-pill__btn" onclick="handleJobDone('${t.id}')">Tap Done</button>`}
               </div>`;
             }).join("")}
+            </div>
+            ${faithTotal > 4 ? `<button onclick="scrollFaith(1)" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.25);color:#fff;font-size:1rem;cursor:pointer;backdrop-filter:blur(4px);">›</button>` : ""}
           </div>
         </div>`;
       }
@@ -1724,6 +1728,13 @@ window.confirmSubmitTask = async () => {
 };
 
 // Clean handler for Done buttons — avoids quote issues in onclick
+// ── Scroll faith strip via arrow buttons ──────────────────────
+window.scrollFaith = (dir) => {
+  const scroll = document.getElementById("faith-scroll");
+  if (scroll) scroll.scrollBy({ left: dir * 200, behavior: "smooth" });
+};
+
+// ── Scroll faith strip ─ end ──────────────────────────────────
 window.handleJobDone = (taskId) => openSubmitTaskModal(taskId, "");
 window.handleTaskDone = (taskId) => openSubmitTaskModal(taskId, "");
 
@@ -2054,7 +2065,7 @@ window.openPickGoal = async () => {
   renderRewardPicker();
 };
 
-function renderRewardPicker() {
+window.renderRewardPicker = function renderRewardPicker() {
   const el = document.getElementById("reward-picker-list");
   Promise.all([
     getStarBalance(currentKid.id),

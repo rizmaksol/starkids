@@ -268,9 +268,18 @@ async function loadPendingApprovals() {
     goals.filter(g => g.status === GOAL_STATUS.REQUESTED).forEach(g =>
       allGoals.push({ ...g, kidName: kid.name, kidEmoji: kid.avatarEmoji, kidPhoto: kid.photoURL }));
   }
+  // Gather pending achievement trophies
+  let pendingTrophies = [];
+  try {
+    pendingTrophies = await getPendingTrophies(currentParent.uid);
+    pendingTrophies = pendingTrophies.map(t => {
+      const kid = kidsList.find(k => k.id === t.kidId);
+      return { ...t, kidName: kid?.name||"?", kidEmoji: kid?.avatarEmoji, kidPhoto: kid?.photoURL };
+    });
+  } catch(e) {}
   const el    = document.getElementById("approvals-list");
   const badge = document.getElementById("approvals-badge");
-  const total = pending.length + allGoals.length;
+  const total = pending.length + allGoals.length + pendingTrophies.length;
 
   // ── Notification: sound + toast when new approvals arrive ──
   const prevCount = window._lastApprovalCount ?? -1;
@@ -350,6 +359,24 @@ async function loadPendingApprovals() {
           <button class="btn btn--sm btn--success" onclick="handleApproveRedemption('${g.id}','${g.kidId}',${g.targetStars},'${g.title}','${g.kidName}')">🎁 Give!</button>
           <button class="btn btn--sm btn--danger"  onclick="handleRejectRedemption('${g.id}','${g.title}')">❌ Not yet</button>
         </div></div>`;
+    }).join("");
+  }
+  // ── Achievement trophies awaiting celebration ──
+  if (pendingTrophies.length) {
+    html += `<div class="task-section-title">🎖️ Achievements to Celebrate</div>`;
+    html += pendingTrophies.map(t => {
+      const av = t.kidPhoto ? `<img src="${t.kidPhoto}" class="approval-avatar-img" />` : `<span>${t.kidEmoji||"🌟"}</span>`;
+      return `<div class="approval-card approval-card--redeem">
+        <div class="approval-avatar">${av}</div>
+        <div class="approval-info">
+          <div class="approval-kid">${t.kidName}</div>
+          <div class="approval-task">${t.category} — ${t.title}</div>
+          ${t.photo ? `<div style="font-size:0.72rem;color:var(--color-muted);">📷 Photo attached</div>` : ""}
+        </div>
+        <div class="approval-actions">
+          <button class="btn btn--sm btn--success" onclick="openApproveAchievement('${t.id}')">🎉 Celebrate</button>
+        </div>
+      </div>`;
     }).join("");
   }
   if (!total) html = `<p class="empty-state">Nothing pending 🎉</p>`;
@@ -559,7 +586,13 @@ document.getElementById("btn-save-new-reward")?.addEventListener("click", async 
 
 // ── Approve/Reject redemptions ────────────────────────────────
 window.handleApproveRedemption = async (goalId,kidId,stars,title,kidName) => {
-  if (!confirm(`Give "${title}" to ${kidName}? This will deduct ⭐${stars}.`)) return;
+  // Check current balance first — block if insufficient
+  const balance = await getStarBalance(kidId);
+  if (stars > balance) {
+    alert(`⚠️ ${kidName} only has ⭐${balance} but "${title}" costs ⭐${stars}.\n\nThey've already spent their stars on other rewards. Reject this one, or wait until they earn more.`);
+    return;
+  }
+  if (!confirm(`Give "${title}" to ${kidName}? This will deduct ⭐${stars}. (Balance after: ⭐${balance - stars})`)) return;
   try { await approveRedemption(goalId,kidId,stars); toast(`🎁 "${title}" redeemed for ${kidName}!`,"success"); loadPendingApprovals(); loadWalletsOverview(); }
   catch(err) { toast("Failed.","error"); console.error(err); }
 };
@@ -1442,23 +1475,34 @@ async function loadKidTasks(kid) {
       const normalTasks  = regular.filter(t => !t.isFaith);
 
       if (faithTasks.length) {
-        // Sort by Islamic daily order
+        // Sort by Islamic daily order — check longer/specific keywords first
         const FAITH_ORDER = [
-          "fajr","morning dhikr","morning","duha","dhuhr","zuhr","zohar","zuhur",
-          "asr","maghrib","evening dhikr","evening","isha","night","quran","dua","learn"
+          "fajr", "morning dhikr", "duha", "ishraq",
+          "dhuhr", "zuhr", "zohar", "zuhur", "zohr",
+          "asr",
+          "maghrib",
+          "evening dhikr",
+          "isha", "ishaa",
+          "quran", "qur'an",
+          "dua", "learn", "hadith"
         ];
-        const faithSorted = [...faithTasks].sort((a, b) => {
-          const ai = FAITH_ORDER.findIndex(k => a.title.toLowerCase().includes(k));
-          const bi = FAITH_ORDER.findIndex(k => b.title.toLowerCase().includes(k));
-          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-        });
+        const orderIndex = (title) => {
+          const t = title.toLowerCase();
+          // Find the best (earliest in FAITH_ORDER) keyword that appears in the title
+          let best = 999;
+          FAITH_ORDER.forEach((kw, i) => {
+            if (t.includes(kw) && i < best) best = i;
+          });
+          return best;
+        };
+        const faithSorted = [...faithTasks].sort((a, b) => orderIndex(a.title) - orderIndex(b.title));
         const faithDone  = faithSorted.filter(t => t.status === STATUS.APPROVED || t.status === STATUS.SUBMITTED).length;
         const faithTotal = faithSorted.length;
         html += `
         <div class="faith-strip">
           <div class="faith-strip__header">
             <span class="faith-strip__title">🕌 Faith Journey</span>
-            <span class="faith-strip__progress">${faithDone}/${faithTotal} done</span>
+            <span class="faith-strip__progress">${faithDone}/${faithTotal} done${faithTotal > 4 ? ' · swipe →' : ''}</span>
           </div>
           <div class="faith-strip__scroll">
             ${faithSorted.map(t => {
@@ -2012,7 +2056,16 @@ window.openPickGoal = async () => {
 
 function renderRewardPicker() {
   const el = document.getElementById("reward-picker-list");
-  getStarBalance(currentKid.id).then(stars => {
+  Promise.all([
+    getStarBalance(currentKid.id),
+    getGoalsForKid(currentKid.id)
+  ]).then(([walletStars, goals]) => {
+    // Stars already committed to pending redemption requests
+    const pendingCommitted = goals
+      .filter(g => g.status === GOAL_STATUS.REQUESTED)
+      .reduce((s,g) => s + (g.targetStars||0), 0);
+    // Truly available = wallet minus what's already requested but not yet approved
+    const stars     = Math.max(0, walletStars - pendingCommitted);
     const cartTotal = _rewardCart.reduce((s,r)=>s+r.stars, 0);
     const remaining = stars - cartTotal;
     const sorted    = [...parentRewardsForKid].sort((a,b)=>a.stars-b.stars);
@@ -2020,21 +2073,32 @@ function renderRewardPicker() {
     let html = `
       <div style="position:sticky;top:0;background:var(--color-surface);padding:10px 0;margin-bottom:8px;border-bottom:1px solid var(--color-border);z-index:2;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">⭐ ${stars} available</div>
+          <div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">⭐ ${stars} to spend</div>
           ${cartTotal>0?`<div style="font-size:0.85rem;font-weight:700;color:var(--color-primary);">Cart: ${cartTotal}⭐ = ${starsToMoney(cartTotal,financeSettings)}</div>`:""}
         </div>
+        ${pendingCommitted>0?`<div style="font-size:0.68rem;color:var(--color-muted);margin-top:2px;">(⭐${pendingCommitted} already waiting for parent approval)</div>`:""}
         ${cartTotal>0?`<div style="font-size:0.72rem;color:${remaining>=0?"var(--color-muted)":"#FF6B6B"};margin-top:2px;">${remaining>=0?`${remaining}⭐ left after this`:`⚠️ ${Math.abs(remaining)}⭐ too many!`}</div>`:""}
       </div>`;
 
+    if (stars === 0 && cartTotal === 0) {
+      html += `<div style="text-align:center;padding:24px 12px;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">💪</div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--color-text);margin-bottom:4px;">No stars to spend right now!</div>
+        <div style="font-size:0.8rem;color:var(--color-muted);line-height:1.5;">Complete more tasks and Rush activities to earn stars. The harder you work, the more rewards you can claim! 🌟</div>
+      </div>`;
+      el.innerHTML = html;
+      return;
+    }
+
     html += sorted.map(r => {
-      const inCart   = _rewardCart.filter(c=>c.id===r.id).length;
-      const canAfford= remaining >= r.stars;
-      const everAfford = stars >= r.stars;
-      return `<div class="reward-picker-item ${everAfford?"reward-picker-item--ready":""}" style="${inCart?"border:2px solid var(--color-primary);":""}">
+      const inCart    = _rewardCart.filter(c=>c.id===r.id).length;
+      const canAfford = remaining >= r.stars;
+      const everAfford= stars >= r.stars;
+      return `<div class="reward-picker-item ${everAfford?"reward-picker-item--ready":""}" style="${inCart?"border:2px solid var(--color-primary);":""}${!everAfford?"opacity:0.55;":""}">
         <span class="reward-emoji">${r.emoji}</span>
         <div class="reward-info">
           <div class="reward-title">${r.title} ${inCart>1?`<span style="color:var(--color-primary);">×${inCart}</span>`:""}</div>
-          <div class="reward-stars">⭐ ${r.stars} = ${starsToMoney(r.stars,financeSettings)}</div>
+          <div class="reward-stars">⭐ ${r.stars} = ${starsToMoney(r.stars,financeSettings)}${!everAfford?" — keep earning!":""}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
           ${inCart>0?`<button onclick="removeFromCart('${r.id}')" style="width:30px;height:30px;border-radius:8px;border:none;background:#FF6B6B;color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;">−</button><span style="min-width:18px;text-align:center;font-weight:700;">${inCart}</span>`:""}
@@ -2043,7 +2107,6 @@ function renderRewardPicker() {
       </div>`;
     }).join("");
 
-    // Action buttons
     if (cartTotal > 0) {
       html += `<div style="position:sticky;bottom:0;background:var(--color-surface);padding:12px 0;margin-top:8px;border-top:1px solid var(--color-border);">
         <button class="btn btn--success" onclick="requestCart()" style="width:100%;">🎁 Request ${_rewardCart.length} Reward${_rewardCart.length>1?"s":""} (${cartTotal}⭐)</button>
@@ -2073,9 +2136,20 @@ window.removeFromCart = (rewardId) => {
 
 window.requestCart = async () => {
   if (!_rewardCart.length) return;
-  const stars = await getStarBalance(currentKid.id);
-  const total = _rewardCart.reduce((s,r)=>s+r.stars,0);
-  if (total > stars) { toast("Not enough stars for everything in your cart!", "error"); return; }
+  const [walletStars, goals] = await Promise.all([
+    getStarBalance(currentKid.id),
+    getGoalsForKid(currentKid.id)
+  ]);
+  const pendingCommitted = goals
+    .filter(g => g.status === GOAL_STATUS.REQUESTED)
+    .reduce((s,g) => s + (g.targetStars||0), 0);
+  const available = walletStars - pendingCommitted;
+  const total     = _rewardCart.reduce((s,r)=>s+r.stars,0);
+  if (total > available) {
+    toast(`Not enough stars! You have ⭐${available} to spend. Keep earning! 💪`, "error");
+    renderRewardPicker();
+    return;
+  }
   try {
     for (const reward of _rewardCart) {
       await createRedemptionRequest(currentKid.id, reward);
@@ -2199,7 +2273,203 @@ async function loadKidAchievements(kidId) {
     }
     el.innerHTML = html;
   } catch(e) { el.innerHTML = `<p class="empty-state">Could not load achievements.</p>`; console.error(e); }
+  // Also load the trophy shelf (real-world achievements)
+  loadTrophyShelf(kidId);
 }
+
+// ══════════════════════════════════════════════════════════════
+// TROPHY SHELF — Real-world achievements (certificates, grades, etc.)
+// Uses Firestore collection "trophies"
+// ══════════════════════════════════════════════════════════════
+let _achPhotoB64 = null;
+
+window.openAddAchievement = () => {
+  _achPhotoB64 = null;
+  document.getElementById("ach-title").value = "";
+  document.getElementById("ach-category").value = "⭐ Other";
+  document.getElementById("ach-photo-preview").style.display = "none";
+  document.getElementById("ach-photo-placeholder").style.display = "flex";
+  document.querySelectorAll(".ach-cat-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("modal-add-achievement").classList.add("open");
+};
+window.closeAddAchievement = () => document.getElementById("modal-add-achievement").classList.remove("open");
+
+window.selectAchCat = (btn) => {
+  document.querySelectorAll(".ach-cat-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("ach-category").value = btn.dataset.cat;
+};
+
+// Photo preview for achievement
+document.addEventListener("change", async (e) => {
+  if (e.target && e.target.id === "ach-photo-input") {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      // Compress: 600px wide, 50% quality — bigger than task photos but capped
+      _achPhotoB64 = await imageToBase64(file, 600, 0.5);
+      const preview = document.getElementById("ach-photo-preview");
+      preview.src = _achPhotoB64;
+      preview.style.display = "block";
+      document.getElementById("ach-photo-placeholder").style.display = "none";
+    } catch(err) { toast("Could not load photo.", "error"); }
+  }
+});
+
+window.submitAchievement = async () => {
+  const title    = document.getElementById("ach-title")?.value.trim();
+  const category = document.getElementById("ach-category")?.value || "⭐ Other";
+  if (!title) { toast("Tell us what you achieved!", "error"); return; }
+  const btn = document.getElementById("btn-submit-achievement");
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+  try {
+    const { addDoc, collection, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    // Check photo size — Firestore 1MB doc limit
+    if (_achPhotoB64 && _achPhotoB64.length > 900000) {
+      toast("Photo too large. Try a smaller one.", "error");
+      if (btn) { btn.disabled = false; btn.textContent = "🚀 Send to Parent!"; }
+      return;
+    }
+    await addDoc(collection(db, "trophies"), {
+      kidId:     currentKid.id,
+      parentId:  currentKid.parentId,
+      title, category,
+      photo:     _achPhotoB64 || null,
+      status:    "pending",
+      stars:     0,
+      badge:     null,
+      compliment:null,
+      createdAt: serverTimestamp()
+    });
+    _achPhotoB64 = null;
+    closeAddAchievement();
+    toast("🎉 Sent to your parent! They'll celebrate it soon.", "success");
+    loadTrophyShelf(currentKid.id);
+  } catch(e) {
+    toast("Something went wrong. Try again.", "error"); console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🚀 Send to Parent!"; }
+  }
+};
+
+async function loadTrophyShelf(kidId) {
+  const el = document.getElementById("kid-trophy-shelf");
+  if (!el) return;
+  try {
+    const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await getDocs(query(collection(db, "trophies"), where("kidId","==",kidId)));
+    const trophies = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    if (!trophies.length) {
+      el.innerHTML = `<p class="empty-state">No achievements yet. Tap ＋ Add to share your first one! 🌟</p>`;
+      return;
+    }
+    // Sort: pending first, then newest
+    trophies.sort((a,b) => {
+      if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
+      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return tb - ta;
+    });
+    el.innerHTML = trophies.map(t => {
+      const pending = t.status === "pending";
+      const photo = t.photo ? `<img src="${t.photo}" class="trophy-photo" />` : "";
+      if (pending) {
+        return `<div class="trophy-card trophy-card--pending">
+          <div style="font-size:0.72rem;color:var(--color-muted);font-weight:700;">${t.category}</div>
+          <div style="font-weight:800;color:var(--color-text);margin:2px 0;">${t.title}</div>
+          ${photo}
+          <div style="font-size:0.78rem;color:#FF9F43;font-weight:700;">⏳ Waiting for parent to celebrate…</div>
+        </div>`;
+      }
+      return `<div class="trophy-card">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.8rem;">${t.badge||"🌟"}</span>
+          <div style="flex:1;">
+            <div style="font-size:0.72rem;color:var(--color-muted);font-weight:700;">${t.category}</div>
+            <div style="font-weight:800;color:var(--color-text);">${t.title}</div>
+          </div>
+          <div style="text-align:right;color:#ff9f43;font-weight:800;font-size:0.85rem;">+${t.stars}⭐</div>
+        </div>
+        ${photo}
+        ${t.compliment ? `<div style="background:rgba(108,99,255,0.1);border-radius:10px;padding:8px 10px;margin-top:6px;font-size:0.82rem;color:var(--color-text);font-style:italic;">💛 "${t.compliment}"</div>` : ""}
+      </div>`;
+    }).join("");
+  } catch(e) { el.innerHTML = `<p class="empty-state">Could not load.</p>`; console.error(e); }
+}
+
+// ── Parent: approve achievements ──────────────────────────────
+let _currentAchId = null, _currentAchKidId = null;
+
+async function getPendingTrophies(parentId) {
+  const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const snap = await getDocs(query(collection(db, "trophies"), where("parentId","==",parentId), where("status","==","pending")));
+  return snap.docs.map(d => ({id:d.id, ...d.data()}));
+}
+
+window.openApproveAchievement = async (trophyId) => {
+  try {
+    const { getDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await getDoc(fsDoc(db, "trophies", trophyId));
+    if (!snap.exists()) { toast("Achievement not found.", "error"); return; }
+    const t = snap.data();
+    _currentAchId = trophyId; _currentAchKidId = t.kidId;
+    const content = document.getElementById("approve-ach-content");
+    content.innerHTML = `
+      <div style="font-size:0.72rem;color:var(--color-muted);font-weight:700;">${t.category}</div>
+      <div style="font-weight:800;font-size:1rem;color:var(--color-text);margin:2px 0 8px;">${t.title}</div>
+      ${t.photo ? `<img src="${t.photo}" class="trophy-photo" />` : ""}`;
+    document.getElementById("ach-compliment").value = "";
+    document.getElementById("ach-stars").value = "";
+    document.getElementById("ach-badge").value = "🌟";
+    document.querySelectorAll(".ach-badge-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".ach-star-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("modal-approve-achievement").classList.add("open");
+  } catch(e) { toast("Could not load achievement.", "error"); console.error(e); }
+};
+window.closeApproveAchievement = () => document.getElementById("modal-approve-achievement").classList.remove("open");
+
+window.selectAchBadge = (btn) => {
+  document.querySelectorAll(".ach-badge-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("ach-badge").value = btn.dataset.badge;
+};
+window.setAchStars = (n, btn) => {
+  document.getElementById("ach-stars").value = n;
+  document.querySelectorAll(".ach-star-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+};
+
+window.approveAchievement = async () => {
+  const stars      = parseInt(document.getElementById("ach-stars")?.value, 10) || 0;
+  const badge      = document.getElementById("ach-badge")?.value || "🌟";
+  const compliment = document.getElementById("ach-compliment")?.value.trim() || "";
+  const btn = document.getElementById("btn-give-achievement");
+  if (btn) { btn.disabled = true; btn.textContent = "Awarding…"; }
+  try {
+    const { updateDoc, doc: fsDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await updateDoc(fsDoc(db, "trophies", _currentAchId), {
+      status: "approved", stars, badge, compliment, approvedAt: serverTimestamp()
+    });
+    // Award the stars
+    if (stars > 0) await addBonusStars(_currentAchKidId, stars);
+    closeApproveAchievement();
+    toast(`🎉 Achievement celebrated! +${stars}⭐ awarded.`, "success");
+    loadPendingApprovals();
+    loadWalletsOverview();
+  } catch(e) { toast("Failed.", "error"); console.error(e); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "🎉 Celebrate & Award"; } }
+};
+
+window.rejectAchievement = async () => {
+  if (!confirm("Send this achievement back? The child can edit and resubmit.")) return;
+  try {
+    const { deleteDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await deleteDoc(fsDoc(db, "trophies", _currentAchId));
+    closeApproveAchievement();
+    toast("Achievement sent back.", "info");
+    loadPendingApprovals();
+  } catch(e) { toast("Failed.", "error"); console.error(e); }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // WEEKLY REPORT (Sprint 8) — Parent view

@@ -364,6 +364,9 @@ window.addRushTask = window.addRushTask || function() {
     </div>
     <div class="remember-row"><label class="remember-label"><input type="checkbox" id="remember-me" checked /><span>Remember me (save email &amp; password)</span></label></div>
     <button id="btn-login" class="btn btn--primary mt-8">Log In</button>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="forgotPasswordFromLogin()" style="background:none;border:none;color:var(--color-primary);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.85rem;text-decoration:underline;">Forgot password?</button>
+    </div>
     <div class="auth-switch mt-12">No account yet? <button onclick="goToParentAuth('signup')">Sign up free</button></div>
   </div>
 </section>
@@ -1262,7 +1265,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=47"></script>
+<script type="module" src="./js/app.js?v=48"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

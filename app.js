@@ -1,0 +1,4454 @@
+// ============================================================
+// js/app.js — StarKids V10  Sprint 1+2+3+4+5+6
+// ============================================================
+
+import { db, auth } from "./firebase.js?v=12";
+import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=12";
+import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=13";
+import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, getTotalEarned, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=15";
+import { createGoalFromReward, createRedemptionRequest, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=14";
+import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=13";
+import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=12";
+import { getFamilyValues, seedDefaultValues, addFamilyValue, deleteFamilyValue, updateFamilyValue, getValuesProgress, sendPraise, getPraiseForKid, markPraiseRead, addFaithTasksForKid, getFaithTasks, getFaithLabel, getFaithEmoji, DEFAULT_FAITH_TASKS } from "./values.js?v=12";
+import { ACHIEVEMENTS, getAchievements, checkAchievements, getKidStats, getWeeklyReport } from "./achievements.js?v=13";
+
+// ── Rush Sessions (inline — no separate module needed) ────────
+const DEFAULT_RUSH_SESSIONS = {
+  morning: {
+    id:"morning", label:"🌅 Morning Rush", emoji:"🌅",
+    color:"#FF9F43", windowMinutes: 30,
+    tasks:[
+      {id:"m1",title:"Make Bed",      emoji:"🛏", stars:3},
+      {id:"m2",title:"Brush Teeth",   emoji:"🦷", stars:2},
+      {id:"m3",title:"Face Wash",     emoji:"💧", stars:2},
+      {id:"m4",title:"Get Dressed",   emoji:"👕", stars:3},
+      {id:"m5",title:"Have Breakfast",emoji:"🍳", stars:3},
+    ]
+  },
+  afterschool: {
+    id:"afterschool", label:"🏠 After School", emoji:"🏠",
+    color:"#6C63FF", windowMinutes: 45,
+    tasks:[
+      {id:"a1",title:"Change Clothes", emoji:"👔", stars:2},
+      {id:"a2",title:"Have Lunch",     emoji:"🍽", stars:2},
+      {id:"a3",title:"Wash Hands",     emoji:"🧼", stars:1},
+      {id:"a4",title:"Pack School Bag",emoji:"🎒", stars:3},
+      {id:"a5",title:"Rest Time",      emoji:"😴", stars:2},
+    ]
+  },
+  bedtime: {
+    id:"bedtime", label:"🌙 Bed Time", emoji:"🌙",
+    color:"#114b5f", windowMinutes: 30,
+    tasks:[
+      {id:"b1",title:"Have Dinner",    emoji:"🍽", stars:2},
+      {id:"b2",title:"Brush Teeth",    emoji:"🦷", stars:2},
+      {id:"b3",title:"Put on Pyjamas", emoji:"👕", stars:1},
+      {id:"b4",title:"Tidy Your Room", emoji:"🧹", stars:3},
+      {id:"b5",title:"Read or Quran",  emoji:"📖", stars:3},
+    ]
+  }
+};
+
+function calculateRushStars(baseStars, elapsed, total) {
+  const r = elapsed/total;
+  if (r<=0.33) return baseStars*3;
+  if (r<=0.66) return baseStars*2;
+  return baseStars;
+}
+
+async function startRush(parentId, sessionId, kidIds, tasks, windowMinutes) {
+  const { setDoc, doc: fsDoc, serverTimestamp: fsts } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const rushId    = `${parentId}_${sessionId}_${Date.now()}`;
+  const startAtMs = Date.now();
+  const endAtMs   = startAtMs + ((windowMinutes || 30) * 60 * 1000);
+  await setDoc(fsDoc(db, "activeRush", rushId), {
+    rushId, parentId, sessionId, kidIds, tasks,
+    windowMinutes: windowMinutes || 30,
+    startAtMs, endAtMs, status:"active", progress:{}, startAt: fsts()
+  });
+  return rushId;
+}
+
+async function getActiveRushForKid(parentId) {
+  const firestoreModule = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const { getDocs, collection, query, where } = firestoreModule;
+  const q    = query(collection(db,"activeRush"), where("parentId","==",parentId), where("status","==","active"));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const data = {id:snap.docs[0].id, ...snap.docs[0].data()};
+  // Normalize timestamps — Firestore may return Timestamp objects or plain numbers
+  if (data.endAtMs?.toMillis)   data.endAtMs   = data.endAtMs.toMillis();
+  if (data.startAtMs?.toMillis) data.startAtMs = data.startAtMs.toMillis();
+  return data;
+}
+
+async function completeRushTask(rushId, kidId, taskId, baseStars, startAtMs) {
+  const { updateDoc, doc: fsDoc, getDoc } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const elapsed   = Math.floor((Date.now()-startAtMs)/1000);
+  const snap      = await getDoc(fsDoc(db,"activeRush",rushId));
+  if (!snap.exists()) return baseStars;
+  const task      = snap.data().tasks.find(t=>t.id===taskId);
+  const totalSecs = (task?.minutes||5)*60;
+  const earned    = calculateRushStars(baseStars, elapsed, totalSecs);
+  await updateDoc(fsDoc(db,"activeRush",rushId), {
+    [`progress.${kidId}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
+  });
+  return earned;
+}
+
+async function endRush(rushId) {
+  const { updateDoc, doc: fsDoc, serverTimestamp: fsts } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await updateDoc(fsDoc(db,"activeRush",rushId), {status:"completed", endedAt:fsts()});
+}
+
+// ── Credential helpers — delegate to window.SK (defined in HTML) ─
+const saveCredentials  = (e,p) => window.SK?.saveParent(e,p);
+const loadCredentials  = ()    => window.SK?.loadParent() || {email:"",password:""};
+const clearCredentials = ()    => window.SK?.clearParent();
+
+// ── State ─────────────────────────────────────────────────────
+let currentParent    = null;
+let currentKid       = null;
+let kidsList         = [];
+let rewardsCatalog   = [];
+let familyValues     = [];
+let financeSettings  = { rate: 0.10, currency: "SAR", symbol: "﷼" };
+let selectedPhoto    = null;
+
+// ── Helpers ───────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id)?.classList.add("active");
+  if (id !== "screen-splash") sessionStorage.setItem("sk_splash_shown","1");
+}
+function toast(msg, type = "info") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = `toast toast--${type} toast--show`;
+  setTimeout(() => t.classList.remove("toast--show"), 3500);
+}
+function celebrate(title, icon = "⭐🎉⭐") {
+  const el = document.getElementById("celebration");
+  if (!el) return;
+  document.getElementById("celebration-icon").textContent = icon;
+  document.getElementById("celebration-text").textContent = title;
+  el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 4500);
+}
+function friendlyError(err) {
+  const map = { "auth/email-already-in-use":"This email is already registered.","auth/invalid-email":"Please enter a valid email.","auth/weak-password":"Password must be at least 6 characters.","auth/user-not-found":"No account found with this email.","auth/wrong-password":"Incorrect password.","auth/invalid-credential":"Email or password is incorrect." };
+  return map[err.code] || err.message;
+}
+function setLoading(btn, loading) {
+  btn.disabled = loading; btn.dataset.orig = btn.dataset.orig || btn.textContent;
+  btn.textContent = loading ? "Please wait…" : btn.dataset.orig;
+}
+function fmt(n) { return parseFloat(n).toFixed(2); }
+
+// ── Convert file to compressed base64 ────────────────────────
+// Single reliable function: reads file → draws on canvas → returns base64 string
+function imageToBase64(file, maxWidth = 400, quality = 0.5) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("FileReader failed"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Image load failed"));
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+          if (h > maxWidth) { w = Math.round(w * maxWidth / h); h = maxWidth; }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          const b64 = canvas.toDataURL("image/jpeg", quality);
+          resolve(b64);
+        } catch(err) {
+          reject(new Error("Canvas failed: " + err.message));
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Keep these for backward compat
+function compressImage(file, maxWidth = 400, quality = 0.5) {
+  return Promise.resolve(file); // no-op, imageToBase64 handles compression
+}
+function fileToBase64(file) {
+  return imageToBase64(file, 400, 0.5);
+}
+
+// ── Remember Me ───────────────────────────────────────────────
+const LS_EMAIL = "sk_remembered_email";
+const saveEmail     = e  => localStorage.setItem(LS_EMAIL, e);
+const clearEmail    = () => localStorage.removeItem(LS_EMAIL);
+const getSavedEmail = () => localStorage.getItem(LS_EMAIL) || "";
+// Prefill runs after DOM is ready
+function prefillLoginForm() {
+  const { email, password } = loadCredentials();
+  console.log("prefillLoginForm called, email:", email, "has password:", !!password);
+  if (!email) return;
+  const emailEl = document.getElementById("login-email");
+  const pwEl    = document.getElementById("login-password");
+  const cb      = document.getElementById("remember-me");
+  if (emailEl) emailEl.value = email;
+  if (pwEl && password) pwEl.value = password;
+  if (cb) cb.checked = true;
+}
+document.addEventListener("DOMContentLoaded", prefillLoginForm);
+
+// ── Photo preview ─────────────────────────────────────────────
+document.getElementById("kid-photo-input")?.addEventListener("change", e => {
+  const file = e.target.files[0]; if (!file) return;
+  selectedPhoto = file;
+  const prev = document.getElementById("kid-photo-preview");
+  prev.src = URL.createObjectURL(file); prev.style.display = "block";
+  document.getElementById("kid-photo-placeholder").style.display = "none";
+});
+
+// ═══════════════════════════════════════════════════════════════
+// KIDS LIST
+// ═══════════════════════════════════════════════════════════════
+function renderKids() {
+  const list = document.getElementById("kids-list");
+  if (!list) return;
+  if (!kidsList.length) { list.innerHTML = `<p class="empty-state">No kids yet. Add your first kid! 👶</p>`; return; }
+  list.innerHTML = kidsList.map(kid => {
+    const av = kid.photoURL
+      ? `<img src="${kid.photoURL}" class="kid-card__photo" onclick="changeKidPhoto('${kid.id}')" title="Tap to change photo" style="cursor:pointer;" />`
+      : `<div class="kid-card__avatar" onclick="changeKidPhoto('${kid.id}')" title="Tap to add photo" style="cursor:pointer;">
+           <span>${kid.avatarEmoji||"🌟"}</span>
+           <span class="kid-photo-add">📷</span>
+         </div>`;
+    return `<div class="kid-card" data-id="${kid.id}">${av}
+      <div class="kid-card__info">
+        <div class="kid-card__name">${kid.name}</div>
+        <div class="kid-card__age">Age ${kid.age}</div>
+        <div class="kid-card__code">Code: <strong class="code-display" id="code-${kid.id}">${kid.code}</strong></div>
+      </div>
+      <div class="kid-card__actions">
+        <button class="btn btn--sm btn--accent"    onclick="openAddTask('${kid.id}','${kid.name}')">➕ Task</button>
+        <button class="btn btn--sm btn--faith"     onclick="openFaithTasks('${kid.id}','${kid.name}')">${getFaithEmoji(currentParent?.faith||"muslim")} Faith</button>
+        <button class="btn btn--sm btn--praise"    onclick="openSendPraise('${kid.id}','${kid.name}')">💛 Praise</button>
+        <button class="btn btn--sm btn--info"      onclick="openBonusStars('${kid.id}','${kid.name}')">⭐ Bonus</button>
+        <button class="btn btn--sm btn--secondary" onclick="handleRegenCode('${kid.id}')">🔄</button>
+        <button class="btn btn--sm btn--danger"    onclick="handleDeleteKid('${kid.id}','${kid.name}')">🗑</button>
+      </div></div>`;
+  }).join("");
+}
+async function loadKids() {
+  if (!currentParent) return;
+  kidsList = await getKidsByParent(currentParent.uid);
+  renderKids();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APPROVALS (tasks + redemptions)
+// ═══════════════════════════════════════════════════════════════
+async function loadPendingApprovals() {
+  // Use kidId-based query to catch tasks that may be missing parentId
+  const kidIds   = kidsList.map(k => k.id);
+  const pending  = kidIds.length
+    ? await getPendingApprovalsByKids(kidIds)
+    : await getPendingApprovals(currentParent.uid);
+  const allGoals = [];
+  for (const kid of kidsList) {
+    const goals = await getGoalsForKid(kid.id);
+    goals.filter(g => g.status === GOAL_STATUS.REQUESTED).forEach(g =>
+      allGoals.push({ ...g, kidName: kid.name, kidEmoji: kid.avatarEmoji, kidPhoto: kid.photoURL }));
+  }
+  // Gather pending achievement trophies
+  let pendingTrophies = [];
+  try {
+    pendingTrophies = await getPendingTrophies(currentParent.uid);
+    pendingTrophies = pendingTrophies.map(t => {
+      const kid = kidsList.find(k => k.id === t.kidId);
+      return { ...t, kidName: kid?.name||"?", kidEmoji: kid?.avatarEmoji, kidPhoto: kid?.photoURL };
+    });
+  } catch(e) {}
+  const el    = document.getElementById("approvals-list");
+  const badge = document.getElementById("approvals-badge");
+  const total = pending.length + allGoals.length + pendingTrophies.length;
+
+  // ── Notification: sound + toast when new approvals arrive ──
+  const prevCount = window._lastApprovalCount ?? -1;
+  if (total > 0 && total > prevCount) {
+    playApprovalDing();
+    if (prevCount >= 0) {
+      // New submission came in while parent was on dashboard
+      const newCount = total - prevCount;
+      toast(`🔔 ${newCount} new task${newCount>1?"s":""} waiting for your approval!`, "info");
+    } else if (prevCount === -1) {
+      // First load — just show toast, don't be too noisy
+      setTimeout(() => toast(`🔔 ${total} task${total>1?"s":""} waiting for approval!`, "info"), 800);
+    }
+  }
+  window._lastApprovalCount = total;
+
+  if (badge) {
+    badge.textContent = total || "";
+    badge.style.display = total ? "inline-flex" : "none";
+    // Pulse animation when there are pending items
+    if (total > 0) {
+      badge.classList.add("badge--pulse");
+    } else {
+      badge.classList.remove("badge--pulse");
+    }
+  }
+  if (!el) return;
+  let html = "";
+  if (pending.length) {
+    html += `<div class="task-section-title">📋 Task Approvals</div>`;
+    html += pending.map(task => {
+      const kid = kidsList.find(k => k.id === task.kidId);
+      const av  = kid?.photoURL ? `<img src="${kid.photoURL}" class="approval-avatar-img" />` : `<span>${kid?.avatarEmoji||"🌟"}</span>`;
+      const typeLabel = task.taskType==="daily"?"🔄":task.taskType==="weekly"?"📅":task.isEntrepreneur?"💼":"1️⃣";
+      const streakInfo = task.streak ? ` · 🔥 ${task.streak} streak` : "";
+      // ── Submitted date/time label ───────────────────────────
+      let submittedLabel = "";
+      if (task.submittedAt) {
+        const subDate = task.submittedAt.toDate ? task.submittedAt.toDate() : new Date(task.submittedAt);
+        const now     = new Date();
+        const diffMs  = now - subDate;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffHr  = Math.floor(diffMs / 3600000);
+        const diffDay = Math.floor(diffMs / 86400000);
+        if (diffMin < 1)        submittedLabel = "just now";
+        else if (diffMin < 60)  submittedLabel = `${diffMin}m ago`;
+        else if (diffHr < 24)   submittedLabel = `${diffHr}h ago`;
+        else if (diffDay === 1) submittedLabel = "yesterday";
+        else                    submittedLabel = `${diffDay} days ago`;
+      }
+      return `<div class="approval-card">
+        <div class="approval-avatar">${av}</div>
+        <div class="approval-info">
+          <div class="approval-kid">${kid?.name||"?"} ${submittedLabel ? `<span style="font-size:0.72rem;color:var(--color-muted);font-weight:500;">· ${submittedLabel}</span>` : ""}</div>
+          <div class="approval-task">${typeLabel} ${task.title}${streakInfo}</div>
+          <div class="approval-stars">⭐ ${task.stars} stars = ${starsToMoney(task.stars, financeSettings)}</div>
+          <div id="photo-wrap-${task.id}" class="task-photo-wrap"></div>
+        </div>
+        <div class="approval-actions">
+          <button class="btn btn--sm btn--success" onclick="handleApprove('${task.id}','${task.kidId}',${task.stars},'${task.title}',${task.streak||0})">✅ Approve</button>
+          <button class="btn btn--sm btn--danger"  onclick="handleReject('${task.id}','${task.title}')">❌ Reject</button>
+        </div></div>`;
+    }).join("");
+  }
+  if (allGoals.length) {
+    window._pendingGoals = allGoals;
+    html += `<div class="task-section-title">🎁 Reward Redemptions${allGoals.length > 3 ? ` <button onclick="rejectAllRedemptions()" style="float:right;background:none;border:none;color:#FF6B6B;font-size:0.75rem;font-weight:700;cursor:pointer;">Clear All</button>` : ""}</div>`;
+    html += allGoals.map(g => {
+      const av = g.kidPhoto ? `<img src="${g.kidPhoto}" class="approval-avatar-img" />` : `<span>${g.kidEmoji||"🌟"}</span>`;
+      return `<div class="approval-card approval-card--redeem">
+        <div class="approval-avatar">${av}</div>
+        <div class="approval-info">
+          <div class="approval-kid">${g.kidName}</div>
+          <div class="approval-task">${g.emoji} ${g.title}</div>
+          <div class="approval-stars">⭐ ${g.targetStars} stars = ${starsToMoney(g.targetStars, financeSettings)}</div>
+        </div>
+        <div class="approval-actions">
+          <button class="btn btn--sm btn--success" onclick="handleApproveRedemption('${g.id}','${g.kidId}',${g.targetStars},'${g.title}','${g.kidName}')">🎁 Give!</button>
+          <button class="btn btn--sm btn--danger"  onclick="handleRejectRedemption('${g.id}','${g.title}')">❌ Not yet</button>
+        </div></div>`;
+    }).join("");
+  }
+  // ── Achievement trophies awaiting celebration ──
+  if (pendingTrophies.length) {
+    html += `<div class="task-section-title">🎖️ Achievements to Celebrate</div>`;
+    html += pendingTrophies.map(t => {
+      const av = t.kidPhoto ? `<img src="${t.kidPhoto}" class="approval-avatar-img" />` : `<span>${t.kidEmoji||"🌟"}</span>`;
+      return `<div class="approval-card approval-card--redeem">
+        <div class="approval-avatar">${av}</div>
+        <div class="approval-info">
+          <div class="approval-kid">${t.kidName}</div>
+          <div class="approval-task">${t.category} — ${t.title}</div>
+          ${t.photo ? `<div style="font-size:0.72rem;color:var(--color-muted);">📷 Photo attached</div>` : ""}
+        </div>
+        <div class="approval-actions">
+          <button class="btn btn--sm btn--success" onclick="openApproveAchievement('${t.id}')">🎉 Celebrate</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  if (!total) html = `<p class="empty-state">Nothing pending 🎉</p>`;
+  el.innerHTML = html;
+
+  // Load submission photos asynchronously after rendering
+  for (const task of pending) {
+    const wrap = document.getElementById(`photo-wrap-${task.id}`);
+    if (!wrap) continue;
+    const photo = await loadTaskPhoto(task.id);
+    if (photo) {
+      wrap.innerHTML = `<img src="${photo}" class="submission-photo" onclick="showPhotoFull(this.src)" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer;" />`;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WALLETS OVERVIEW — now shows money value
+// ═══════════════════════════════════════════════════════════════
+async function loadWalletsOverview() {
+  const el = document.getElementById("wallets-list");
+  if (!el) return;
+  if (!kidsList.length) { el.innerHTML = `<p class="empty-state">Add kids first. 👶</p>`; return; }
+  const rows = await Promise.all(kidsList.map(async kid => {
+    const [stars, goals] = await Promise.all([getStarBalance(kid.id), getGoalsForKid(kid.id)]);
+    const money  = starsToMoney(stars, financeSettings);
+    const active = goals.find(g => g.status === GOAL_STATUS.ACTIVE);
+    const pct    = active ? Math.min(100, Math.round((stars/active.targetStars)*100)) : null;
+    const av     = kid.photoURL ? `<img src="${kid.photoURL}" class="wallet-avatar-img" />` : `<span class="wallet-avatar-emoji">${kid.avatarEmoji||"🌟"}</span>`;
+    return `<div class="wallet-card"><div class="wallet-avatar">${av}</div>
+      <div class="wallet-info">
+        <div class="wallet-name">${kid.name}</div>
+        <div class="wallet-stars">⭐ ${stars} stars</div>
+        <div class="wallet-money">💰 ${money}</div>
+        ${active ? `<div class="wallet-goal">
+          <div class="wallet-goal-label">${active.emoji} Saving for: ${active.title} (${active.targetStars}⭐ / ${starsToMoney(active.targetStars, financeSettings)})</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="progress-label">⭐ ${stars} / ${active.targetStars} — ${pct}%</div>
+        </div>` : `<div class="wallet-no-goal">No active goal</div>`}
+      </div></div>`;
+  }));
+  el.innerHTML = rows.join("");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FINANCE SETTINGS TAB
+// ═══════════════════════════════════════════════════════════════
+async function loadFinanceSettings() {
+  if (!currentParent?.uid) {
+    console.warn("loadFinanceSettings: no currentParent");
+    return;
+  }
+
+  // Fetch settings
+  try {
+    financeSettings = await getFinanceSettings(currentParent.uid);
+  } catch(e) {
+    console.error("getFinanceSettings failed:", e);
+    financeSettings = { rate: 0.10, currency: "SAR", symbol: "﷼" };
+  }
+
+  // Populate form fields — they exist because the tab panel is now visible
+  const rateEl = document.getElementById("star-rate-input");
+  const currEl = document.getElementById("currency-select");
+  const symEl  = document.getElementById("currency-symbol-input");
+
+  if (rateEl) rateEl.value = financeSettings.rate    || 0.10;
+  if (currEl) currEl.value = financeSettings.currency || "SAR";
+  if (symEl)  symEl.value  = financeSettings.symbol   || "﷼";
+
+  updateRatePreview();
+
+  // Seed and load jobs
+  try {
+    await seedDefaultJobs(currentParent.uid);
+  } catch(e) {
+    console.error("seedDefaultJobs failed:", e);
+  }
+  await loadJobsCatalog();
+}
+
+function updateRatePreview() {
+  const rateEl = document.getElementById("star-rate-input");
+  const symEl  = document.getElementById("currency-symbol-input");
+  const preEl  = document.getElementById("rate-preview");
+  if (!rateEl || !preEl) return;
+  const rate = parseFloat(rateEl.value) || 0.10;
+  const sym  = symEl?.value || "﷼";
+  preEl.textContent = `10 ⭐ = ${sym} ${fmt(rate * 10)}  ·  50 ⭐ = ${sym} ${fmt(rate * 50)}  ·  100 ⭐ = ${sym} ${fmt(rate * 100)}`;
+}
+
+// Attach listeners after DOM ready
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("star-rate-input")?.addEventListener("input", updateRatePreview);
+  document.getElementById("currency-symbol-input")?.addEventListener("input", updateRatePreview);
+});
+
+window.saveFinanceSettingsHandler = async () => {
+  const btn  = document.getElementById("btn-save-finance");
+  const rate = parseFloat(document.getElementById("star-rate-input")?.value) || 0.10;
+  const curr = document.getElementById("currency-select")?.value || "SAR";
+  const sym  = document.getElementById("currency-symbol-input")?.value || "﷼";
+  if (!btn) return;
+  setLoading(btn, true);
+  try {
+    await saveFinanceSettings(currentParent.uid, rate, curr, sym);
+    financeSettings = { rate, currency: curr, symbol: sym };
+    toast("✅ Finance settings saved!", "success");
+  } catch(err) { toast("Failed to save.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ENTREPRENEUR JOBS CATALOG (parent)
+// ═══════════════════════════════════════════════════════════════
+async function loadJobsCatalog() {
+  if (!currentParent?.uid) return;
+  const el = document.getElementById("jobs-catalog-list");
+  if (!el) return;
+  let jobs = [];
+  try { jobs = await getEntrepreneurJobs(currentParent.uid); } catch(e) { console.error(e); }
+  if (!jobs.length) { el.innerHTML = `<p class="empty-state">No jobs yet. Add one above!</p>`; return; }
+  el.innerHTML = jobs.map(j => `
+    <div class="job-catalog-item">
+      <span class="job-emoji">${j.emoji}</span>
+      <div class="job-info">
+        <div class="job-title">${j.title}</div>
+        <div class="job-desc">${j.description||""}</div>
+        <div class="job-stars">⭐ ${j.stars} stars = ${starsToMoney(j.stars, financeSettings)}</div>
+      </div>
+      <button class="btn btn--sm btn--danger" onclick="handleDeleteJob('${j.id}')">🗑</button>
+    </div>`).join("");
+}
+
+window.handleDeleteJob = async (jobId) => {
+  if (!confirm("Remove this job?")) return;
+  try { await deleteJob(jobId); await loadJobsCatalog(); toast("Job removed.", "info"); }
+  catch(err) { toast("Failed.", "error"); }
+};
+
+window.openAddJob  = () => { document.getElementById("new-job-title").value=""; document.getElementById("new-job-desc").value=""; document.getElementById("new-job-stars").value="20"; document.getElementById("new-job-emoji").value="💼"; document.getElementById("new-job-emoji-preview").textContent="💼"; document.getElementById("modal-add-job").classList.add("open"); };
+window.closeAddJob = () => document.getElementById("modal-add-job").classList.remove("open");
+
+document.getElementById("btn-save-new-job")?.addEventListener("click", async () => {
+  const btn   = document.getElementById("btn-save-new-job");
+  const title = document.getElementById("new-job-title").value.trim();
+  const desc  = document.getElementById("new-job-desc").value.trim();
+  const stars = parseInt(document.getElementById("new-job-stars").value)||20;
+  const emoji = document.getElementById("new-job-emoji").value||"💼";
+  if (!title) { toast("Please enter a job title.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await createJob(currentParent.uid, title, desc, stars, emoji);
+    closeAddJob(); await loadJobsCatalog();
+    toast(`"${title}" added to jobs! 💼`, "success");
+  } catch(err) { toast("Failed.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// REWARDS CATALOG
+// ═══════════════════════════════════════════════════════════════
+async function loadRewardsCatalog() {
+  rewardsCatalog = await getRewardsForParent(currentParent.uid);
+  renderRewardsCatalog();
+}
+function renderRewardsCatalog() {
+  const el = document.getElementById("rewards-catalog-list");
+  if (!el) return;
+  if (!rewardsCatalog.length) { el.innerHTML = `<p class="empty-state">No rewards yet.</p>`; return; }
+
+  // Detect duplicates (same title + same stars)
+  const seen = {};
+  let dupCount = 0;
+  rewardsCatalog.forEach(r => {
+    const key = `${r.title}__${r.stars}`;
+    if (seen[key]) dupCount++; else seen[key] = true;
+  });
+
+  const cats = {}; rewardsCatalog.forEach(r => { const c = r.category||"custom"; if(!cats[c]) cats[c]=[]; cats[c].push(r); });
+  const labels = { treat:"🍬 Treats", outing:"🎡 Outings", toy:"🧸 Toys & Things", big:"🏆 Big Rewards", custom:"✨ Custom" };
+  let html = "";
+  if (dupCount > 0) {
+    html += `<div style="background:#FFF3CD;border:1px solid #FFE69C;border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:0.82rem;color:#856404;font-weight:700;margin-bottom:6px;">⚠️ Found ${dupCount} duplicate reward${dupCount>1?"s":""}</div>
+      <button class="btn btn--sm btn--primary" onclick="removeDuplicateRewards()">🧹 Remove Duplicates</button>
+    </div>`;
+  }
+  Object.entries(cats).forEach(([cat, rewards]) => {
+    html += `<div class="reward-cat-title">${labels[cat]||cat}</div>`;
+    html += rewards.map(r => `<div class="reward-catalog-item">
+      <span class="reward-emoji">${r.emoji}</span>
+      <div class="reward-info">
+        <div class="reward-title">${r.title}</div>
+        <div class="reward-stars">⭐ ${r.stars} = ${starsToMoney(r.stars, financeSettings)}</div>
+      </div>
+      <div class="reward-actions">
+        <button class="btn btn--sm btn--secondary" onclick="openEditReward('${r.id}','${r.title}',${r.stars},'${r.emoji}')">✏️</button>
+        <button class="btn btn--sm btn--danger"    onclick="handleDeleteReward('${r.id}')">🗑</button>
+      </div></div>`).join("");
+  });
+  el.innerHTML = html;
+}
+
+// ── Remove duplicate rewards (keeps one of each title+stars) ──
+window.removeDuplicateRewards = async () => {
+  if (!confirm("Remove duplicate rewards? This keeps one copy of each and deletes the extras.")) return;
+  try {
+    const seen = {};
+    const toDelete = [];
+    rewardsCatalog.forEach(r => {
+      const key = `${r.title}__${r.stars}`;
+      if (seen[key]) toDelete.push(r.id);
+      else seen[key] = true;
+    });
+    for (const id of toDelete) {
+      await deleteReward(id);
+    }
+    await loadRewardsCatalog();
+    toast(`🧹 Removed ${toDelete.length} duplicate${toDelete.length>1?"s":""}!`, "success");
+  } catch(e) { toast("Could not remove duplicates.", "error"); console.error(e); }
+};
+let editRewardId = null;
+window.openEditReward  = (id,title,stars,emoji) => { editRewardId=id; document.getElementById("edit-reward-title").value=title; document.getElementById("edit-reward-stars").value=stars; document.getElementById("edit-reward-emoji").value=emoji; document.getElementById("edit-reward-emoji-preview").textContent=emoji; document.getElementById("modal-edit-reward").classList.add("open"); };
+window.closeEditReward = () => document.getElementById("modal-edit-reward").classList.remove("open");
+document.getElementById("btn-save-edit-reward")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-save-edit-reward"); const title=document.getElementById("edit-reward-title").value.trim(); const stars=parseInt(document.getElementById("edit-reward-stars").value)||1; const emoji=document.getElementById("edit-reward-emoji").value||"🎁";
+  if (!title) { toast("Please enter a name.","error"); return; } setLoading(btn,true);
+  try { await updateReward(editRewardId,{title,stars,emoji}); closeEditReward(); await loadRewardsCatalog(); toast("Reward updated! ✅","success"); }
+  catch(err) { toast("Failed.","error"); } finally { setLoading(btn,false); }
+});
+window.handleDeleteReward = async (id) => { if (!confirm("Delete this reward?")) return; try { await deleteReward(id); await loadRewardsCatalog(); toast("Removed.","info"); } catch(err) { toast("Failed.","error"); } };
+window.openAddReward  = () => { document.getElementById("new-reward-title").value=""; document.getElementById("new-reward-stars").value="20"; document.getElementById("new-reward-emoji").value="🎁"; document.getElementById("new-reward-emoji-preview").textContent="🎁"; document.getElementById("modal-add-reward").classList.add("open"); };
+window.closeAddReward = () => document.getElementById("modal-add-reward").classList.remove("open");
+document.getElementById("btn-save-new-reward")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-save-new-reward"); const title=document.getElementById("new-reward-title").value.trim(); const stars=parseInt(document.getElementById("new-reward-stars").value)||20; const emoji=document.getElementById("new-reward-emoji").value||"🎁";
+  if (!title) { toast("Please enter a name.","error"); return; } setLoading(btn,true);
+  try { await createReward(currentParent.uid,title,stars,emoji,"custom"); closeAddReward(); await loadRewardsCatalog(); toast(`"${title}" added! 🎁`,"success"); }
+  catch(err) { toast("Failed.","error"); console.error(err); } finally { setLoading(btn,false); }
+});
+
+// ── Approve/Reject redemptions ────────────────────────────────
+window.handleApproveRedemption = async (goalId,kidId,stars,title,kidName) => {
+  // Check current balance first — block if insufficient
+  const balance = await getStarBalance(kidId);
+  if (stars > balance) {
+    alert(`⚠️ ${kidName} only has ⭐${balance} but "${title}" costs ⭐${stars}.\n\nThey've already spent their stars on other rewards. Reject this one, or wait until they earn more.`);
+    return;
+  }
+  if (!confirm(`Give "${title}" to ${kidName}? This will deduct ⭐${stars}. (Balance after: ⭐${balance - stars})`)) return;
+  try { await approveRedemption(goalId,kidId,stars); toast(`🎁 "${title}" redeemed for ${kidName}!`,"success"); loadPendingApprovals(); loadWalletsOverview(); }
+  catch(err) { toast("Failed.","error"); console.error(err); }
+};
+window.rejectAllRedemptions = async () => {
+  const goals = window._pendingGoals || [];
+  if (!goals.length) return;
+  if (!confirm(`Send back all ${goals.length} reward requests? The kids' stars stay safe and they can request again.`)) return;
+  try {
+    for (const g of goals) { await rejectRedemption(g.id); }
+    toast(`Sent back ${goals.length} requests.`, "info");
+    loadPendingApprovals();
+  } catch(e) { toast("Failed.", "error"); console.error(e); }
+};
+
+window.handleRejectRedemption = async (goalId,title) => {
+  try { await rejectRedemption(goalId); toast(`"${title}" sent back.`,"info"); loadPendingApprovals(); }
+  catch(err) { toast("Failed.","error"); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// VALUES & FAITH ENGINE (Sprint 7)
+// ═══════════════════════════════════════════════════════════════
+
+// ── Load values management tab ────────────────────────────────
+async function loadValuesTab() {
+  if (!currentParent?.uid) return;
+  try {
+    familyValues = await getFamilyValues(currentParent.uid);
+    if (!familyValues.length) familyValues = await seedDefaultValues(currentParent.uid);
+  } catch(e) { console.error("loadValuesTab:", e); return; }
+  renderValuesTab();
+}
+
+function renderValuesTab() {
+  const el = document.getElementById("values-list");
+  if (!el) return;
+  if (!familyValues.length) { el.innerHTML = `<p class="empty-state">No values yet.</p>`; return; }
+  el.innerHTML = familyValues.map(v => `
+    <div class="value-card" style="border-left: 4px solid ${v.color||"#6c63ff"}">
+      <span class="value-emoji">${v.emoji}</span>
+      <div class="value-info">
+        <div class="value-name">${v.name}</div>
+        <div class="value-desc">${v.description||""}</div>
+      </div>
+      <button class="goal-delete-btn" onclick="handleDeleteValue('${v.id}','${v.name}')">×</button>
+    </div>`).join("");
+}
+
+window.handleDeleteValue = async (id, name) => {
+  if (!confirm(`Remove "${name}" from family values?`)) return;
+  try { await deleteFamilyValue(id); familyValues=familyValues.filter(v=>v.id!==id); renderValuesTab(); toast(`"${name}" removed.`,"info"); }
+  catch(e) { toast("Failed.","error"); }
+};
+
+// ── Add custom value modal ────────────────────────────────────
+window.openAddValue  = () => {
+  document.getElementById("new-value-name").value="";
+  document.getElementById("new-value-desc").value="";
+  document.getElementById("new-value-emoji").value="💫";
+  document.getElementById("new-value-emoji-preview").textContent="💫";
+  document.getElementById("new-value-color").value="#6c63ff";
+  document.getElementById("modal-add-value").classList.add("open");
+};
+window.closeAddValue = () => document.getElementById("modal-add-value").classList.remove("open");
+
+document.getElementById("btn-save-new-value")?.addEventListener("click", async () => {
+  const btn  = document.getElementById("btn-save-new-value");
+  const name = document.getElementById("new-value-name").value.trim();
+  const desc = document.getElementById("new-value-desc").value.trim();
+  const emoji= document.getElementById("new-value-emoji").value||"💫";
+  const color= document.getElementById("new-value-color").value||"#6c63ff";
+  if (!name) { toast("Please enter a value name.","error"); return; }
+  setLoading(btn,true);
+  try {
+    const v = await addFamilyValue(currentParent.uid, name, emoji, color, desc);
+    familyValues.push(v); closeAddValue(); renderValuesTab();
+    toast(`"${name}" added to family values! 💛`,"success");
+  } catch(e) { toast("Failed.","error"); console.error(e); } finally { setLoading(btn,false); }
+});
+
+// ── Populate value selector in Add Task modal ─────────────────
+function populateValueSelector() {
+  const sel = document.getElementById("task-value-select");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">— No value tag —</option>` +
+    familyValues.map(v => `<option value="${v.id}">${v.emoji} ${v.name}</option>`).join("");
+}
+
+// ── Faith tasks section ───────────────────────────────────────
+window.openFaithTasks = (kidId, kidName) => {
+  // Get faith from parent profile
+  const faith     = currentParent?.faith || "muslim";
+  const faithLabel= getFaithLabel(faith);
+  const faithEmoji= getFaithEmoji(faith);
+  const tasks     = getFaithTasks(faith);
+
+  document.getElementById("modal-faith-kid-name").textContent = `${faithEmoji} Faith Journey for ${kidName}`;
+  document.getElementById("faith-modal-subtitle").textContent =
+    `${faithLabel} tasks — added as daily habits. Select the ones you want.`;
+  document.getElementById("faith-modal-kid-id").value = kidId;
+
+  const list = document.getElementById("faith-tasks-list");
+  if (!tasks.length) {
+    list.innerHTML = `<p class="empty-state">No preset tasks for your faith. Add custom tasks from the Kids tab instead.</p>`;
+  } else {
+    list.innerHTML = tasks.map((t,i) => `
+      <label class="faith-task-item">
+        <input type="checkbox" value="${i}" checked />
+        <span class="faith-emoji">${t.emoji}</span>
+        <div class="faith-info">
+          <div class="faith-title">${t.title}</div>
+          <div class="faith-desc" style="font-size:0.75rem;color:var(--color-muted);">${t.description}</div>
+          <div class="faith-stars">⭐ ${t.stars} stars/day · ${starsToMoney(t.stars,financeSettings)}</div>
+        </div>
+      </label>`).join("");
+  }
+  document.getElementById("modal-faith-tasks").classList.add("open");
+};
+window.closeFaithTasks = () => document.getElementById("modal-faith-tasks").classList.remove("open");
+
+document.getElementById("btn-save-faith-tasks")?.addEventListener("click", async () => {
+  const btn    = document.getElementById("btn-save-faith-tasks");
+  const kidId  = document.getElementById("faith-modal-kid-id").value;
+  const faith  = currentParent?.faith || "muslim";
+  const tasks  = getFaithTasks(faith);
+  const checks = document.querySelectorAll("#faith-tasks-list input[type=checkbox]:checked");
+  const selected = Array.from(checks).map(c => tasks[parseInt(c.value)]).filter(Boolean);
+  if (!selected.length) { toast("Please select at least one task.","error"); return; }
+  setLoading(btn,true);
+  try {
+    await addFaithTasksForKid(currentParent.uid, kidId, selected);
+    closeFaithTasks();
+    toast(`${selected.length} faith task${selected.length>1?"s":""} added! 🕌`,"success");
+  } catch(e) { toast("Failed.","error"); console.error(e); } finally { setLoading(btn,false); }
+});
+
+// ── Praise: parent sends praise to kid ───────────────────────
+let praiseKidId=null, praiseKidName=null;
+window.openSendPraise = (kidId, kidName) => {
+  praiseKidId=kidId; praiseKidName=kidName;
+  document.getElementById("modal-praise-kid-name").textContent=`Praise ${kidName} 💛`;
+  document.getElementById("praise-message-input").value="";
+  document.getElementById("praise-value-select").innerHTML=
+    `<option value="">— General praise —</option>` +
+    familyValues.map(v=>`<option value="${v.id}">${v.emoji} ${v.name}</option>`).join("");
+  document.getElementById("praise-emoji-select").value="💛";
+  document.getElementById("modal-send-praise").classList.add("open");
+};
+window.closeSendPraise=()=>document.getElementById("modal-send-praise").classList.remove("open");
+
+document.getElementById("btn-send-praise")?.addEventListener("click", async () => {
+  const btn     = document.getElementById("btn-send-praise");
+  const message = document.getElementById("praise-message-input").value.trim();
+  const valueId = document.getElementById("praise-value-select").value||null;
+  const emoji   = document.getElementById("praise-emoji-select").value||"💛";
+  if (!message) { toast("Please write a praise message.","error"); return; }
+  setLoading(btn,true);
+  try {
+    await sendPraise(currentParent.uid, praiseKidId, message, valueId, emoji);
+    closeSendPraise();
+    toast(`💛 Praise sent to ${praiseKidName}!`,"success");
+  } catch(e) { toast("Failed.","error"); console.error(e); } finally { setLoading(btn,false); }
+});
+
+// ── Kid: load values progress ─────────────────────────────────
+async function loadKidValuesProgress(kidId) {
+  const el    = document.getElementById("kid-values-list");
+  const tabEl = document.getElementById("kid-values-tab-list");
+  try {
+    const values   = await getFamilyValues(currentKid.parentId);
+    if (!values.length) {
+      const msg = `<p class="empty-state">Your family hasn't set values yet.</p>`;
+      if (el) el.innerHTML = msg; if (tabEl) tabEl.innerHTML = msg; return;
+    }
+    const progress = await getValuesProgress(kidId, values);
+    const valHTML  = values.map(v => {
+      const count = progress[v.id]||0;
+      return `<div class="value-progress-card" style="border-left:4px solid ${v.color||"#6c63ff"}">
+        <span class="value-emoji" style="font-size:2rem;">${v.emoji}</span>
+        <div class="value-info">
+          <div class="value-name">${v.name}</div>
+          <div class="value-desc">${v.description||""}</div>
+          <div class="value-count">${count > 0 ? `✅ ${count} task${count>1?"s":""} completed` : "No tasks yet"}</div>
+        </div>
+        ${count>0?`<div class="value-badge" style="background:${v.color||"#6c63ff"}">${count}</div>`:""}
+      </div>`;
+    }).join("");
+    if (el) el.innerHTML = valHTML;
+    if (tabEl) tabEl.innerHTML = valHTML;
+  } catch(e) {
+    const msg = `<p class="empty-state">Could not load values.</p>`;
+    if (el) el.innerHTML = msg; if (tabEl) tabEl.innerHTML = msg;
+    console.error(e);
+  }
+}
+
+// ── Kid: load praise messages ─────────────────────────────────
+async function loadKidPraise(kidId) {
+  // Update both the goals-tab inline list AND the dedicated praise tab
+  const el     = document.getElementById("kid-praise-list");
+  const tabEl  = document.getElementById("kid-praise-tab-list");
+  try {
+    const praises = await getPraiseForKid(kidId);
+    if (!praises.length) {
+      const emptyMsg = `<p class="empty-state">No praise messages yet. Keep working hard! 💪</p>`;
+      if (el) el.innerHTML = emptyMsg;
+      if (tabEl) tabEl.innerHTML = emptyMsg;
+      return;
+    }
+    const sorted = praises.sort((a,b) => (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const praiseHTML = sorted.map(p => `
+      <div class="praise-card ${p.read?"praise-card--read":"praise-card--new"}">
+        <div class="praise-emoji">${p.emoji||"💛"}</div>
+        <div class="praise-body">
+          <div class="praise-message">${p.message}</div>
+          ${p.valueId ? (() => { const v=familyValues.find(fv=>fv.id===p.valueId); return v?`<div class="praise-value">${v.emoji} ${v.name}</div>`:""; })() : ""}
+        </div>
+        ${!p.read?`<div class="praise-new-dot"></div>`:""}
+      </div>`).join("");
+    if (el) el.innerHTML = praiseHTML;
+    if (tabEl) tabEl.innerHTML = praiseHTML;
+    praises.filter(p=>!p.read).forEach(p=>markPraiseRead(p.id).catch(()=>{}));
+  } catch(e) { el.innerHTML=`<p class="empty-state">Could not load praise.</p>`; console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+window._parentTabHistory = ["kids"];
+window.showTab = (tab) => {
+  // Track history for Back button
+  if (window._parentTabHistory[window._parentTabHistory.length-1] !== tab) {
+    window._parentTabHistory.push(tab);
+    if (window._parentTabHistory.length > 10) window._parentTabHistory.shift();
+  }
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById(`tab-btn-${tab}`)?.classList.add("active");
+  document.getElementById(`tab-${tab}`)?.classList.add("active");
+  if (tab==="approvals") loadPendingApprovals();
+  if (tab==="wallets")   loadWalletsOverview();
+  if (tab==="rewards")   loadRewardsCatalog();
+  if (tab==="finance")   loadFinanceSettings();
+  if (tab==="values")    loadValuesTab();
+  if (tab==="report")    loadWeeklyReports();
+  if (tab==="profile")   loadProfileTab();
+  if (tab==="rush")      { loadRushTab(); loadRushHistory(); }
+};
+
+// ── Back button — go to previous tab ──────────────────────────
+window.parentGoBack = () => {
+  if (window._parentTabHistory.length > 1) {
+    window._parentTabHistory.pop(); // remove current
+    const prev = window._parentTabHistory[window._parentTabHistory.length-1];
+    // Show without re-pushing
+    const tab = prev;
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    document.getElementById(`tab-btn-${tab}`)?.classList.add("active");
+    document.getElementById(`tab-${tab}`)?.classList.add("active");
+    if (tab==="approvals") loadPendingApprovals();
+    if (tab==="wallets")   loadWalletsOverview();
+    if (tab==="rewards")   loadRewardsCatalog();
+    if (tab==="finance")   loadFinanceSettings();
+    if (tab==="values")    loadValuesTab();
+    if (tab==="report")    loadWeeklyReports();
+    if (tab==="profile")   loadProfileTab();
+    if (tab==="rush")      { loadRushTab(); loadRushHistory(); }
+  } else {
+    lockParentPortal(); // already at first tab → go home
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+onAuthChange(async user => {
+  if (user) {
+    try {
+      const profile = await getParentProfile(user.uid);
+      const name = profile?.name || user.displayName || user.email?.split("@")[0] || "Parent";
+      currentParent = { uid: user.uid, name, email: user.email, ...profile };
+      financeSettings = await getFinanceSettings(currentParent.uid);
+      await seedDefaultRewards(currentParent.uid);
+      await seedDefaultJobs(currentParent.uid);
+    } catch(e) {
+      currentParent = { uid: user.uid, name: "Parent", email: user.email };
+      console.error("Profile load error:", e);
+    }
+    if (window._justLoggedIn) {
+      window._justLoggedIn = false;
+      if (!hasPINSet()) openPINSetup();
+      else openParentPIN();
+    }
+    // else: stay on home screen — Firebase Auth restored silently in background
+  } else { currentParent = null; showScreen("screen-home"); }
+});;
+
+function goToParentDashboard() {
+  loadCustomRushSessions().then(() => {
+    renderCustomRushSessions();
+  }).catch(()=>{});
+  document.getElementById("parent-name-display").textContent = `Welcome, ${currentParent.name}! 👋`;
+  autoSyncKidsToLocalStorage();
+  showScreen("screen-parent-dashboard"); showTab("kids"); loadKids();
+  setTimeout(checkAndSendEmailReports, 3000);
+  // ── Auto-detect running rush on any device ─────────────────
+  setTimeout(async () => {
+    try {
+      const rush = await getActiveRushForKid(currentParent.uid);
+      if (rush) {
+        const session = DEFAULT_RUSH_SESSIONS[rush.sessionId] ||
+          customRushSessions.find(s=>s.id===rush.sessionId) || {};
+        activeRushId   = rush.id;
+        currentSession = session;
+        document.getElementById("rush-monitor").style.display = "block";
+        document.getElementById("rush-monitor-title").textContent =
+          `${session.emoji||"⚡"} ${session.label||"Rush"} — Live`;
+        startRushMonitor(session, rush.id);
+        toast(`${session.emoji||"⚡"} Rush already running — reconnected!`, "info");
+        showParentRushOverlay(rush.id, session);
+      }
+    } catch(e) {}
+  }, 1500);
+}
+
+// ── Auto-sync kids from Firestore → localStorage thumbnails ───
+async function autoSyncKidsToLocalStorage() {
+  try {
+    const kids = await getKidsByParent(currentParent.uid);
+    const validIds = kids.map(k => k.id);
+    // ── Remove any localStorage kids that don't belong to this parent ──
+    try {
+      const existing = window.SK ? window.SK.getKids() : [];
+      existing.forEach(k => {
+        // Remove if from a different parent OR no longer exists in this account
+        if (k.parentId !== currentParent.uid || !validIds.includes(k.id)) {
+          if (window.SK && typeof window.SK.removeKid === "function") {
+            window.SK.removeKid(k.id);
+          }
+        }
+      });
+    } catch(e) {}
+    // Add/update current parent's kids
+    kids.forEach(kid => {
+      if (typeof window.SK_saveKidDirect === "function") {
+        window.SK_saveKidDirect(kid.id, kid.name, kid.avatarEmoji||"🌟", kid.photoURL||null, kid.code, kid.parentId);
+      }
+    });
+    if (typeof window.SK_renderKids === "function") window.SK_renderKids();
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════════
+// EMAIL REPORTS (EmailJS)
+// Replace YOUR_PUBLIC_KEY and YOUR_SERVICE_ID with your EmailJS credentials
+// ══════════════════════════════════════════════════════════════
+const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "starkids_report"; // create this template in EmailJS
+
+async function loadEmailJS() {
+  if (window.emailjs) return;
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  window.emailjs.init(EMAILJS_PUBLIC_KEY);
+}
+
+async function sendWeeklyEmailReport() {
+  if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") return; // not configured yet
+  if (!currentParent?.email) return;
+
+  // Check if already sent this week
+  const now       = new Date();
+  const weekKey   = `sk_email_week_${now.getFullYear()}_${getWeekNumber(now)}`;
+  if (localStorage.getItem(weekKey)) return;
+
+  try {
+    await loadEmailJS();
+    // Build report data
+    const kids   = await getKidsByParent(currentParent.uid);
+    const lines  = await Promise.all(kids.map(async k => {
+      const bal = await getStarBalance(k.id);
+      return `${k.name}: ⭐${bal} = ${starsToMoney(bal, financeSettings)}`;
+    }));
+
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     currentParent.email,
+      parent_name:  currentParent.name,
+      report_type:  "Weekly",
+      period:       `Week of ${now.toDateString()}`,
+      kids_summary: lines.join("\n"),
+      app_link:     "https://rizmaksol.github.io/starkids/"
+    });
+
+    localStorage.setItem(weekKey, "1");
+    console.log("Weekly report sent to", currentParent.email);
+  } catch(e) { console.error("Email report failed:", e); }
+}
+
+async function sendMonthlyEmailReport() {
+  if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") return;
+  if (!currentParent?.email) return;
+
+  const now       = new Date();
+  const monthKey  = `sk_email_month_${now.getFullYear()}_${now.getMonth()}`;
+  if (localStorage.getItem(monthKey)) return;
+
+  try {
+    await loadEmailJS();
+    const kids  = await getKidsByParent(currentParent.uid);
+    const lines = await Promise.all(kids.map(async k => {
+      const bal = await getStarBalance(k.id);
+      const tot = await getTotalEarned(k.id);
+      return `${k.name}: Balance ⭐${bal} | Total Earned ⭐${tot} = ${starsToMoney(tot, financeSettings)}`;
+    }));
+
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email:     currentParent.email,
+      parent_name:  currentParent.name,
+      report_type:  "Monthly",
+      period:       `${now.toLocaleString("default",{month:"long"})} ${now.getFullYear()}`,
+      kids_summary: lines.join("\n"),
+      app_link:     "https://rizmaksol.github.io/starkids/"
+    });
+
+    localStorage.setItem(monthKey, "1");
+    console.log("Monthly report sent to", currentParent.email);
+  } catch(e) { console.error("Monthly email report failed:", e); }
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+}
+
+// ── Trigger email checks on parent dashboard load ─────────────
+function checkAndSendEmailReports() {
+  const now = new Date();
+  if (now.getDay() === 1) sendWeeklyEmailReport();  // Monday
+  if (now.getDate() === 1) sendMonthlyEmailReport(); // 1st of month
+}
+
+// ── Onboarding Flow ───────────────────────────────────────────
+
+let _obStep    = 0;
+let _obKidCode = "";
+let _obKidName = "";
+
+function showOnboarding() {
+  _obStep = 0;
+  showScreen("screen-onboarding");
+  obUpdateDots();
+  document.getElementById("ob-step-0").style.display = "block";
+  document.getElementById("ob-step-1").style.display = "none";
+  document.getElementById("ob-step-2").style.display = "none";
+}
+
+function obUpdateDots() {
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById(`ob-dot-${i}`);
+    if (dot) dot.classList.toggle("active", i === _obStep);
+  }
+}
+
+window.obNext = () => {
+  document.getElementById(`ob-step-${_obStep}`).style.display = "none";
+  _obStep++;
+  document.getElementById(`ob-step-${_obStep}`).style.display = "block";
+  obUpdateDots();
+};
+
+window.obBack = () => {
+  document.getElementById(`ob-step-${_obStep}`).style.display = "none";
+  _obStep--;
+  document.getElementById(`ob-step-${_obStep}`).style.display = "block";
+  obUpdateDots();
+};
+
+window.obSelectEmoji = (emoji, btn) => {
+  document.getElementById("ob-kid-emoji").value = emoji;
+  document.querySelectorAll("#ob-emoji-row button").forEach(b => {
+    b.style.borderColor = "transparent";
+    b.style.background  = "var(--color-bg-2)";
+  });
+  btn.style.borderColor = "var(--color-primary)";
+  btn.style.background  = "rgba(108,99,255,0.12)";
+};
+
+window.obAddKid = async () => {
+  const name  = document.getElementById("ob-kid-name")?.value.trim();
+  const age   = parseInt(document.getElementById("ob-kid-age")?.value, 10);
+  const emoji = document.getElementById("ob-kid-emoji")?.value || "🌟";
+  if (!name) { toast("Please enter a name.", "error"); return; }
+  if (!age || age < 1 || age > 18) { toast("Please enter a valid age.", "error"); return; }
+  const btn = document.getElementById("ob-add-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Adding…"; }
+  try {
+    const kid = await addKid(currentParent.uid, name, age, emoji);
+    await createDefaultTasks(currentParent.uid, kid.id, age);
+    if (typeof window.SK_saveKidDirect === "function") {
+      window.SK_saveKidDirect(kid.id, kid.name, emoji, null, kid.code, kid.parentId);
+    }
+    _obKidCode = kid.code;
+    _obKidName = kid.name;
+    document.getElementById("ob-kid-code").textContent = kid.code;
+    document.getElementById("ob-kid-name-display").textContent = kid.name;
+    obNext();
+  } catch(e) {
+    toast("Failed to add kid. Try again.", "error"); console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Add Kid & Continue →"; }
+  }
+};
+
+window.obFinish = () => { goToParentDashboard(); };
+
+// ── Forgot Password from login screen (before logging in) ─────
+window.forgotPasswordFromLogin = async () => {
+  const email = document.getElementById("login-email")?.value.trim();
+  if (!email) {
+    toast("Enter your email above first, then tap Forgot password.", "info");
+    document.getElementById("login-email")?.focus();
+    return;
+  }
+  try {
+    const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    await sendPasswordResetEmail(auth, email);
+    toast(`📧 Password reset link sent to ${email}. Check your inbox!`, "success");
+  } catch(e) {
+    if (e.code === "auth/user-not-found") {
+      toast("No account found with that email.", "error");
+    } else if (e.code === "auth/invalid-email") {
+      toast("Please enter a valid email address.", "error");
+    } else {
+      toast("Could not send reset email. Try again.", "error");
+    }
+    console.error(e);
+  }
+};
+
+// ── Forgot Password — send reset email ───────────────────────
+window.sendPasswordReset = async () => {
+  if (!currentParent?.email) { toast("No email found.", "error"); return; }
+  try {
+    const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    await sendPasswordResetEmail(auth, currentParent.email);
+    toast(`📧 Reset link sent to ${currentParent.email}`, "success");
+  } catch(e) {
+    toast("Could not send reset email. Try again.", "error");
+    console.error(e);
+  }
+};
+
+// ── Lock parent portal — go home without logging out ──────────
+window.lockParentPortal = () => {
+  showScreen("screen-home");
+  SK_renderKids();
+};
+
+// ── Signup step navigation ───────────────────────────────────
+window.goToSignupStep2 = function() {
+  const name  = document.getElementById("signup-name")?.value.trim();
+  const email = document.getElementById("signup-email")?.value.trim();
+  const pw    = document.getElementById("signup-password")?.value;
+  if (!name || !email || !pw) { toast("Please fill in all fields.", "error"); return; }
+  document.getElementById("signup-step-1").style.display = "none";
+  document.getElementById("signup-step-2").style.display = "block";
+};
+
+window.goToSignupStep1 = function() {
+  document.getElementById("signup-step-2").style.display = "none";
+  document.getElementById("signup-step-1").style.display = "block";
+};
+
+window.selectFocus = function(focus) {
+  document.querySelectorAll(".focus-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector('[data-focus="' + focus + '"]')?.classList.add("active");
+  document.getElementById("signup-focus").value = focus;
+  const fs = document.getElementById("faith-selector-section");
+  if (fs) fs.style.display = focus === "faith" ? "block" : "none";
+};
+
+window.selectFaith = function(faith) {
+  document.querySelectorAll(".faith-grid-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector('[data-faith="' + faith + '"]')?.classList.add("active");
+  document.getElementById("signup-faith").value = faith;
+};
+
+document.getElementById("btn-signup")?.addEventListener("click", async () => {
+  const btn      = document.getElementById("btn-signup");
+  const name     = document.getElementById("signup-name")?.value.trim();
+  const email    = document.getElementById("signup-email")?.value.trim();
+  const password = document.getElementById("signup-password")?.value;
+  const focus    = document.getElementById("signup-focus")?.value || "faith";
+  const faith    = document.getElementById("signup-faith")?.value || "muslim";
+  if (!name||!email||!password) { toast("Please fill in all fields.","error"); return; }
+  setLoading(btn, true);
+  try {
+    const prefs = { focus, faith: focus === "faith" ? faith : null };
+    const user  = await signUpParent(name, email, password, prefs);
+    const profile = await getParentProfile(user.uid);
+    currentParent = { uid: user.uid, name: profile?.name||name, email, ...profile };
+    financeSettings = await getFinanceSettings(currentParent.uid);
+    await seedDefaultRewards(currentParent.uid);
+    familyValues = await seedDefaultValues(currentParent.uid);
+    toast("Account created! Welcome to StarKids! 🌟","success");
+    window._justLoggedIn = true;
+    // New parent — show onboarding first, then PIN setup
+    window._pendingOnboarding = true;
+    if (!hasPINSet()) openPINSetup();
+    else showOnboarding();
+  } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
+});
+
+document.getElementById("btn-login")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-login"); const email=document.getElementById("login-email").value.trim(); const password=document.getElementById("login-password").value; const remember=document.getElementById("remember-me")?.checked;
+  if (!email||!password) { toast("Please enter email and password.","error"); return; } setLoading(btn,true);
+  try {
+    const user=await loginParent(email,password);
+    if (remember) {
+      saveCredentials(email, password);
+      console.log("✅ Credentials saved:", email);
+    } else {
+      clearCredentials();
+    }
+    const profile=await getParentProfile(user.uid);
+    const name = profile?.name || user.displayName || email.split("@")[0] || "Parent";
+    currentParent={uid:user.uid, name, email, ...profile};
+    financeSettings=await getFinanceSettings(currentParent.uid);
+    await seedDefaultRewards(currentParent.uid);
+    familyValues = await seedDefaultValues(currentParent.uid);
+    toast("Welcome back! 🌟","success");
+    window._justLoggedIn = false;
+    if (!hasPINSet()) openPINSetup();
+    else openParentPIN();
+  } catch(err) { toast(friendlyError(err),"error"); } finally { setLoading(btn,false); }
+});
+
+document.getElementById("btn-logout")?.addEventListener("click", async () => {
+  clearCredentials();
+  clearKidSession();
+  window._lastApprovalCount = -1;
+  await logoutParent();
+  toast("Logged out!", "info");
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ADD KID
+// ═══════════════════════════════════════════════════════════════
+document.getElementById("btn-add-kid")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-add-kid"); const name=document.getElementById("kid-name").value.trim(); const age=parseInt(document.getElementById("kid-age").value,10); const emoji=document.getElementById("kid-avatar").value||"🌟";
+  if (!name||!age||age<1||age>18) { toast("Please enter a valid name and age.","error"); return; } setLoading(btn,true);
+  try {
+    const kid=await addKid(currentParent.uid,name,age,emoji,null);
+    if (selectedPhoto) {
+      toast("Processing photo… 📸","info");
+      try {
+        const b64 = await fileToBase64(selectedPhoto);
+        const final = b64.length > 900000
+          ? await fileToBase64(await compressImage(selectedPhoto, 300, 0.6))
+          : b64;
+        if (final.length <= 900000) {
+          await updateKidPhoto(kid.id, final);
+          kid.photoURL = final;
+          toast("Photo saved! ✅","success");
+        } else {
+          toast("Photo too large — kid added without photo.","info");
+        }
+      } catch(e) { console.error("Kid photo failed:", e); toast("Photo failed.","info"); }
+    }
+    await createDefaultTasks(currentParent.uid,kid.id,age);
+    kidsList.push(kid); renderKids();
+    document.getElementById("kid-name").value=""; document.getElementById("kid-age").value=""; document.getElementById("kid-avatar").value="🌟";
+    document.getElementById("kid-photo-input").value=""; document.getElementById("kid-photo-preview").style.display="none"; document.getElementById("kid-photo-placeholder").style.display="flex";
+    selectedPhoto=null; toast(`${kid.name} added! Code: ${kid.code} 🎉`,"success");
+  } catch(err) { toast("Failed to add kid.","error"); console.error(err); } finally { setLoading(btn,false); }
+});
+
+window.handleDeleteKid = async (kidId,kidName) => { if (!confirm(`Delete ${kidName}?`)) return; try { await deleteKid(kidId); kidsList=kidsList.filter(k=>k.id!==kidId); renderKids(); toast(`${kidName} removed.`,"info"); } catch(err) { toast("Failed.","error"); } };
+window.handleRegenCode = async (kidId) => {
+  try { const code=await regenerateKidCode(kidId); const idx=kidsList.findIndex(k=>k.id===kidId); if(idx!==-1) kidsList[idx].code=code; const el=document.getElementById(`code-${kidId}`); if(el){el.textContent=code;el.classList.add("code-flash");setTimeout(()=>el.classList.remove("code-flash"),800);} toast(`New code: ${code}`,"success"); }
+  catch(err) { toast("Failed.","error"); }
+};
+
+// ── Bonus Stars ───────────────────────────────────────────────
+let bonusKidId=null,bonusKidName=null;
+window.openBonusStars  = (id,name) => { bonusKidId=id; bonusKidName=name; document.getElementById("modal-bonus-kid-name").textContent=`Bonus Stars for ${name}`; document.getElementById("bonus-stars-input").value="1"; document.getElementById("bonus-reason-input").value=""; document.getElementById("modal-bonus").classList.add("open"); };
+window.closeBonusStars = () => document.getElementById("modal-bonus").classList.remove("open");
+document.getElementById("btn-save-bonus")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-save-bonus"); const stars=parseInt(document.getElementById("bonus-stars-input").value)||1; setLoading(btn,true);
+  try { const total=await addBonusStars(bonusKidId,stars); const completed=await checkGoalCompletion(bonusKidId,total); completed.forEach(g=>celebrate(`🎉 Goal Reached!\n"${g.title}"`)); closeBonusStars(); toast(`⭐ ${stars} bonus star${stars>1?"s":""} = ${starsToMoney(stars,financeSettings)} given to ${bonusKidName}!`,"success"); }
+  catch(err) { toast("Failed.","error"); } finally { setLoading(btn,false); }
+});
+
+// ── Add Task ──────────────────────────────────────────────────
+let taskKidId=null,taskKidName=null;
+window.openAddTask  = (id,name) => {
+  taskKidId=id; taskKidName=name;
+  document.getElementById("modal-task-kid-name").textContent=`Task for ${name}`;
+  document.getElementById("task-title-input").value="";
+  document.getElementById("task-desc-input").value="";
+  document.getElementById("task-stars-input").value="1";
+  selectTaskType("daily");
+  populateValueSelector();
+  document.getElementById("modal-add-task").classList.add("open");
+};
+window.closeAddTask = () => document.getElementById("modal-add-task").classList.remove("open");
+document.getElementById("btn-save-task")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-save-task"); const title=document.getElementById("task-title-input").value.trim(); const desc=document.getElementById("task-desc-input").value.trim(); const stars=parseInt(document.getElementById("task-stars-input").value)||1; const taskType=document.getElementById("task-type-input")?.value||"daily";
+  if (!title) { toast("Please enter a task title.","error"); return; } setLoading(btn,true);
+  try { await createTask(currentParent.uid,taskKidId,title,desc,stars,taskType); closeAddTask(); toast(`Task added for ${taskKidName}! ⭐`,"success"); }
+  catch(err) { toast("Failed.","error"); } finally { setLoading(btn,false); }
+});
+
+// ── Approve / Reject ──────────────────────────────────────────
+window.handleApprove = async (taskId,kidId,stars,title,currentStreak) => {
+  try {
+    const result=await approveTask(taskId,kidId,stars,currentStreak||0);
+    toast(`✅ Approved! ${stars}⭐ = ${starsToMoney(stars,financeSettings)} for "${title}"`,"success");
+    if (result.streakBonus) setTimeout(()=>toast(`🔥 ${result.streak}-task streak! Bonus +2⭐`,"success"),1500);
+    const newStars=await getStarBalance(kidId);
+    const completed=await checkGoalCompletion(kidId,newStars);
+    completed.forEach(g=>celebrate(`🎉 Goal Reached!\n"${g.title}"`));
+    if (newStars === stars && !localStorage.getItem(`sk_first_salary_${kidId}`)) {
+      const savedKids = window.SK ? window.SK.getKids() : [];
+      const prevKid   = currentKid;
+      const matchKid  = savedKids.find(k => k.id === kidId);
+      if (matchKid) currentKid = matchKid;
+      showFirstSalary(title, stars);
+      currentKid = prevKid;
+    }
+    loadPendingApprovals();
+  } catch(err) { toast("Failed.","error"); console.error(err); }
+};
+// ── Reject with reason modal ──────────────────────────────────
+let rejectTaskId = null, rejectTaskTitle = null;
+window.openRejectModal = (taskId, title) => {
+  rejectTaskId    = taskId;
+  rejectTaskTitle = title;
+  document.getElementById("reject-reason-input").value = "";
+  document.getElementById("reject-modal-task-title").textContent = `Reject: "${title}"`;
+  document.getElementById("modal-reject-task").classList.add("open");
+};
+window.closeRejectModal = () => document.getElementById("modal-reject-task").classList.remove("open");
+
+window.confirmRejectTask = async () => {
+  const btn    = document.getElementById("btn-confirm-reject");
+  const reason = document.getElementById("reject-reason-input")?.value.trim();
+  if (!reason) { toast("Please give a reason so the kid knows what to fix.", "error"); return; }
+  if(btn) { btn.disabled=true; btn.textContent="Sending…"; }
+  try {
+    await rejectTaskWithReason(rejectTaskId, reason);
+    closeRejectModal();
+    toast("❌ Task sent back with feedback.", "info");
+    loadPendingApprovals();
+  } catch(err) { toast("Failed.", "error"); console.error(err); }
+  finally { if(btn) { btn.disabled=false; btn.textContent="Send Feedback ❌"; } }
+};
+
+window.handleReject = (taskId, title) => openRejectModal(taskId, title);
+
+// ═══════════════════════════════════════════════════════════════
+// KID LOGIN
+// ═══════════════════════════════════════════════════════════════
+document.getElementById("btn-kid-login")?.addEventListener("click", async () => {
+  const btn=document.getElementById("btn-kid-login"); const code=document.getElementById("kid-code-input").value.trim();
+  if (code.length!==6||!/^\d+$/.test(code)) { toast("Please enter a valid 6-digit code.","error"); return; } setLoading(btn,true);
+  try {
+    const kid=await loginKidByCode(code); if (!kid) { toast("Code not found. Ask your parent!","error"); return; }
+    currentKid=kid;
+    saveKidSession(kid);
+    // Save to thumbnail list immediately
+    if (typeof window.SK_saveKidDirect === "function") {
+      window.SK_saveKidDirect(kid.id, kid.name, kid.avatarEmoji||"🌟", kid.photoURL||null, kid.code, kid.parentId);
+    }
+    if (typeof window.SK_renderKids === "function") window.SK_renderKids();
+    // Load parent's finance settings for money display
+    financeSettings = await getFinanceSettings(kid.parentId);
+    await showKidDashboard(kid);
+    toast(`Hi ${kid.name}! Let's have a great day! 🌟`,"success");
+  } catch(err) { toast("Error: "+(err?.message||"Unknown").slice(0,60),"error"); console.error(err); }
+  finally { setLoading(btn,false); }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// KID DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+async function showKidDashboard(kid) {
+  const av=document.getElementById("kid-dashboard-avatar");
+  av.innerHTML=kid.photoURL?`<img src="${kid.photoURL}" class="kid-dash-photo" />`:(kid.avatarEmoji||"🌟");
+  document.getElementById("kid-dashboard-name").textContent=`Hi, ${kid.name}!`;
+
+  const resetCount = await resetRecurringTasks(kid.id);
+
+  // Load prayer times if family is faith-based
+  if (kid.parentId) {
+    try {
+      const { city, country } = getPrayerCity();
+      if (city) {
+        const timings = await fetchPrayerTimes(city, country);
+        const next    = getNextPrayer(timings);
+        const prayerBar = document.getElementById("prayer-times-bar");
+        if (prayerBar) {
+          prayerBar.style.display = "block";
+          prayerBar.innerHTML = `
+            <div class="prayer-next">
+              ${next.emoji} Next: <strong>${next.name}</strong> at ${formatPrayerTime(next.time)}
+              <span class="prayer-countdown">(${next.minutesLeft < 60
+                ? next.minutesLeft + " min"
+                : Math.floor(next.minutesLeft/60) + "h " + (next.minutesLeft%60) + "m"} away)</span>
+            </div>`;
+          startPrayerAlerts(timings, kid.name);
+        }
+      }
+    } catch(e) { console.log("Prayer times not available:", e.message); }
+  }
+
+  const stars = await getStarBalance(kid.id);
+  const money = starsToMoney(stars, financeSettings);
+  document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
+  document.getElementById("kid-dashboard-money").textContent = `💰 ${money}`;
+
+  await loadKidTasks(kid);
+  await loadKidGoalsView(kid.id, stars);
+  // Load family values
+  try { familyValues = await getFamilyValues(kid.parentId); } catch(e) {}
+  showKidTab("tasks");
+  await loadKidJobsSection(kid.id);
+  // Check for unread praise → show badge on Praise tab
+  try {
+    const praises = await getPraiseForKid(kid.id);
+    const unread  = praises.filter(p => !p.read).length;
+    const badge   = document.getElementById("kid-praise-badge");
+    if (badge && unread > 0) { badge.textContent = unread; badge.style.display = "inline-flex"; }
+    else if (badge) badge.style.display = "none";
+  } catch(e) {}
+  // Check for active rush immediately and then every 30s
+  checkForActiveRush(kid).catch(e => console.log('Rush check:', e.message));
+  if (window._rushPollInterval) clearInterval(window._rushPollInterval);
+  window._rushPollInterval = setInterval(() => {
+    if (currentKid) checkForActiveRush(currentKid).catch(()=>{});
+  }, 30000);
+
+  // ── Instant rush trigger via localStorage broadcast ────────
+  // Fires immediately when parent taps Start on the SAME device/browser
+  if (!window._rushBroadcastListener) {
+    window._rushBroadcastListener = (e) => {
+      if (e.key !== "sk_rush_broadcast" || !e.newValue) return;
+      try {
+        const data = JSON.parse(e.newValue);
+        if (!currentKid) return;
+        if (!data.kidIds?.includes(currentKid.id)) return;
+        if (kidRushId === data.rushId) return;
+        // Use checkForActiveRush so all the same rules (expiry, done) apply
+        checkForActiveRush(currentKid).catch(()=>{});
+      } catch(err) {}
+    };
+    window.addEventListener("storage", window._rushBroadcastListener);
+  }
+  // Load achievements
+  await loadKidAchievements(kid.id);
+  scheduleMidnightRefresh();
+  showScreen("screen-kid-dashboard");
+}
+
+// ── Kid tasks ──────────────────────────────────────────────────
+async function loadKidTasks(kid) {
+  const tasks=await getTasksForKid(kid.id); const el=document.getElementById("kid-tasks-list"); if (!el) return;
+  const active  = tasks.filter(t=>t.status===STATUS.PENDING||t.status===STATUS.REJECTED);
+  const waiting = tasks.filter(t=>t.status===STATUS.SUBMITTED);
+  const approved= tasks.filter(t=>t.status===STATUS.APPROVED);
+  let html="";
+  if (!tasks.length) html=`<p class="empty-state">No tasks yet! Ask your parent. 🌟</p>`;
+
+  if (active.length || tasks.some(t => t.isFaith)) {
+    // Split regular vs entrepreneur
+    const regular = active.filter(t => !t.isEntrepreneur);
+    const jobs    = active.filter(t => t.isEntrepreneur);
+    {
+      // Faith tasks: include ALL (pending + submitted + approved) so done ones
+      // show as "Done!" for the rest of the day instead of vanishing/repeating
+      const allFaith     = tasks.filter(t => t.isFaith && t.status !== STATUS.REJECTED);
+      const faithTasks   = allFaith;
+      const normalTasks  = regular.filter(t => !t.isFaith);
+
+      if (faithTasks.length) {
+        // Sort by Islamic daily order — check longer/specific keywords first
+        const FAITH_ORDER = [
+          "fajr", "morning dhikr", "duha", "ishraq",
+          "dhuhr", "zuhr", "zohar", "zuhur", "zohr",
+          "asr",
+          "maghrib",
+          "evening dhikr",
+          "isha", "ishaa",
+          "quran", "qur'an",
+          "dua", "learn", "hadith"
+        ];
+        const orderIndex = (title) => {
+          const t = title.toLowerCase();
+          // Find the best (earliest in FAITH_ORDER) keyword that appears in the title
+          let best = 999;
+          FAITH_ORDER.forEach((kw, i) => {
+            if (t.includes(kw) && i < best) best = i;
+          });
+          return best;
+        };
+        const faithSorted = [...faithTasks].sort((a, b) => orderIndex(a.title) - orderIndex(b.title));
+        const faithDone  = faithSorted.filter(t => t.status === STATUS.APPROVED || t.status === STATUS.SUBMITTED).length;
+        const faithTotal = faithSorted.length;
+        html += `
+        <div class="faith-strip">
+          <div class="faith-strip__header">
+            <span class="faith-strip__title">🕌 Faith Journey</span>
+            <span class="faith-strip__progress">${faithDone}/${faithTotal} done${faithTotal > 4 ? ' · swipe →' : ''}</span>
+          </div>
+          <div style="position:relative;">
+            ${faithTotal > 4 ? `<button onclick="scrollFaith(-1)" style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.25);color:#fff;font-size:1rem;cursor:pointer;backdrop-filter:blur(4px);">‹</button>` : ""}
+            <div class="faith-strip__scroll" id="faith-scroll">
+            ${faithSorted.map(t => {
+              const done = t.status === STATUS.APPROVED || t.status === STATUS.SUBMITTED;
+              const emojiMatch = t.title.match(/\p{Emoji_Presentation}/u);
+              const emoji = emojiMatch ? emojiMatch[0] : "🕌";
+              const nameClean = t.title.replace(/\p{Emoji_Presentation}/gu,"").trim();
+              return `<div class="faith-pill ${done ? "faith-pill--done" : ""}">
+                <div class="faith-pill__emoji">${emoji}</div>
+                <div class="faith-pill__name">${nameClean}</div>
+                <div class="faith-pill__stars">⭐ ${t.stars}</div>
+                ${done
+                  ? `<div class="faith-pill__btn faith-pill__btn--done">✅ Done!</div>`
+                  : `<button class="faith-pill__btn" onclick="handleJobDone('${t.id}')">Tap Done</button>`}
+              </div>`;
+            }).join("")}
+            </div>
+            ${faithTotal > 4 ? `<button onclick="scrollFaith(1)" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);z-index:3;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,0.25);color:#fff;font-size:1rem;cursor:pointer;backdrop-filter:blur(4px);">›</button>` : ""}
+          </div>
+        </div>`;
+      }
+
+      if (normalTasks.length) {
+        html += `<div class="task-section-title">📋 My Tasks</div>`;
+        html += normalTasks.map(t => {
+          const typeBadge   = t.taskType==="daily"?`<span class="type-badge type-badge--daily">🔄 Daily</span>`:t.taskType==="weekly"?`<span class="type-badge type-badge--weekly">📅 Weekly</span>`:`<span class="type-badge type-badge--onetime">1️⃣ One-time</span>`;
+          const streakBadge = (t.streak&&t.streak>1)?`<span class="streak-badge">🔥 ${t.streak}</span>`:"";
+          const rejReason   = t.status===STATUS.REJECTED && t.rejectionReason
+            ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
+          return `<div class="task-card task-card--pending ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
+            <div class="task-card__info">
+              <div class="task-card__title-row">${typeBadge}${streakBadge}</div>
+              <div class="task-card__title">${t.title}</div>
+              ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
+              <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+              ${rejReason}
+            </div>
+            <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
+          </div>`;
+        }).join("");
+      }
+    }
+    if (jobs.length) {
+      html += `<div class="task-section-title">💼 Entrepreneur Jobs</div>`;
+      html += jobs.map(t => {
+        const rejReason = t.status===STATUS.REJECTED && t.rejectionReason
+          ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
+        return `<div class="task-card task-card--job ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
+          <div class="task-card__info">
+            <div class="task-card__title">${t.title}</div>
+            ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
+            <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+            ${rejReason}
+          </div>
+          <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
+        </div>`;
+      }).join("");
+    }
+  }
+  if (waiting.filter(t=>!t.isFaith).length) {
+    html+=`<div class="task-section-title">⏳ Waiting Approval</div>`;
+    html+=waiting.filter(t=>!t.isFaith).map(t=>`<div class="task-card task-card--submitted">
+      <div class="task-card__info">
+        <div class="task-card__title">${t.title}</div>
+        <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
+        <div id="kid-photo-wrap-${t.id}"></div>
+      </div>
+      <span class="task-badge task-badge--waiting">Waiting…</span>
+    </div>`).join("");
+    // Load photos for waiting tasks
+    for (const t of waiting) {
+      const wrap = document.getElementById(`kid-photo-wrap-${t.id}`);
+      if (!wrap) continue;
+      const photo = await loadTaskPhoto(t.id);
+      if (photo) wrap.innerHTML = `<img src="${photo}" class="submission-photo-thumb" onclick="showPhotoFull(this.src)" />`;
+    }
+  }
+  if (approved.length) {
+    html+=`<div class="task-section-title">✅ Completed</div>`;
+    html+=approved.map(t=>`<div class="task-card task-card--approved"><div class="task-card__info"><div class="task-card__title">${t.title}</div><div class="task-card__stars">⭐ +${t.stars} = +${starsToMoney(t.stars,financeSettings)}</div></div><span class="task-badge task-badge--approved">Done! ⭐</span></div>`).join("");
+  }
+  el.innerHTML=html;
+}
+
+// ── Submit task modal (with optional photo) ──────────────────
+let submitTaskId = null;
+window.openSubmitTaskModal = (taskId, title) => {
+  submitTaskId = taskId;
+  const displayTitle = (!title || title === "Task") ? "" : `"${title}"`;
+  document.getElementById("submit-task-title").textContent = displayTitle ? `✅ ${displayTitle}` : "✅ Mark as done!";
+  document.getElementById("submit-task-photo-preview").style.display = "none";
+  document.getElementById("submit-task-photo-placeholder").style.display = "flex";
+  document.getElementById("submit-task-photo-input").value = "";
+  document.getElementById("modal-submit-task").classList.add("open");
+};
+window.closeSubmitTaskModal = () => document.getElementById("modal-submit-task").classList.remove("open");
+
+// photo preview for submission
+document.getElementById("submit-task-photo-input")?.addEventListener("change", e => {
+  const file = e.target.files[0]; if (!file) return;
+  const prev = document.getElementById("submit-task-photo-preview");
+  prev.src = URL.createObjectURL(file);
+  prev.style.display = "block";
+  document.getElementById("submit-task-photo-placeholder").style.display = "none";
+});
+
+// ── Photo stored in /taskPhotos/{taskId} ─────────────────────
+async function saveTaskPhoto(taskId, base64) {
+  const { setDoc, doc, serverTimestamp } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  await setDoc(doc(db, "taskPhotos", taskId), {
+    taskId, photo: base64, savedAt: serverTimestamp()
+  });
+  console.log("✅ Photo saved to taskPhotos/", taskId);
+}
+
+async function loadTaskPhoto(taskId) {
+  try {
+    const { getDoc, doc } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+    );
+    const snap = await getDoc(doc(db, "taskPhotos", taskId));
+    return snap.exists() ? snap.data().photo : null;
+  } catch(e) { console.error("loadTaskPhoto:", e); return null; }
+}
+
+// ── Offline queue ─────────────────────────────────────────────
+window._offlineQueue = JSON.parse(localStorage.getItem("sk_offline_queue")||"[]");
+
+function saveOfflineQueue() {
+  localStorage.setItem("sk_offline_queue", JSON.stringify(window._offlineQueue));
+}
+
+async function flushOfflineQueue() {
+  if (!navigator.onLine || !window._offlineQueue.length) return;
+  const queue = [...window._offlineQueue];
+  window._offlineQueue = [];
+  saveOfflineQueue();
+  for (const item of queue) {
+    try {
+      if (item.type === "submitTask") {
+        await submitTaskWithPhoto(item.taskId, item.photo || null);
+      } else if (item.type === "rushTask") {
+        const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await updateDoc(fsDoc(db, "activeRush", item.rushId), {
+          [`progress.${item.kidId}.${item.taskId}`]: {
+            done:true, doneAtMs:Date.now(),
+            elapsedSecs:item.elapsed, stars:item.earned
+          }
+        });
+        await addBonusStars(item.kidId, item.earned);
+      }
+    } catch(e) {
+      window._offlineQueue.push(item);
+      saveOfflineQueue();
+    }
+  }
+  if (queue.length) toast("✅ Synced offline tasks!", "success");
+}
+
+// Flush when connection returns
+window.addEventListener("online", () => {
+  toast("Back online — syncing... 🔄", "info");
+  setTimeout(flushOfflineQueue, 1000);
+});
+
+window.confirmSubmitTask = async () => {
+  const btn  = document.getElementById("btn-confirm-submit-task");
+  const file = document.getElementById("submit-task-photo-input")?.files[0];
+  if(btn) { btn.disabled=true; btn.textContent="Sending…"; }
+
+  // ── Offline: queue and show optimistic UI ─────────────────
+  if (!navigator.onLine) {
+    window._offlineQueue.push({ type: "submitTask", taskId: submitTaskId, photo: null });
+    saveOfflineQueue();
+    closeSubmitTaskModal();
+    toast("📶 Offline — task queued and will sync when online!", "info");
+    // Optimistically update the UI
+    await loadKidTasks(currentKid);
+    if(btn) { btn.disabled=false; btn.textContent="Send for Approval"; }
+    return;
+  }
+
+  try {
+    // Step 1: Submit task first (no photo) — always succeeds
+    await submitTaskWithPhoto(submitTaskId, null);
+
+    // Step 2: If photo selected, save it to separate Firestore doc
+    // /taskPhotos/{taskId} — avoids 1MB task document limit
+    if (file) {
+      try {
+        toast("Processing photo… 📸", "info");
+        // Aggressive compression: 300px, 40% quality → ~30-50KB
+        const b64 = await imageToBase64(file, 300, 0.4);
+        const kb  = Math.round(b64.length / 1024);
+
+        if (b64.length <= 800000) {
+          // Save to separate collection to avoid task doc size limit
+          await saveTaskPhoto(submitTaskId, b64);
+          toast(`🚀 Sent with photo (${kb}KB)! Tap 🔄 Refresh`, "success");
+        } else {
+          toast(`🚀 Sent! Photo too large (${kb}KB) — try a smaller image.`, "info");
+        }
+      } catch(photoErr) {
+        console.error("Photo save failed:", photoErr);
+        toast("🚀 Sent! Photo failed — " + (photoErr.message||"error"), "info");
+      }
+    } else {
+      toast("🚀 Sent! Tap 🔄 Refresh after parent approves", "success");
+    }
+
+    closeSubmitTaskModal();
+    await loadKidTasks(currentKid);
+  } catch(err) {
+    toast("Failed: " + (err.message||err.code||"error"), "error");
+    console.error("Submit failed:", err);
+  } finally {
+    if(btn) { btn.disabled=false; btn.textContent="🚀 Send to Parent!"; }
+  }
+};
+
+// Clean handler for Done buttons — avoids quote issues in onclick
+// ── Scroll faith strip via arrow buttons ──────────────────────
+window.scrollFaith = (dir) => {
+  const scroll = document.getElementById("faith-scroll");
+  if (scroll) scroll.scrollBy({ left: dir * 200, behavior: "smooth" });
+};
+
+// ── Scroll faith strip ─ end ──────────────────────────────────
+window.handleJobDone = (taskId) => openSubmitTaskModal(taskId, "");
+window.handleTaskDone = (taskId) => openSubmitTaskModal(taskId, "");
+
+// ─ Refresh kid dashboard ────────────────────────────────────────────────────────────
+window.refreshKidDashboard = async () => {
+  if (!currentKid) return;
+  const kid = currentKid; // capture to prevent null mid-async
+  const btn = document.getElementById("btn-kid-refresh");
+  if (btn) { btn.textContent = "⏳ Checking…"; btn.disabled = true; }
+  try {
+    await resetRecurringTasks(kid.id);
+    const stars = await getStarBalance(kid.id);
+    const money = starsToMoney(stars, financeSettings);
+    document.getElementById("kid-dashboard-stars").textContent = `⭐ ${stars} Stars`;
+    document.getElementById("kid-dashboard-money").textContent = `💰 ${money}`;
+    await loadKidTasks(currentKid);
+    await loadKidGoalsView(kid.id, stars);
+    // Check achievements
+    try {
+      const kidVals = familyValues.length ? familyValues : await getFamilyValues(kid.parentId).catch(()=>[]);
+      const stats   = await getKidStats(kid.id, kidVals);
+      const earned  = await checkAchievements(kid.id, stats);
+      if (earned.length > 0) {
+        await loadKidAchievements(kid.id);
+        // Award bonus stars for each achievement
+        let bonusTotal = 0;
+        for (const a of earned) {
+          const bonus = 5; // 5 bonus stars per achievement
+          await addBonusStars(kid.id, bonus);
+          bonusTotal += bonus;
+        }
+        // Refresh star display
+        const newStars = await getStarBalance(kid.id);
+        document.getElementById("kid-dashboard-stars").textContent = `⭐ ${newStars} Stars`;
+        document.getElementById("kid-dashboard-money").textContent = `💰 ${starsToMoney(newStars, financeSettings)}`;
+        earned.forEach((a, i) => setTimeout(() =>
+          celebrate(`🏆 Achievement Unlocked!
+${a.emoji} ${a.title}
++5⭐ Bonus Stars!`, a.emoji+"🏆"+a.emoji)
+        , 900*(i+1)));
+        toast(`🏆 ${earned.length} achievement${earned.length>1?"s":""} unlocked! +${bonusTotal}⭐ bonus!`, "success");
+      } else {
+        toast("✅ All updated!", "success");
+      }
+    } catch(e) { console.error("achievement check:", e); toast("✅ Stars updated!", "success"); }
+    // Refresh praise badge
+    try {
+      const praises = await getPraiseForKid(currentKid.id);
+      const unread  = praises.filter(p=>!p.read).length;
+      const badge   = document.getElementById("kid-praise-badge");
+      if (badge && unread>0) { badge.textContent=unread; badge.style.display="inline-flex"; }
+      else if (badge) badge.style.display="none";
+    } catch(e) {}
+  } catch(e) {
+    toast("Refresh failed. Try again.","error"); console.error(e);
+  } finally {
+    if (btn) { btn.textContent = "🔄 Refresh"; btn.disabled = false; }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// KID GOALS
+// ═══════════════════════════════════════════════════════════════
+let parentRewardsForKid = [];
+
+async function loadKidGoalsView(kidId, currentStars) {
+  const el=document.getElementById("kid-goals-list"); if (!el) return;
+  const goals=await getGoalsForKid(kidId);
+  const active   =goals.find(g=>g.status===GOAL_STATUS.ACTIVE);
+  const completed=goals.filter(g=>g.status===GOAL_STATUS.COMPLETED);
+  const requested=goals.filter(g=>g.status===GOAL_STATUS.REQUESTED);
+  const redeemed =goals.filter(g=>g.status==="redeemed");
+  let html="";
+  if (active) {
+    const pct=Math.min(100,Math.round((currentStars/active.targetStars)*100));
+    const reached=currentStars>=active.targetStars;
+    html+=`<div class="task-section-title">🎯 My Goal</div>
+    <div class="goal-card ${reached?"goal-card--reached":""}">
+      <div class="goal-emoji">${active.emoji}</div>
+      <div class="goal-info">
+        <div class="goal-title">${active.title}</div>
+        <div class="goal-target">⭐ ${active.targetStars} stars = ${starsToMoney(active.targetStars,financeSettings)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="progress-label">⭐ ${currentStars} / ${active.targetStars} — ${pct}% there!</div>
+        ${reached?`<button class="btn btn--success mt-8" onclick="handleRequestRedeem('${active.id}','${active.title}')">🎁 I'm Ready! Ask Parent to Redeem</button>`:""}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button class="goal-delete-btn" title="Change goal" onclick="openPickGoal()">✏️</button>
+        <button class="goal-delete-btn" title="Remove goal" onclick="handleDeleteGoal('${active.id}','${active.title}')" style="color:#FF6B6B;">🗑️</button>
+      </div>
+    </div>`;
+  }
+  if (requested.length) {
+    html+=`<div class="task-section-title">⏳ Waiting for Parent</div>`;
+    html+=requested.map(g=>`<div class="goal-card goal-card--waiting">
+      <div class="goal-emoji">${g.emoji}</div>
+      <div class="goal-info">
+        <div class="goal-title">${g.title}</div>
+        <div class="goal-target">⭐ ${g.targetStars} — 🎁 Ask your parent to approve!</div>
+      </div>
+      <button class="goal-delete-btn" title="Cancel this request" onclick="handleCancelRequest('${g.id}','${g.title}')" style="color:#FF6B6B;">🗑️</button>
+    </div>`).join("");
+  }
+  if (completed.length) {
+    html+=`<div class="task-section-title">🏆 Goal Reached!</div>`;
+    html+=completed.map(g=>`<div class="goal-card goal-card--done"><div class="goal-emoji">${g.emoji}</div><div class="goal-info"><div class="goal-title">${g.title}</div><div class="goal-target">You did it! ⭐${g.targetStars} stars</div><button class="btn btn--success mt-8" onclick="handleRequestRedeem('${g.id}','${g.title}')">🎁 Request Reward</button></div></div>`).join("");
+  }
+  if (redeemed.length) {
+    html+=`<div class="task-section-title">🎁 Past Rewards</div>`;
+    html+=redeemed.map(g=>`<div class="goal-card goal-card--redeemed"><div class="goal-emoji">${g.emoji}</div><div class="goal-info"><div class="goal-title">${g.title}</div><div class="goal-target">🎉 Enjoyed!</div></div></div>`).join("");
+  }
+  html+=`<div style="margin-top:16px;"><button class="btn btn--${active?"secondary":"kid"}" onclick="openPickGoal()">${active?"🔄 Browse & Change Goal":"🎯 Pick a Goal"}</button></div>`;
+  el.innerHTML=html;
+}
+
+// ── Kid entrepreneur jobs ─────────────────────────────────────
+async function loadKidJobsSection(kidId) {
+  const el = document.getElementById("kid-jobs-list"); if (!el) return;
+  const jobs    = await getEntrepreneurJobs(currentKid.parentId);
+  const myTasks = await getTasksForKid(kidId);
+  const claimed = myTasks.filter(t => t.isEntrepreneur && (t.status==="pending"||t.status==="submitted")).map(t => t.jobId);
+  // Show badge on Jobs tab with available job count
+  const available = jobs.filter(j => !claimed.includes(j.id)).length;
+  const badge = document.getElementById("kid-jobs-badge");
+  if (badge) { badge.textContent = available; badge.style.display = available > 0 ? "inline-flex" : "none"; }
+  if (!jobs.length) { el.innerHTML=`<p class="empty-state">No jobs available yet.</p>`; return; }
+  el.innerHTML = jobs.map(j => {
+    const isClaimed = claimed.includes(j.id);
+    return `<div class="job-kid-item ${isClaimed?"job-kid-item--claimed":""}">
+      <span class="job-emoji">${j.emoji}</span>
+      <div class="job-info">
+        <div class="job-title">${j.title}</div>
+        ${j.description?`<div class="job-desc">${j.description}</div>`:""}
+        <div class="job-stars">⭐ ${j.stars} = ${starsToMoney(j.stars,financeSettings)}</div>
+      </div>
+      ${isClaimed
+        ? `<span class="task-badge task-badge--waiting">Claimed</span>`
+        : `<button class="btn btn--sm btn--accent" onclick="handleClaimJob('${j.id}')">Take Job</button>`}
+    </div>`;
+  }).join("");
+}
+
+// ── Earnings Screen ───────────────────────────────────────────
+async function loadKidEarnings(kid) {
+  const el = document.getElementById("kid-earnings-view"); if (!el) return;
+  el.innerHTML = `<p class="empty-state">Loading earnings…</p>`;
+  try {
+    // ── Wallet = single source of truth ───────────────────────
+    const balance      = await getStarBalance(kid.id);  // spendable balance
+    const totalEarned  = await getTotalEarned(kid.id);  // lifetime total, never decremented
+    const balMoney     = starsToMoney(balance, financeSettings);
+    const totalMoney   = starsToMoney(totalEarned, financeSettings);
+
+    // Task-based breakdown (for the breakdown section)
+    const allTasks   = await getTasksForKid(kid.id);
+    const approved   = allTasks.filter(t => t.status === "approved");
+
+    // This month from approved tasks
+    const now        = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonth  = approved.filter(t => {
+      if (!t.approvedAt) return false;
+      const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+      return d >= monthStart;
+    });
+
+    // Rush stars this month
+    let rushStarsMonth = 0;
+    let rushStarsTotal = 0;
+    try {
+      const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const rushSnap = await getDocs(query(collection(db,"activeRush"), where("kidIds","array-contains",kid.id)));
+      rushSnap.docs.forEach(d => {
+        const prog = d.data().progress?.[kid.id] || {};
+        Object.values(prog).forEach(p => {
+          if (!p.done) return;
+          rushStarsTotal += (p.stars||0);
+          if (p.doneAtMs && new Date(p.doneAtMs) >= monthStart) rushStarsMonth += (p.stars||0);
+        });
+      });
+    } catch(e) {}
+
+    const taskMonthStars = thisMonth.reduce((s,t) => s+(t.stars||0), 0);
+    const monthStars     = taskMonthStars + rushStarsMonth;
+    const monthMoney     = starsToMoney(monthStars, financeSettings);
+
+    // Breakdown by type
+    const entrStars  = approved.filter(t => t.isEntrepreneur).reduce((s,t) => s+(t.stars||0), 0);
+    const entrMoney  = starsToMoney(entrStars, financeSettings);
+    const faithStars = approved.filter(t => t.isFaith).reduce((s,t) => s+(t.stars||0), 0);
+    const faithMoney = starsToMoney(faithStars, financeSettings);
+    // Daily tasks = wallet total minus entrepreneur minus faith
+    const regStars   = Math.max(0, balance - entrStars - faithStars);
+    const regMoney   = starsToMoney(regStars, financeSettings);
+
+    el.innerHTML = `
+    <div class="card" style="background:linear-gradient(135deg,#1a1040,#302b63);border:none;color:#fff;margin-bottom:12px;">
+      <div style="font-size:0.75rem;opacity:0.7;font-weight:700;letter-spacing:1px;margin-bottom:4px;">💰 TOTAL EARNED ALL TIME</div>
+      <div style="font-size:2.4rem;font-weight:900;color:#FFD93D;line-height:1;">${totalMoney}</div>
+      <div style="font-size:0.9rem;opacity:0.8;margin-top:4px;">= ${totalEarned} ⭐ stars earned through effort</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;">
+        <div>
+          <div style="font-size:0.7rem;opacity:0.6;">Current Balance</div>
+          <div style="font-size:1rem;font-weight:800;color:#6bcb77;">${balMoney}</div>
+          ${totalEarned > balance ? `<div style="font-size:0.65rem;opacity:0.5;">Spent: ${starsToMoney(totalEarned-balance,financeSettings)}</div>` : ""}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.7rem;opacity:0.6;">This Month</div>
+          <div style="font-size:1rem;font-weight:800;color:#ff9f43;">${monthMoney}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--color-text);margin-bottom:12px;">📊 Earnings Breakdown</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">📋</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--color-text);">Daily Tasks</div>
+              <div style="font-size:0.72rem;color:var(--color-muted);">${regStars} stars</div>
+            </div>
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:var(--color-primary);">${regMoney}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">💼</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--color-text);">Entrepreneur Jobs</div>
+              <div style="font-size:0.72rem;color:var(--color-muted);">${entrStars} stars</div>
+            </div>
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:#ff9f43;">${entrMoney}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">🕌</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;color:var(--color-text);">Faith Journey</div>
+              <div style="font-size:0.72rem;color:var(--color-muted);">${faithStars} stars</div>
+            </div>
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:#1a936f;">${faithMoney}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--color-text);margin-bottom:4px;">🚀 Entrepreneur Level</div>
+      <div style="font-size:0.75rem;color:var(--color-muted);margin-bottom:12px;">Keep completing jobs to level up!</div>
+      <div style="background:var(--color-bg-2);border-radius:12px;padding:12px;text-align:center;">
+        ${entrStars === 0
+          ? `<div style="font-size:1.8rem;">🌱</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Beginner</div><div style="font-size:0.72rem;color:var(--color-muted);">Complete your first job to start!</div>`
+          : entrStars < 50
+          ? `<div style="font-size:1.8rem;">⚡</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Rising Star</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs so far!</div>`
+          : entrStars < 150
+          ? `<div style="font-size:1.8rem;">💼</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Junior Entrepreneur</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs!</div>`
+          : `<div style="font-size:1.8rem;">🚀</div><div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">Future CEO!</div><div style="font-size:0.72rem;color:var(--color-muted);">Earned ${entrMoney} from jobs — incredible!</div>`}
+      </div>
+    </div>`;
+
+    // ── Progress Calendar for kid ────────────────────────────
+    try {
+      const monthly = await getMonthlyStatsForKid(kid.id);
+      el.innerHTML += `<div class="card">${renderProgressCalendar(kid.name, monthly.dailyMap||{}, "week")}</div>`;
+    } catch(e) {}
+
+  } catch(e) { el.innerHTML=`<p class="empty-state">Could not load earnings.</p>`; console.error(e); }
+}
+
+// ── First Salary Celebration ──────────────────────────────────
+// getMonthlyStatsForKid — alias so kid earnings tab can use the same function
+async function getMonthlyStatsForKid(kidId) {
+  return getMonthlyStats(kidId);
+}
+
+function showFirstSalary(taskTitle, stars) {
+  const key = `sk_first_salary_${currentKid?.id}`;
+  if (localStorage.getItem(key)) return; // already shown
+  localStorage.setItem(key, "1");
+  const modal = document.getElementById("modal-first-salary");
+  if (!modal) return;
+  document.getElementById("first-salary-name").textContent = `Congratulations, ${currentKid?.name}! 🌟`;
+  document.getElementById("first-salary-amount").textContent = starsToMoney(stars, financeSettings);
+  document.getElementById("first-salary-task").textContent = `"${taskTitle}"`;
+  document.getElementById("first-salary-stars").textContent = `⭐ ${stars} stars earned`;
+  modal.style.display = "flex";
+}
+
+window.closeFirstSalary = () => {
+  const modal = document.getElementById("modal-first-salary");
+  if (modal) modal.style.display = "none";
+};
+
+window.handleClaimJob = async (jobId) => {
+  const jobs = await getEntrepreneurJobs(currentKid.parentId);
+  const job  = jobs.find(j => j.id === jobId);
+  if (!job) return;
+  try {
+    await claimJob(currentKid.parentId, currentKid.id, job);
+    toast(`💼 Job claimed: "${job.title}"! Complete it to earn ⭐${job.stars}`, "success");
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
+    await loadKidTasks(currentKid);
+  } catch(err) { toast("Failed to claim job.", "error"); console.error(err); }
+};
+
+window.handleCancelRequest = async (goalId, title) => {
+  if (!confirm(`Cancel your request for "${title}"? You can request it again later.`)) return;
+  try {
+    await deleteGoal(goalId);
+    toast(`Request cancelled. Your stars are safe! ⭐`, "info");
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
+  } catch(e) { toast("Could not cancel.", "error"); console.error(e); }
+};
+
+window.handleDeleteGoal = async (goalId, title) => {
+  if (!confirm(`Remove "${title}" as your goal? You can pick a new one anytime.`)) return;
+  try {
+    await deleteGoal(goalId);
+    toast(`Goal removed. Pick a new one! 🎯`, "info");
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
+  } catch(e) { toast("Could not remove goal.", "error"); console.error(e); }
+};
+
+window.handleRequestRedeem = async (goalId,title) => {
+  try { await requestRedemption(goalId,currentKid.id,title,0); toast("🎁 Redemption requested! Ask your parent.","success"); const stars=await getStarBalance(currentKid.id); await loadKidGoalsView(currentKid.id,stars); }
+  catch(err) { toast("Something went wrong.","error"); console.error(err); }
+};
+
+// ── Reward cart state ─────────────────────────────────────────
+let _rewardCart = [];
+
+window.openPickGoal = async () => {
+  _rewardCart = [];
+  const el=document.getElementById("reward-picker-list");
+  el.innerHTML=`<p class="empty-state">Loading rewards…</p>`;
+  document.getElementById("modal-pick-goal").classList.add("open");
+  parentRewardsForKid=await getRewardsForParent(currentKid.parentId);
+  if (!parentRewardsForKid.length) { el.innerHTML=`<p class="empty-state">Your parent hasn't added rewards yet!</p>`; return; }
+  renderRewardPicker();
+};
+
+window.renderRewardPicker = function renderRewardPicker() {
+  const el = document.getElementById("reward-picker-list");
+  Promise.all([
+    getStarBalance(currentKid.id),
+    getGoalsForKid(currentKid.id)
+  ]).then(([walletStars, goals]) => {
+    // Stars already committed to pending redemption requests
+    const pendingCommitted = goals
+      .filter(g => g.status === GOAL_STATUS.REQUESTED)
+      .reduce((s,g) => s + (g.targetStars||0), 0);
+    // Truly available = wallet minus what's already requested but not yet approved
+    const stars     = Math.max(0, walletStars - pendingCommitted);
+    const cartTotal = _rewardCart.reduce((s,r)=>s+r.stars, 0);
+    const remaining = stars - cartTotal;
+    const sorted    = [...parentRewardsForKid].sort((a,b)=>a.stars-b.stars);
+
+    let html = `
+      <div style="position:sticky;top:0;background:var(--color-surface);padding:10px 0;margin-bottom:8px;border-bottom:1px solid var(--color-border);z-index:2;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:0.85rem;font-weight:700;color:var(--color-text);">⭐ ${stars} to spend</div>
+          ${cartTotal>0?`<div style="font-size:0.85rem;font-weight:700;color:var(--color-primary);">Cart: ${cartTotal}⭐ = ${starsToMoney(cartTotal,financeSettings)}</div>`:""}
+        </div>
+        ${pendingCommitted>0?`<div style="font-size:0.68rem;color:var(--color-muted);margin-top:2px;">(⭐${pendingCommitted} already waiting for parent approval)</div>`:""}
+        ${cartTotal>0?`<div style="font-size:0.72rem;color:${remaining>=0?"var(--color-muted)":"#FF6B6B"};margin-top:2px;">${remaining>=0?`${remaining}⭐ left after this`:`⚠️ ${Math.abs(remaining)}⭐ too many!`}</div>`:""}
+      </div>`;
+
+    if (stars === 0 && cartTotal === 0) {
+      html += `<div style="text-align:center;padding:24px 12px;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">💪</div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--color-text);margin-bottom:4px;">No stars to spend right now!</div>
+        <div style="font-size:0.8rem;color:var(--color-muted);line-height:1.5;">Complete more tasks and Rush activities to earn stars. The harder you work, the more rewards you can claim! 🌟</div>
+      </div>`;
+      el.innerHTML = html;
+      return;
+    }
+
+    html += sorted.map(r => {
+      const inCart    = _rewardCart.filter(c=>c.id===r.id).length;
+      const canAfford = remaining >= r.stars;
+      const everAfford= stars >= r.stars;
+      return `<div class="reward-picker-item ${everAfford?"reward-picker-item--ready":""}" style="${inCart?"border:2px solid var(--color-primary);":""}${!everAfford?"opacity:0.55;":""}">
+        <span class="reward-emoji">${r.emoji}</span>
+        <div class="reward-info">
+          <div class="reward-title">${r.title} ${inCart>1?`<span style="color:var(--color-primary);">×${inCart}</span>`:""}</div>
+          <div class="reward-stars">⭐ ${r.stars} = ${starsToMoney(r.stars,financeSettings)}${!everAfford?" — keep earning!":""}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${inCart>0?`<button onclick="removeFromCart('${r.id}')" style="width:30px;height:30px;border-radius:8px;border:none;background:#FF6B6B;color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;">−</button><span style="min-width:18px;text-align:center;font-weight:700;">${inCart}</span>`:""}
+          <button onclick="addToCart('${r.id}')" ${!canAfford?"disabled":""} style="width:30px;height:30px;border-radius:8px;border:none;background:${canAfford?"var(--color-primary)":"var(--color-border)"};color:#fff;font-size:1.1rem;font-weight:700;cursor:${canAfford?"pointer":"not-allowed"};">+</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    if (cartTotal > 0) {
+      html += `<div style="position:sticky;bottom:0;background:var(--color-surface);padding:12px 0;margin-top:8px;border-top:1px solid var(--color-border);">
+        <button class="btn btn--success" onclick="requestCart()" style="width:100%;">🎁 Request ${_rewardCart.length} Reward${_rewardCart.length>1?"s":""} (${cartTotal}⭐)</button>
+      </div>`;
+    } else {
+      html += `<div style="text-align:center;font-size:0.78rem;color:var(--color-muted);margin-top:12px;padding:12px;">
+        Tap ➕ to add rewards to your cart, or set one as a savings goal below.
+      </div>
+      <div style="margin-top:4px;"><button class="btn btn--secondary" onclick="showSetGoalPicker()" style="width:100%;">🎯 Set a Savings Goal Instead</button></div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+window.addToCart = (rewardId) => {
+  const reward = parentRewardsForKid.find(r=>r.id===rewardId);
+  if (!reward) return;
+  _rewardCart.push(reward);
+  renderRewardPicker();
+};
+
+window.removeFromCart = (rewardId) => {
+  const idx = _rewardCart.findIndex(r=>r.id===rewardId);
+  if (idx>=0) _rewardCart.splice(idx,1);
+  renderRewardPicker();
+};
+
+window.requestCart = async () => {
+  if (!_rewardCart.length) return;
+  const [walletStars, goals] = await Promise.all([
+    getStarBalance(currentKid.id),
+    getGoalsForKid(currentKid.id)
+  ]);
+  const pendingCommitted = goals
+    .filter(g => g.status === GOAL_STATUS.REQUESTED)
+    .reduce((s,g) => s + (g.targetStars||0), 0);
+  const available = walletStars - pendingCommitted;
+  const total     = _rewardCart.reduce((s,r)=>s+r.stars,0);
+  if (total > available) {
+    toast(`Not enough stars! You have ⭐${available} to spend. Keep earning! 💪`, "error");
+    renderRewardPicker();
+    return;
+  }
+  try {
+    for (const reward of _rewardCart) {
+      await createRedemptionRequest(currentKid.id, reward);
+    }
+    const count = _rewardCart.length;
+    _rewardCart = [];
+    closePickGoal();
+    toast(`🎁 ${count} reward${count>1?"s":""} requested! Ask your parent to approve.`, "success");
+    const s = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, s);
+  } catch(e) { toast("Something went wrong.", "error"); console.error(e); }
+};
+
+// ── Savings goal picker (the original single-goal flow) ───────
+window.showSetGoalPicker = async () => {
+  const el=document.getElementById("reward-picker-list");
+  const stars=await getStarBalance(currentKid.id);
+  const sorted=[...parentRewardsForKid].sort((a,b)=>a.stars-b.stars);
+  el.innerHTML = `<div style="font-size:0.8rem;color:var(--color-muted);margin-bottom:10px;text-align:center;">Pick ONE reward to save toward. You'll see your progress!</div>` +
+    sorted.map(r => {
+    const can=stars>=r.stars; const pct=Math.min(100,Math.round((stars/r.stars)*100));
+    return `<div class="reward-picker-item ${can?"reward-picker-item--ready":""}" onclick="handlePickGoal('${r.id}')">
+      <span class="reward-emoji">${r.emoji}</span>
+      <div class="reward-info">
+        <div class="reward-title">${r.title}</div>
+        <div class="reward-stars">⭐ ${r.stars} = ${starsToMoney(r.stars,financeSettings)} ${can?"— Ready! 🎉":`— ${pct}% saved`}</div>
+        ${!can?`<div class="mini-progress"><div class="mini-progress-fill" style="width:${pct}%"></div></div>`:""}
+      </div>
+      ${can?`<span class="ready-badge">Ready!</span>`:""}
+    </div>`;
+  }).join("") +
+  `<div style="margin-top:12px;"><button class="btn btn--ghost" onclick="renderRewardPicker()" style="width:100%;">← Back to Cart</button></div>`;
+};
+
+window.closePickGoal=()=>document.getElementById("modal-pick-goal").classList.remove("open");
+window.handlePickGoal=async(rewardId)=>{
+  const reward=parentRewardsForKid.find(r=>r.id===rewardId); if (!reward) return;
+  try { await createGoalFromReward(currentKid.id,reward); closePickGoal(); toast(`Goal set: "${reward.title}" 🎯`,"success"); const stars=await getStarBalance(currentKid.id); await loadKidGoalsView(currentKid.id,stars); }
+  catch(err) { toast("Failed.","error"); console.error(err); }
+};
+
+// ── Kid tabs ──────────────────────────────────────────────────
+window._kidTabHistory = ["tasks"];
+window.showKidTab=(tab)=>{
+  // Track history for Back button
+  if (window._kidTabHistory[window._kidTabHistory.length-1] !== tab) {
+    window._kidTabHistory.push(tab);
+    if (window._kidTabHistory.length > 10) window._kidTabHistory.shift();
+  }
+  document.querySelectorAll(".kid-tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".kid-tab-panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById(`kid-tab-btn-${tab}`)?.classList.add("active");
+  document.getElementById(`kid-tab-${tab}`)?.classList.add("active");
+  // Load achievements tab
+  if (tab==="achievements" && currentKid) {
+    loadKidAchievements(currentKid.id);
+  }
+  // Load praise & values when praise tab is opened
+  if (tab==="praise" && currentKid) {
+    loadKidPraise(currentKid.id);
+    loadKidValuesProgress(currentKid.id);
+    // Clear praise badge
+    const badge = document.getElementById("kid-praise-badge");
+    if (badge) badge.style.display = "none";
+  }
+  // Load jobs tab
+  if (tab==="jobs" && currentKid) {
+    loadKidJobsSection(currentKid.id);
+  }
+  // Load earnings tab
+  if (tab==="earnings" && currentKid) {
+    loadKidEarnings(currentKid);
+  }
+};
+
+// ── Kid Back button — go to previous tab ──────────────────────
+window.kidGoBack = () => {
+  if (window._kidTabHistory.length > 1) {
+    window._kidTabHistory.pop();
+    const prev = window._kidTabHistory[window._kidTabHistory.length-1];
+    // Show without re-pushing to history
+    const saved = [...window._kidTabHistory];
+    showKidTab(prev);
+    window._kidTabHistory = saved; // restore so we don't double-count
+  } else {
+    // Already at first tab → go home
+    if (typeof clearKidSession === "function") {} // keep session
+    showScreen("screen-home");
+    if (typeof SK_renderKids === "function") SK_renderKids();
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ACHIEVEMENTS (Sprint 8)
+// ═══════════════════════════════════════════════════════════════
+
+async function loadKidAchievements(kidId) {
+  const el = document.getElementById("kid-achievements-list");
+  if (!el) return;
+
+  try {
+    const earned = await getAchievements(kidId);
+    const earnedIds = new Set(earned.map(a => a.achievementId));
+
+    let html = `<div class="achievements-grid">`;
+    ACHIEVEMENTS.forEach(a => {
+      const isEarned = earnedIds.has(a.id);
+      html += `
+        <div class="achievement-badge ${isEarned ? "achievement-badge--earned" : "achievement-badge--locked"}"
+             style="${isEarned ? `border-color:${a.color};background:${a.color}18` : ""}"
+             title="${a.title}: ${a.desc}">
+          <div class="achievement-emoji">${isEarned ? a.emoji : "🔒"}</div>
+          <div class="achievement-title">${a.title}</div>
+          ${isEarned ? "" : `<div class="achievement-locked-desc">${a.desc}</div>`}
+        </div>`;
+    });
+    html += `</div>`;
+
+    if (earned.length > 0) {
+      html = `<div class="achievement-summary">🏆 ${earned.length} / ${ACHIEVEMENTS.length} Achievements Earned!</div>` + html;
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<p class="empty-state">Could not load achievements.</p>`; console.error(e); }
+  // Also load the trophy shelf (real-world achievements)
+  loadTrophyShelf(kidId);
+}
+
+// ══════════════════════════════════════════════════════════════
+// TROPHY SHELF — Real-world achievements (certificates, grades, etc.)
+// Uses Firestore collection "trophies"
+// ══════════════════════════════════════════════════════════════
+let _achPhotoB64 = null;
+
+window.openAddAchievement = () => {
+  _achPhotoB64 = null;
+  document.getElementById("ach-title").value = "";
+  document.getElementById("ach-category").value = "⭐ Other";
+  document.getElementById("ach-photo-preview").style.display = "none";
+  document.getElementById("ach-photo-placeholder").style.display = "flex";
+  document.querySelectorAll(".ach-cat-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("modal-add-achievement").classList.add("open");
+};
+window.closeAddAchievement = () => document.getElementById("modal-add-achievement").classList.remove("open");
+
+window.selectAchCat = (btn) => {
+  document.querySelectorAll(".ach-cat-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("ach-category").value = btn.dataset.cat;
+};
+
+// Photo preview for achievement
+document.addEventListener("change", async (e) => {
+  if (e.target && e.target.id === "ach-photo-input") {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      // Compress: 600px wide, 50% quality — bigger than task photos but capped
+      _achPhotoB64 = await imageToBase64(file, 600, 0.5);
+      const preview = document.getElementById("ach-photo-preview");
+      preview.src = _achPhotoB64;
+      preview.style.display = "block";
+      document.getElementById("ach-photo-placeholder").style.display = "none";
+    } catch(err) { toast("Could not load photo.", "error"); }
+  }
+});
+
+window.submitAchievement = async () => {
+  const title    = document.getElementById("ach-title")?.value.trim();
+  const category = document.getElementById("ach-category")?.value || "⭐ Other";
+  if (!title) { toast("Tell us what you achieved!", "error"); return; }
+  const btn = document.getElementById("btn-submit-achievement");
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+  try {
+    const { addDoc, collection, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    // Check photo size — Firestore 1MB doc limit
+    if (_achPhotoB64 && _achPhotoB64.length > 900000) {
+      toast("Photo too large. Try a smaller one.", "error");
+      if (btn) { btn.disabled = false; btn.textContent = "🚀 Send to Parent!"; }
+      return;
+    }
+    await addDoc(collection(db, "trophies"), {
+      kidId:     currentKid.id,
+      parentId:  currentKid.parentId,
+      title, category,
+      photo:     _achPhotoB64 || null,
+      status:    "pending",
+      stars:     0,
+      badge:     null,
+      compliment:null,
+      createdAt: serverTimestamp()
+    });
+    _achPhotoB64 = null;
+    closeAddAchievement();
+    toast("🎉 Sent to your parent! They'll celebrate it soon.", "success");
+    loadTrophyShelf(currentKid.id);
+  } catch(e) {
+    toast("Something went wrong. Try again.", "error"); console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🚀 Send to Parent!"; }
+  }
+};
+
+async function loadTrophyShelf(kidId) {
+  const el = document.getElementById("kid-trophy-shelf");
+  if (!el) return;
+  try {
+    const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await getDocs(query(collection(db, "trophies"), where("kidId","==",kidId)));
+    const trophies = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    if (!trophies.length) {
+      el.innerHTML = `<p class="empty-state">No achievements yet. Tap ＋ Add to share your first one! 🌟</p>`;
+      return;
+    }
+    // Sort: pending first, then newest
+    trophies.sort((a,b) => {
+      if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
+      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return tb - ta;
+    });
+    el.innerHTML = trophies.map(t => {
+      const pending = t.status === "pending";
+      const photo = t.photo ? `<img src="${t.photo}" class="trophy-photo" />` : "";
+      if (pending) {
+        return `<div class="trophy-card trophy-card--pending">
+          <div style="font-size:0.72rem;color:var(--color-muted);font-weight:700;">${t.category}</div>
+          <div style="font-weight:800;color:var(--color-text);margin:2px 0;">${t.title}</div>
+          ${photo}
+          <div style="font-size:0.78rem;color:#FF9F43;font-weight:700;">⏳ Waiting for parent to celebrate…</div>
+        </div>`;
+      }
+      return `<div class="trophy-card">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.8rem;">${t.badge||"🌟"}</span>
+          <div style="flex:1;">
+            <div style="font-size:0.72rem;color:var(--color-muted);font-weight:700;">${t.category}</div>
+            <div style="font-weight:800;color:var(--color-text);">${t.title}</div>
+          </div>
+          <div style="text-align:right;color:#ff9f43;font-weight:800;font-size:0.85rem;">+${t.stars}⭐</div>
+        </div>
+        ${photo}
+        ${t.compliment ? `<div style="background:rgba(108,99,255,0.1);border-radius:10px;padding:8px 10px;margin-top:6px;font-size:0.82rem;color:var(--color-text);font-style:italic;">💛 "${t.compliment}"</div>` : ""}
+      </div>`;
+    }).join("");
+  } catch(e) { el.innerHTML = `<p class="empty-state">Could not load.</p>`; console.error(e); }
+}
+
+// ── Parent: approve achievements ──────────────────────────────
+let _currentAchId = null, _currentAchKidId = null;
+
+async function getPendingTrophies(parentId) {
+  const { getDocs, collection, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const snap = await getDocs(query(collection(db, "trophies"), where("parentId","==",parentId), where("status","==","pending")));
+  return snap.docs.map(d => ({id:d.id, ...d.data()}));
+}
+
+window.openApproveAchievement = async (trophyId) => {
+  try {
+    const { getDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await getDoc(fsDoc(db, "trophies", trophyId));
+    if (!snap.exists()) { toast("Achievement not found.", "error"); return; }
+    const t = snap.data();
+    _currentAchId = trophyId; _currentAchKidId = t.kidId;
+    const content = document.getElementById("approve-ach-content");
+    content.innerHTML = `
+      <div style="font-size:0.72rem;color:var(--color-muted);font-weight:700;">${t.category}</div>
+      <div style="font-weight:800;font-size:1rem;color:var(--color-text);margin:2px 0 8px;">${t.title}</div>
+      ${t.photo ? `<img src="${t.photo}" class="trophy-photo" />` : ""}`;
+    document.getElementById("ach-compliment").value = "";
+    document.getElementById("ach-stars").value = "";
+    document.getElementById("ach-badge").value = "🌟";
+    document.querySelectorAll(".ach-badge-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".ach-star-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("modal-approve-achievement").classList.add("open");
+  } catch(e) { toast("Could not load achievement.", "error"); console.error(e); }
+};
+window.closeApproveAchievement = () => document.getElementById("modal-approve-achievement").classList.remove("open");
+
+window.selectAchBadge = (btn) => {
+  document.querySelectorAll(".ach-badge-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("ach-badge").value = btn.dataset.badge;
+};
+window.setAchStars = (n, btn) => {
+  document.getElementById("ach-stars").value = n;
+  document.querySelectorAll(".ach-star-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+};
+
+window.approveAchievement = async () => {
+  const stars      = parseInt(document.getElementById("ach-stars")?.value, 10) || 0;
+  const badge      = document.getElementById("ach-badge")?.value || "🌟";
+  const compliment = document.getElementById("ach-compliment")?.value.trim() || "";
+  const btn = document.getElementById("btn-give-achievement");
+  if (btn) { btn.disabled = true; btn.textContent = "Awarding…"; }
+  try {
+    const { updateDoc, doc: fsDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await updateDoc(fsDoc(db, "trophies", _currentAchId), {
+      status: "approved", stars, badge, compliment, approvedAt: serverTimestamp()
+    });
+    // Award the stars
+    if (stars > 0) await addBonusStars(_currentAchKidId, stars);
+    closeApproveAchievement();
+    toast(`🎉 Achievement celebrated! +${stars}⭐ awarded.`, "success");
+    loadPendingApprovals();
+    loadWalletsOverview();
+  } catch(e) { toast("Failed.", "error"); console.error(e); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "🎉 Celebrate & Award"; } }
+};
+
+window.rejectAchievement = async () => {
+  if (!confirm("Send this achievement back? The child can edit and resubmit.")) return;
+  try {
+    const { deleteDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await deleteDoc(fsDoc(db, "trophies", _currentAchId));
+    closeApproveAchievement();
+    toast("Achievement sent back.", "info");
+    loadPendingApprovals();
+  } catch(e) { toast("Failed.", "error"); console.error(e); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// WEEKLY REPORT (Sprint 8) — Parent view
+// ═══════════════════════════════════════════════════════════════
+
+async function getMonthlyStats(kidId) {
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+  const { getDocs, collection, query, where } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  );
+  const snap = await getDocs(query(collection(db, "tasks"), where("kidId","==",kidId)));
+  const tasks = snap.docs.map(d=>d.data());
+  const monthTasks = tasks.filter(t => {
+    if (!t.approvedAt) return false;
+    const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+    return d >= oneMonthAgo;
+  });
+
+  // Daily map: date string → {tasks, stars}
+  const dailyMap = {};
+  monthTasks.forEach(t => {
+    const d = t.approvedAt.toDate ? t.approvedAt.toDate() : new Date(t.approvedAt);
+    const key = d.toISOString().slice(0,10);
+    if (!dailyMap[key]) dailyMap[key] = { tasks: 0, stars: 0 };
+    dailyMap[key].tasks++;
+    dailyMap[key].stars += (t.stars||0);
+  });
+
+  // ── Include Rush stars in daily map ──────────────────────
+  try {
+    const rushSnap = await getDocs(query(
+      collection(db,"activeRush"), where("kidIds","array-contains",kidId)
+    ));
+    rushSnap.docs.forEach(d => {
+      const rush = d.data();
+      const prog = rush.progress?.[kidId] || {};
+      Object.values(prog).forEach(p => {
+        if (!p.done || !p.doneAtMs) return;
+        const date = new Date(p.doneAtMs);
+        if (date < oneMonthAgo) return;
+        const key = date.toISOString().slice(0,10);
+        if (!dailyMap[key]) dailyMap[key] = { tasks: 0, stars: 0 };
+        dailyMap[key].tasks++;
+        dailyMap[key].stars += (p.stars||0);
+      });
+    });
+  } catch(e) {}
+
+  const activeDays = Object.keys(dailyMap).length;
+  const totalAll   = Object.values(dailyMap).reduce((s,d)=>s+d.tasks,0);
+  const avgPerDay  = activeDays ? (totalAll/activeDays).toFixed(1) : 0;
+  const starsMonth = Object.values(dailyMap).reduce((s,d)=>s+d.stars,0);
+  const faithMonth = monthTasks.filter(t=>t.isFaith).length;
+  return { total: totalAll, activeDays, avgPerDay, starsMonth, faithMonth, dailyMap };
+}
+
+// ── Progress Calendar ─────────────────────────────────────────
+function renderProgressCalendar(kidName, dailyMap, period) {
+  const today  = new Date();
+  const days   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  // Use stable uid from kidName only — no random — so it's consistent across renders
+  const uid    = kidName.replace(/[^a-zA-Z0-9]/g,"_");
+
+  function dayColor(stars) {
+    if (!stars)      return "var(--color-bg-2)";
+    if (stars >= 15) return "#1a936f";
+    if (stars >= 8)  return "#6BCB77";
+    if (stars >= 3)  return "#FF9F43";
+    return "#6c63ff";
+  }
+
+  // ── Week view: last 7 days ────────────────────────────────
+  function buildWeekView() {
+    const weekDays = [];
+    for (let i = 6; i >= 0; i--) {
+      const d   = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().slice(0,10);
+      weekDays.push({ date:d, key, ...(dailyMap[key]||{tasks:0,stars:0}) });
+    }
+    return weekDays.map(d => {
+      const isToday  = d.key === today.toISOString().slice(0,10);
+      const dayLabel = days[(d.date.getDay()+6)%7];
+      const money    = d.stars > 0 ? starsToMoney(d.stars, financeSettings) : null;
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;">
+        <div style="font-size:0.6rem;color:var(--color-muted);font-weight:${isToday?"800":"500"};">${dayLabel}</div>
+        <div style="font-size:0.58rem;color:var(--color-muted);">${d.date.getDate()}</div>
+        <div style="width:100%;aspect-ratio:1;border-radius:8px;background:${dayColor(d.stars)};
+          border:${isToday?"2px solid var(--color-primary)":"2px solid transparent"};
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          ${d.stars > 0
+            ? `<span style="font-size:0.6rem;font-weight:800;color:#fff;line-height:1;">⭐${d.stars}</span>`
+            : `<span style="font-size:0.65rem;color:rgba(255,255,255,0.15);">·</span>`}
+        </div>
+        <div style="font-size:0.55rem;color:${money?"var(--color-primary)":"var(--color-muted)"};text-align:center;line-height:1.2;">
+          ${money||"–"}
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // ── Month view: 4 week bars ───────────────────────────────
+  function buildMonthView() {
+    const weeks = [];
+    for (let w = 3; w >= 0; w--) {
+      const weekDays = [];
+      for (let d = 6; d >= 0; d--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - (w*7) - d);
+        const key  = date.toISOString().slice(0,10);
+        weekDays.push({ date, key, ...(dailyMap[key]||{tasks:0,stars:0}) });
+      }
+      const totalStars = weekDays.reduce((s,d)=>s+(d.stars||0),0);
+      const activeDays = weekDays.filter(d=>d.stars>0).length;
+      const start = `${weekDays[0].date.getDate()} ${months[weekDays[0].date.getMonth()]}`;
+      const end   = `${weekDays[6].date.getDate()} ${months[weekDays[6].date.getMonth()]}`;
+      weeks.push({ weekDays, totalStars, activeDays, start, end });
+    }
+    const maxStars = Math.max(...weeks.map(w=>w.totalStars), 1);
+
+    return weeks.map((wk, i) => {
+      const barPct = Math.round((wk.totalStars / maxStars) * 100);
+      const money  = starsToMoney(wk.totalStars, financeSettings);
+      const isCurrent = i === 3;
+      const dots = wk.weekDays.map(d =>
+        `<div title="${days[(d.date.getDay()+6)%7]}: ⭐${d.stars||0}"
+          style="width:11px;height:11px;border-radius:3px;background:${dayColor(d.stars||0)};flex-shrink:0;"></div>`
+      ).join("");
+
+      return `<div style="background:var(--color-bg-2);border-radius:12px;padding:10px 12px;margin-bottom:8px;
+        ${isCurrent?"border:1.5px solid var(--color-primary);":"border:1px solid transparent;"}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:0.72rem;font-weight:${isCurrent?"800":"600"};color:var(--color-text);">
+            ${isCurrent?"📅 ":""}<span style="color:var(--color-muted);font-weight:500;font-size:0.65rem;">${wk.start} – ${wk.end}</span>
+          </div>
+          <div style="font-size:0.75rem;font-weight:800;color:${wk.totalStars>0?"var(--color-primary)":"var(--color-muted)"};">
+            ${wk.totalStars > 0 ? `⭐ ${wk.totalStars} = ${money}` : "–"}
+          </div>
+        </div>
+        <div style="height:8px;background:var(--color-bg);border-radius:4px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${barPct}%;background:${dayColor(wk.totalStars)};border-radius:4px;transition:width 0.5s ease;"></div>
+        </div>
+        <div style="display:flex;gap:3px;align-items:center;">
+          ${dots}
+          <span style="font-size:0.6rem;color:var(--color-muted);margin-left:6px;">${wk.activeDays}/7 days</span>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  const html = `
+  <div style="margin-top:14px;border-top:1px solid var(--color-border);padding-top:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--color-text);">📊 Progress</div>
+      <div style="display:flex;gap:4px;">
+        <button id="cal-week-btn-${uid}" onclick="window['showCalView_${uid}']('week')"
+          style="background:var(--color-primary);color:#fff;border:none;border-radius:10px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          Week
+        </button>
+        <button id="cal-month-btn-${uid}" onclick="window['showCalView_${uid}']('month')"
+          style="background:var(--color-bg-2);color:var(--color-muted);border:1px solid var(--color-border);border-radius:10px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          Month
+        </button>
+      </div>
+    </div>
+    <div id="cal-week-${uid}"  style="display:flex;gap:6px;">${buildWeekView()}</div>
+    <div id="cal-month-${uid}" style="display:none;">${buildMonthView()}</div>
+  </div>
+`;
+  // Register toggle function immediately — before innerHTML is set
+  // Use setTimeout(0) so DOM elements exist when function first runs
+  window["showCalView_" + uid] = function(view) {
+    var w  = document.getElementById("cal-week-"  + uid);
+    var m  = document.getElementById("cal-month-" + uid);
+    var wb = document.getElementById("cal-week-btn-"  + uid);
+    var mb = document.getElementById("cal-month-btn-" + uid);
+    if (w)  w.style.display  = view==="week"  ? "flex"  : "none";
+    if (m)  m.style.display  = view==="month" ? "block" : "none";
+    if (wb) { wb.style.background=view==="week"?"var(--color-primary)":"var(--color-bg-2)"; wb.style.color=view==="week"?"#fff":"var(--color-muted)"; wb.style.border=view==="week"?"none":"1px solid var(--color-border)"; }
+    if (mb) { mb.style.background=view==="month"?"var(--color-primary)":"var(--color-bg-2)"; mb.style.color=view==="month"?"#fff":"var(--color-muted)"; mb.style.border=view==="month"?"none":"1px solid var(--color-border)"; }
+  };
+
+  return html;
+}
+
+async function loadWeeklyReports() {
+  const el = document.getElementById("weekly-reports-list");
+  if (!el || !kidsList.length) {
+    if (el) el.innerHTML = `<p class="empty-state">Add kids to see their reports.</p>`;
+    return;
+  }
+
+  const period = document.getElementById("report-period-select")?.value || "week";
+  el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--color-muted);">Loading reports...</div>`;
+
+  const data = await Promise.all(kidsList.map(async kid => {
+    const report  = await getWeeklyReport(kid.id);
+    const monthly = await getMonthlyStats(kid.id);
+    return { kid, report, monthly };
+  }));
+
+  // ── Find top performer ──────────────────────────────────────
+  const ranked = [...data].sort((a,b) => {
+    const sa = a.report.totalStars || 0;
+    const sb = b.report.totalStars || 0;
+    return sb - sa;
+  });
+  const topKid   = ranked[0];
+  const topStars = topKid.report.totalStars || 0;
+  // Weekly key — Monday resets each week
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1);
+  const weekKey = weekStart.toDateString();
+  const alreadyAwarded = localStorage.getItem(`sk_top_award_${period}_${weekKey}_${topKid.kid.id}`);
+
+  // Build HTML
+  let html = "";
+
+  // ── Family Summary Card ──
+  const totalStarsWeek  = data.reduce((s,d) => s + (d.report.starsEarned||0), 0);
+  const totalTasksWeek  = data.reduce((s,d) => s + (d.report.tasksCompleted||0), 0);
+  const totalStarsMonth = data.reduce((s,d) => s + (d.monthly.starsMonth||0), 0);
+  const totalTasksMonth = data.reduce((s,d) => s + (d.monthly.total||0), 0);
+
+  html += `
+  <div class="rpt-family-summary">
+    <div class="rpt-summary-title">📊 Family Overview — ${period==="week"?"This Week":"This Month"}</div>
+    <div class="rpt-summary-grid">
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">${period==="week"?totalTasksWeek:totalTasksMonth}</div>
+        <div class="rpt-summary-lbl">Tasks Done</div>
+      </div>
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">⭐ ${period==="week"?totalStarsWeek:totalStarsMonth}</div>
+        <div class="rpt-summary-lbl">Stars Earned</div>
+      </div>
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">💰 ${starsToMoney(period==="week"?totalStarsWeek:totalStarsMonth, financeSettings)}</div>
+        <div class="rpt-summary-lbl">Family Value</div>
+      </div>
+      <div class="rpt-summary-stat">
+        <div class="rpt-summary-val">${data.length}</div>
+        <div class="rpt-summary-lbl">Active Kids</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Top Performer Banner ──
+  if (topStars > 0) {
+    const topAv = topKid.kid.photoURL
+      ? `<img src="${topKid.kid.photoURL}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid #FFD93D;" />`
+      : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;">${topKid.kid.avatarEmoji||"🌟"}</div>`;
+    html += `
+    <div class="rpt-top-performer">
+      <div class="rpt-top-badge">🏆 Top Performer</div>
+      <div class="rpt-top-body">
+        ${topAv}
+        <div style="flex:1;">
+          <div class="rpt-top-name">${topKid.kid.name}</div>
+          <div class="rpt-top-stars">⭐ ${topStars} stars this ${period==="week"?"week":"month"}</div>
+        </div>
+        ${!alreadyAwarded ? `
+        <button class="rpt-award-btn" onclick="awardTopPerformer('${topKid.kid.id}','${topKid.kid.name}','${period}')">
+          🎁 Award +50⭐
+        </button>` : `
+        <div class="rpt-awarded-badge">✅ Awarded!</div>`}
+      </div>
+    </div>`;
+  }
+
+  // ── Period Tabs ──
+  html += `
+  <div class="report-period-tabs" style="margin-bottom:16px;">
+    <button class="report-tab ${period==="week"?"active":""}" onclick="switchReportPeriod('week')">📅 This Week</button>
+    <button class="report-tab ${period==="month"?"active":""}" onclick="switchReportPeriod('month')">🗓 This Month</button>
+  </div>`;
+
+  // ── Per Kid Cards ──
+  data.forEach(({kid, report, monthly}, kidIndex) => {
+    const r          = period === "week" ? report : monthly;
+    const tasks      = period === "week" ? r.tasksCompleted : r.total;
+    const periodStars= period === "week" ? r.starsEarned    : r.starsMonth;
+    const walletStars= report.totalStars || 0; // wallet balance — source of truth
+    const money      = starsToMoney(walletStars, financeSettings);
+    const periodMoney= starsToMoney(periodStars, financeSettings);
+    const faith      = period === "week" ? r.faithTasks     : r.faithMonth;
+    const jobs       = period === "week" ? (r.jobsDone||0)  : 0;
+    const days       = period === "week" ? (r.activeDays||0): r.activeDays;
+    const maxDays    = period === "week" ? 7 : 30;
+
+    const av = kid.photoURL
+      ? `<img src="${kid.photoURL}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);" />`
+      : `<div style="width:48px;height:48px;border-radius:50%;background:var(--color-bg);border:3px solid var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">${kid.avatarEmoji||"🌟"}</div>`;
+
+
+    html += `
+    <div class="rpt-kid-card">
+      <div class="rpt-kid-header">
+        ${av}
+        <div style="flex:1;">
+          <div class="rpt-kid-name">${kid.name}</div>
+          <div class="rpt-kid-age">Age ${kid.age||"–"} · ${period==="week"?"Weekly":"Monthly"} Report</div>
+        </div>
+        <div class="rpt-kid-score">
+          <div class="rpt-score-val">⭐ ${report.totalStars||0}</div>
+          <div class="rpt-score-lbl">total balance</div>
+        </div>
+      </div>
+
+      <!-- Metric cards row -->
+      <div class="rpt-metrics">
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${tasks}</div>
+          <div class="rpt-metric-lbl">Tasks</div>
+        </div>
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${money}</div>
+          <div class="rpt-metric-lbl" style="font-size:0.65rem;">Balance</div>
+        </div>
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${faith}</div>
+          <div class="rpt-metric-lbl">Prayers</div>
+        </div>
+        <div class="rpt-metric">
+          <div class="rpt-metric-val">${days}/${maxDays}</div>
+          <div class="rpt-metric-lbl">Active Days</div>
+        </div>
+      </div>
+      ${periodStars > 0 ? `<div style="font-size:0.72rem;color:var(--color-muted);margin-bottom:8px;">⭐ ${periodStars} earned this ${period==="week"?"week":"month"} = ${periodMoney}</div>` : ""}
+
+      ${report.topTask ? `<div class="rpt-top-task">🏆 Best: <strong>${report.topTask}</strong></div>` : ""}
+      ${report.pendingTasks > 0 ? `<div class="rpt-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} waiting approval</div>` : ""}
+
+      <!-- ── Progress Calendar ──────────────────────────────── -->
+      ${renderProgressCalendar(kid.name, monthly.dailyMap||{}, period)}
+    </div>`;
+
+  });
+
+  el.innerHTML = html;
+}
+
+// ── Award top performer ──────────────────────────────────────
+window.awardTopPerformer = async (kidId, kidName, period) => {
+  const btn = document.querySelector(".rpt-award-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Awarding…"; }
+  try {
+    await addBonusStars(kidId, 50);
+    const now2 = new Date();
+    const ws = new Date(now2); ws.setDate(now2.getDate() - now2.getDay() + 1);
+    const key = `sk_top_award_${period}_${ws.toDateString()}_${kidId}`;
+    localStorage.setItem(key, "1");
+    toast(`🏆 +50 bonus stars awarded to ${kidName}!`, "success");
+    celebrate(`🏆 ${kidName} is the Top Performer!
++50 Bonus Stars Awarded!`, "🏆⭐🌟");
+    setTimeout(() => loadWeeklyReports(), 1000);
+  } catch(e) { toast("Failed to award stars.", "error"); console.error(e); }
+};
+
+window.switchReportPeriod = (period) => {
+  const sel = document.getElementById("report-period-select");
+  if (sel) sel.value = period;
+  loadWeeklyReports();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// PROFILE SETTINGS (parent)
+// ═══════════════════════════════════════════════════════════════
+
+
+window.savePrayerCitySettings = () => {
+  const city    = document.getElementById("prayer-city-input")?.value.trim();
+  const country = document.getElementById("prayer-country-input")?.value.trim() || "SA";
+  if (!city) { toast("Please enter a city name.", "error"); return; }
+  savePrayerCity(city, country);
+  toast(`✅ Prayer city set to ${city}! Kids will see prayer times on their dashboard.`, "success");
+};
+
+// Pre-fill prayer city on profile load
+async function loadProfileTab() {
+  if (!currentParent?.uid) return;
+  try { familyValues = await getFamilyValues(currentParent.uid); if (!familyValues.length) familyValues = await seedDefaultValues(currentParent.uid); } catch(e) {}
+
+  const nameEl = document.getElementById("profile-name-input");
+  if (nameEl) nameEl.value = currentParent.name || "";
+
+  const focus = currentParent.familyFocus || "faith";
+  document.querySelectorAll(".profile-focus-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-pfocus="${focus}"]`)?.classList.add("active");
+  document.getElementById("profile-focus-hidden").value = focus;
+
+  const faith = currentParent.faith || "muslim";
+  document.querySelectorAll(".profile-faith-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-pfaith="${faith}"]`)?.classList.add("active");
+  document.getElementById("profile-faith-hidden").value = faith;
+
+  const faithSec = document.getElementById("profile-faith-section");
+  if (faithSec) faithSec.style.display = focus === "faith" ? "block" : "none";
+
+  // Pre-fill prayer city
+  const { city, country } = getPrayerCity();
+  const cityEl    = document.getElementById("prayer-city-input");
+  const countryEl = document.getElementById("prayer-country-input");
+  if (cityEl)    cityEl.value    = city;
+  if (countryEl) countryEl.value = country;
+}
+
+window.saveProfileSettings = async () => {
+  const btn   = document.getElementById("btn-save-profile");
+  const name  = document.getElementById("profile-name-input")?.value.trim();
+  const focus = document.getElementById("profile-focus-hidden")?.value || "faith";
+  const faith = document.getElementById("profile-faith-hidden")?.value || "muslim";
+  if (!name) { toast("Please enter your name.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    await updateParentProfile(currentParent.uid, {
+      name,
+      familyFocus: focus,
+      faith: focus === "faith" ? faith : null
+    });
+    currentParent.name        = name;
+    currentParent.familyFocus = focus;
+    currentParent.faith       = focus === "faith" ? faith : null;
+    document.getElementById("parent-name-display").textContent = `Welcome, ${name}! 👋`;
+    toast("✅ Profile saved!", "success");
+  } catch(err) { toast("Failed to save.", "error"); console.error(err); }
+  finally { setLoading(btn, false); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// RUSH MODE — Phase 1
+// One shared timer · Tasks in any order · Faster = more stars
+// ═══════════════════════════════════════════════════════════════
+
+let activeRushId    = null;
+let currentSession  = null;
+let rushIntervalId  = null;
+let kidRushId       = null;
+let kidRushData     = null;
+let kidRushInterval = null;
+
+// ── Load rush tab ─────────────────────────────────────────────
+async function loadRushTab() {
+  ["morning","afterschool","bedtime"].forEach(sid => {
+    const s  = DEFAULT_RUSH_SESSIONS[sid];
+    const el = document.getElementById(`rush-${sid}-tasks`);
+    if (!el) return;
+    el.innerHTML = s.tasks.map(t => `
+      <div class="rush-task-row">
+        <span class="rush-task-emoji">${t.emoji}</span>
+        <span class="rush-task-name">${t.title}</span>
+        <span class="rush-task-stars">up to ${t.stars * 3}⭐</span>
+      </div>`).join("");
+    // Set time window label
+    const totalMins = s.windowMinutes;
+    const wl = document.getElementById(`rush-${sid}-window`);
+    if (wl) wl.textContent = `⏱ ${totalMins} min total window`;
+  });
+}
+
+// ── Start rush ────────────────────────────────────────────────
+window.startRushSession = async (sessionId) => {
+  if (!kidsList.length) { toast("Add kids first!", "error"); return; }
+  if (getRushDoneToday(sessionId)) {
+    toast("This rush was already done today! ✅ Resets at midnight.", "info");
+    return;
+  }
+
+  // ── Single Rush rule — check if one already running ────────
+  const existingRush = await getActiveRushForKid(currentParent.uid).catch(()=>null);
+  if (existingRush) {
+    toast("A Rush is already running! End it first before starting a new one.", "info");
+    // Show the existing rush monitor
+    const existingSession = DEFAULT_RUSH_SESSIONS[existingRush.sessionId] ||
+      customRushSessions.find(s=>s.id===existingRush.sessionId) || {};
+    document.getElementById("rush-monitor").style.display = "block";
+    document.getElementById("rush-monitor-title").textContent =
+      `${existingSession.emoji||"⚡"} ${existingSession.label||"Rush"} — Live`;
+    activeRushId   = existingRush.id;
+    currentSession = existingSession;
+    startRushMonitor(existingSession, existingRush.id);
+    return;
+  }
+
+  const session = DEFAULT_RUSH_SESSIONS[sessionId] || customRushSessions.find(s=>s.id===sessionId);
+  if (!session) return;
+  currentSession  = session;
+  const kidIds    = kidsList.map(k => k.id);
+  activeRushId    = await startRush(currentParent.uid, sessionId, kidIds, session.tasks, session.windowMinutes);
+
+  // ── Broadcast to kid screens immediately via localStorage ──
+  const broadcastData = {
+    rushId:    activeRushId,
+    sessionId: sessionId,
+    parentId:  currentParent.uid,
+    kidIds:    kidIds,
+    startedAt: Date.now()
+  };
+  localStorage.setItem("sk_rush_broadcast", JSON.stringify(broadcastData));
+
+  // ── Same-tab direct trigger ────────────────────────────────
+  if (currentKid && kidIds.includes(currentKid.id) && kidRushId !== activeRushId) {
+    setTimeout(async () => {
+      try {
+        const rush = await getActiveRushForKid(currentParent.uid);
+        if (rush && kidRushId !== rush.id) {
+          kidRushId   = rush.id;
+          kidRushData = rush;
+          playRushStartSound();
+          showKidRushOverlay(rush);
+        }
+      } catch(e) {}
+    }, 500);
+  }
+
+  document.getElementById("rush-monitor").style.display = "block";
+  document.getElementById("rush-monitor-title").textContent = `${session.emoji} ${session.label} — Live`;
+  startRushMonitor(session, activeRushId);
+  toast(`${session.emoji} ${session.label} started! Kids see it now 🚀`, "success");
+  playRushStartSound();
+  // ── Show rush overlay on parent portal too ─────────────────
+  showParentRushOverlay(activeRushId, session);
+};
+
+// ── Parent Rush Overlay ───────────────────────────────────────
+// Shows the same multi-kid Rush overlay on the parent portal
+// so parent can watch live and tap Done for any kid
+async function showParentRushOverlay(rushId, session) {
+  try {
+    const rush = await getActiveRushForKid(currentParent.uid);
+    if (!rush) return;
+    // Temporarily set kidRushId/Data so the overlay renders
+    kidRushId   = rush.id;
+    kidRushData = rush;
+    // Switch the top bar to parent mode buttons
+    const overlay = document.getElementById("kid-rush-overlay");
+    if (!overlay) return;
+    overlay.style.display = "block";
+    showKidRushOverlay(rush);
+    // Replace top bar buttons for parent context
+    const topBar = overlay.querySelector(".rush-parent-topbar");
+    if (topBar) {
+      topBar.innerHTML = `
+        <button onclick="closeParentRushOverlay()"
+          style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          ✕ Close
+        </button>
+        <div style="font-size:0.85rem;font-weight:800;color:#FFD93D;">${session.emoji} ${session.label}</div>
+        <button onclick="if(typeof stopRushSession==='function')stopRushSession();closeParentRushOverlay();"
+          style="background:rgba(255,80,80,0.3);border:1px solid rgba(255,80,80,0.5);color:#ff9999;border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          ⏹ End Rush
+        </button>`;
+    }
+  } catch(e) { console.error("Parent rush overlay:", e); }
+}
+
+window.closeParentRushOverlay = () => {
+  const overlay = document.getElementById("kid-rush-overlay");
+  if (overlay) overlay.style.display = "none";
+  if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
+  // Don't clear kidRushId — rush is still running
+};
+
+function startRushMonitor(session, rushId) {
+  if (rushIntervalId) clearInterval(rushIntervalId);
+  rushIntervalId = setInterval(async () => {
+    try {
+      const { getDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const snap = await getDoc(fsDoc(db, "activeRush", rushId));
+      if (!snap.exists()) { clearInterval(rushIntervalId); return; }
+      const rush     = snap.data();
+      const progress = rush.progress || {};
+      const elapsed  = Math.floor((Date.now() - rush.startAtMs) / 1000);
+      const totalSec = session.windowMinutes * 60;
+      const remaining = Math.max(0, totalSec - elapsed);
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+
+      // Update timer
+      const timerEl = document.getElementById("rush-monitor-timer");
+      if (timerEl) {
+        timerEl.textContent = `${mins}:${String(secs).padStart(2,"0")}`;
+        timerEl.style.color = remaining < 60 ? "#FF6B6B" : remaining < 180 ? "#FF9F43" : "#FFD93D";
+      }
+      // Progress bar
+      const barEl = document.getElementById("rush-monitor-bar");
+      if (barEl) barEl.style.width = `${Math.max(0,(remaining/totalSec)*100)}%`;
+
+      // Kids progress
+      const el = document.getElementById("rush-monitor-content");
+      if (el) {
+        el.innerHTML = kidsList.map(kid => {
+          const kp    = progress[kid.id] || {};
+          const done  = Object.values(kp).filter(p => p.done).length;
+          const total = session.tasks.length;
+          const pct   = Math.round((done / total) * 100);
+          const stars = Object.values(kp).reduce((s,p) => s+(p.stars||0), 0);
+          const av    = kid.photoURL
+            ? `<img src="${kid.photoURL}" class="saved-kid-photo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />`
+            : `<span style="font-size:1.4rem">${kid.avatarEmoji||"🌟"}</span>`;
+          return `<div class="rush-kid-row">
+            <div class="rush-kid-avatar">${av}</div>
+            <div class="rush-kid-info">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span class="rush-kid-name">${kid.name}</span>
+                <span style="font-size:0.75rem;color:var(--color-secondary);font-weight:700">⭐ ${stars}</span>
+              </div>
+              <div class="rush-progress-bar">
+                <div class="rush-progress-fill" style="width:${pct}%;background:${pct===100?"#1a936f":"#6C63FF"}"></div>
+              </div>
+              <div class="rush-kid-stats">${done}/${total} tasks done${pct===100?" 🏆":""}</div>
+            </div>
+          </div>`;
+        }).join("");
+      }
+
+      // Check if all kids done
+      const rushTasks = rush.tasks || [];
+      const allKidsDone = rushTasks.length > 0 && kidsList.every(kid => {
+        const kp = progress[kid.id] || {};
+        return rushTasks.every(t => t?.id && kp[t.id]?.done);
+      });
+      if (allKidsDone && kidsList.length > 0) {
+        clearInterval(rushIntervalId);
+        document.getElementById("rush-monitor").style.display = "none";
+        celebrate("🏆 All kids finished the rush!", "🌅🏆🌟");
+        toast("🏆 All kids completed the rush!", "success");
+        await endRush(rushId);
+        if (currentSession) {
+          markRushDoneToday(currentSession.id);
+          saveRushHistory(rush, currentSession, progress);
+        }
+        loadRushTab();
+        loadRushHistory();
+      } else if (remaining === 0) {
+        clearInterval(rushIntervalId);
+        toast("⏰ Rush time\'s up!", "info");
+      }
+    } catch(e) {}
+  }, 2000);
+}
+
+window.stopRushSession = async () => {
+  if (activeRushId) {
+    // Save history before ending
+    try {
+      const fm   = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const snap = await fm.getDoc(fm.doc(db,"activeRush",activeRushId));
+      if (snap.exists() && currentSession) saveRushHistory(snap.data(), currentSession, snap.data().progress||{});
+    } catch(e){}
+    await endRush(activeRushId);
+  }
+  if (currentSession) markRushDoneToday(currentSession.id);
+  activeRushId = null; currentSession = null;
+  if (rushIntervalId) clearInterval(rushIntervalId);
+  document.getElementById("rush-monitor").style.display = "none";
+  loadRushTab();
+  loadRushHistory();
+  toast("Rush ended.", "info");
+};
+
+// ── Edit Rush Session ────────────────────────────────────────
+window.editingRushSession = null;
+
+// ── Custom Rush Sessions (saved to Firestore) ─────────────────
+let customRushSessions = [];
+
+async function loadCustomRushSessions() {
+  try {
+    if (!currentParent?.uid) return;
+    const fm   = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const q    = fm.query(fm.collection(db,"rushSessions"), fm.where("parentId","==",currentParent.uid));
+    const snap = await fm.getDocs(q);
+    customRushSessions = snap.docs.map(d => ({id:d.id,...d.data()}));
+    console.log("Loaded custom rush sessions:", customRushSessions.length);
+  } catch(e) { console.error("loadCustomRushSessions:", e); }
+}
+
+async function saveCustomRushSession(session) {
+  const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const id = session.id || ("custom_" + currentParent.uid + "_" + Date.now());
+  const data = {
+    id, parentId: currentParent.uid,
+    label: session.label || "Custom Rush",
+    emoji: session.emoji || "⚡",
+    color: session.color || "#6C63FF",
+    windowMinutes: session.windowMinutes || 20,
+    tasks: session.tasks || [],
+    updatedAt: fm.serverTimestamp()
+  };
+  console.log("Saving rush session:", data.label, "id:", id);
+  await fm.setDoc(fm.doc(db,"rushSessions",id), data);
+  console.log("Rush session saved to Firestore:", id);
+  return id;
+}
+
+async function deleteCustomRushSession(sessionId) {
+  const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await fm.deleteDoc(fm.doc(db,"rushSessions",sessionId));
+  customRushSessions = customRushSessions.filter(s => s.id !== sessionId);
+}
+
+// Get all sessions (default + custom)
+function getAllRushSessions() {
+  return [
+    ...Object.values(DEFAULT_RUSH_SESSIONS),
+    ...customRushSessions
+  ];
+}
+
+window.openEditRush = (sessionId) => {
+  const defaultS = DEFAULT_RUSH_SESSIONS[sessionId];
+  const customS  = customRushSessions.find(s => s.id === sessionId);
+  const source   = defaultS || customS;
+  if (!source) { toast("Session not found", "error"); return; }
+
+  // Deep clone with fallback for any undefined values
+  const cleaned = {
+    id:            source.id    || sessionId,
+    label:         source.label || "Rush",
+    emoji:         source.emoji || "⚡",
+    color:         source.color || "#6C63FF",
+    windowMinutes: source.windowMinutes || 20,
+    tasks: (source.tasks || []).map((t, i) => ({
+      id:    t && t.id    ? t.id    : "t" + i,
+      title: t && t.title ? t.title : "Task",
+      emoji: t && t.emoji ? t.emoji : "✅",
+      stars: t && t.stars ? t.stars : 2
+    }))
+  };
+  window.editingRushSession = cleaned;
+
+  document.getElementById("edit-rush-session-id").value = sessionId;
+  document.getElementById("edit-rush-title").textContent = `✏️ Edit ${cleaned.label}`;
+  document.getElementById("edit-rush-time").value = cleaned.windowMinutes;
+
+  const customFields = document.getElementById("edit-rush-custom-fields");
+  if (customFields) {
+    customFields.style.display = customS ? "block" : "none";
+    if (customS) {
+      const nm = document.getElementById("edit-rush-name");
+      const em = document.getElementById("edit-rush-emoji");
+      const co = document.getElementById("edit-rush-color");
+      if (nm) nm.value = cleaned.label;
+      if (em) em.value = cleaned.emoji;
+      if (co) co.value = cleaned.color;
+    }
+  }
+
+  renderEditRushTasks();
+  document.getElementById("modal-edit-rush").classList.add("open");
+};
+
+window.closeEditRush = () => document.getElementById("modal-edit-rush").classList.remove("open");
+window.highlightColor = (btn) => {
+  document.querySelectorAll(".rush-color-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+};
+
+window.adjustRushTime = (delta) => {
+  const el  = document.getElementById("edit-rush-time");
+  const val = Math.min(120, Math.max(5, (parseInt(el.value)||30) + delta));
+  el.value  = val;
+};
+
+function renderEditRushTasks() {
+  const el = document.getElementById("edit-rush-tasks-list");
+  if (!el || !window.editingRushSession) return;
+  el.innerHTML = "";
+  window.editingRushSession.tasks.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;align-items:center;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:8px 12px;margin-bottom:6px;";
+
+    const emojiInput = document.createElement("input");
+    emojiInput.value = t.emoji || "✅";
+    emojiInput.style.cssText = "width:44px;text-align:center;font-size:1.2rem;border:1px solid var(--color-border);border-radius:8px;padding:4px;";
+    emojiInput.addEventListener("input", function() { window.editingRushSession.tasks[i].emoji = this.value; });
+
+    const titleInput = document.createElement("input");
+    titleInput.value = t.title || "Task";
+    titleInput.style.cssText = "flex:1;border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;font-family:var(--font-body);";
+    titleInput.addEventListener("input", function() { window.editingRushSession.tasks[i].title = this.value; });
+
+    const starLabel = document.createElement("span");
+    starLabel.textContent = "⭐";
+    starLabel.style.cssText = "font-size:0.8rem;color:var(--color-muted);";
+
+    const starsInput = document.createElement("input");
+    starsInput.type = "number";
+    starsInput.value = t.stars || 2;
+    starsInput.min = 1; starsInput.max = 10;
+    starsInput.style.cssText = "width:44px;text-align:center;border:1px solid var(--color-border);border-radius:8px;padding:4px;";
+    starsInput.addEventListener("input", function() { window.editingRushSession.tasks[i].stars = parseInt(this.value)||1; });
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "×";
+    delBtn.style.cssText = "background:none;border:none;color:var(--color-danger);font-size:1.1rem;cursor:pointer;padding:4px;";
+    delBtn.addEventListener("click", function() { window.editingRushSession.tasks.splice(i,1); renderEditRushTasks(); });
+
+    row.appendChild(emojiInput);
+    row.appendChild(titleInput);
+    row.appendChild(starLabel);
+    row.appendChild(starsInput);
+    row.appendChild(delBtn);
+    el.appendChild(row);
+  });
+}
+
+window.addRushTask = () => {
+  if (!window.editingRushSession) {
+    window.editingRushSession = {id:null,label:"",emoji:"⚡",color:"#6C63FF",windowMinutes:20,tasks:[]};
+  }
+  window.editingRushSession.tasks.push({id:"t"+Date.now(),title:"New Task",emoji:"✅",stars:2});
+  renderEditRushTasks();
+};
+
+window.removeRushTask = (idx) => {
+  window.editingRushSession.tasks.splice(idx, 1);
+  renderEditRushTasks();
+};
+
+// ── Photo Crop Tool ──────────────────────────────────────────
+let _cropKidId  = null;
+let _cropImg    = null;
+let _cropDrag   = false;
+let _cropX      = 0, _cropY = 0;
+let _cropStartX = 0, _cropStartY = 0;
+let _cropImgX   = 0, _cropImgY = 0;
+
+window.changeKidPhoto = (kidId) => {
+  _cropKidId = kidId;
+  const input = document.createElement("input");
+  input.type  = "file";
+  input.accept = "image/*";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => openCropModal(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  input.click();
+};
+
+function openCropModal(src) {
+  const modal    = document.getElementById("modal-photo-crop");
+  const imgEl    = document.getElementById("crop-image");
+  const zoomEl   = document.getElementById("crop-zoom");
+  const container = document.getElementById("crop-container");
+  if (!modal || !imgEl) return;
+
+  _cropImg = new Image();
+  _cropImg.onload = () => {
+    imgEl.src = src;
+    _cropX = 0; _cropY = 0;
+    zoomEl.value = 130;
+    applyCropTransform();
+    modal.classList.add("open");
+  };
+  _cropImg.src = src;
+
+  // Zoom slider
+  zoomEl.oninput = applyCropTransform;
+
+  // Pinch to zoom on mobile
+  let _pinchDist = 0;
+  container.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 2) {
+      _pinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, {passive:true});
+  container.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = dist - _pinchDist;
+      _pinchDist  = dist;
+      const cur   = parseInt(zoomEl.value);
+      zoomEl.value = Math.min(300, Math.max(100, cur + delta * 0.5));
+      applyCropTransform();
+    }
+  }, {passive:true});
+
+  // Mouse drag
+  container.onmousedown = (e) => {
+    _cropDrag = true; _cropStartX = e.clientX; _cropStartY = e.clientY;
+    _cropImgX = _cropX; _cropImgY = _cropY;
+    container.style.cursor = "grabbing";
+    e.preventDefault();
+  };
+  document.onmousemove = (e) => {
+    if (!_cropDrag) return;
+    _cropX = _cropImgX + (e.clientX - _cropStartX);
+    _cropY = _cropImgY + (e.clientY - _cropStartY);
+    applyCropTransform();
+  };
+  document.onmouseup = () => { _cropDrag = false; container.style.cursor = "grab"; };
+
+  // Touch drag
+  container.ontouchstart = (e) => {
+    const t = e.touches[0];
+    _cropDrag = true; _cropStartX = t.clientX; _cropStartY = t.clientY;
+    _cropImgX = _cropX; _cropImgY = _cropY;
+    e.preventDefault();
+  };
+  container.ontouchmove = (e) => {
+    if (!_cropDrag) return;
+    const t = e.touches[0];
+    _cropX = _cropImgX + (t.clientX - _cropStartX);
+    _cropY = _cropImgY + (t.clientY - _cropStartY);
+    applyCropTransform();
+    e.preventDefault();
+  };
+  container.ontouchend = () => { _cropDrag = false; };
+}
+
+function applyCropTransform() {
+  const imgEl  = document.getElementById("crop-image");
+  const zoomEl = document.getElementById("crop-zoom");
+  if (!imgEl || !_cropImg) return;
+  const zoom   = parseInt(zoomEl.value) / 100;
+  const w      = _cropImg.naturalWidth  * zoom;
+  const h      = _cropImg.naturalHeight * zoom;
+  // Center initially
+  const cSize  = 260;
+  const baseX  = (cSize - w) / 2;
+  const baseY  = (cSize - h) / 2;
+  imgEl.style.width  = w + "px";
+  imgEl.style.height = h + "px";
+  imgEl.style.left   = (baseX + _cropX) + "px";
+  imgEl.style.top    = (baseY + _cropY) + "px";
+}
+
+window.closeCropModal = () => {
+  document.getElementById("modal-photo-crop")?.classList.remove("open");
+  _cropKidId = null; _cropImg = null; _cropDrag = false;
+  _cropX = 0; _cropY = 0;
+};
+
+window.saveCroppedPhoto = async () => {
+  if (!_cropKidId || !_cropImg) return;
+  const btn = document.querySelector("#modal-photo-crop .btn--primary");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const imgEl  = document.getElementById("crop-image");
+    const zoomEl = document.getElementById("crop-zoom");
+    const zoom   = parseInt(zoomEl.value) / 100;
+    const cSize  = 260;
+    const w      = _cropImg.naturalWidth  * zoom;
+    const h      = _cropImg.naturalHeight * zoom;
+    const baseX  = (cSize - w) / 2;
+    const baseY  = (cSize - h) / 2;
+    const offX   = baseX + _cropX;
+    const offY   = baseY + _cropY;
+
+    // Draw cropped circle to canvas
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 400;
+    const ctx    = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(200, 200, 200, 0, Math.PI * 2);
+    ctx.clip();
+    const scale  = 400 / cSize;
+    ctx.drawImage(_cropImg, offX * scale, offY * scale, w * scale, h * scale);
+    const compressed = canvas.toDataURL("image/jpeg", 0.72);
+
+    // Save to Firestore
+    const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await fm.updateDoc(fm.doc(db,"kids",_cropKidId), { photoURL: compressed });
+    toast("Photo updated! ✅", "success");
+    closeCropModal();
+    kidsList = await getKidsByParent(currentParent.uid);
+    renderKids();
+  } catch(err) {
+    toast("Failed to save photo.", "error");
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "✅ Save Photo"; }
+  }
+};
+
+window.renderCustomRushSessions = function() {
+  const container = document.getElementById("custom-rush-sessions");
+  if (!container) return;
+  if (!customRushSessions.length) { container.innerHTML = ""; return; }
+  container.innerHTML = customRushSessions.map(s => `
+    <div class="rush-card rush-card--custom">
+      <div class="rush-card-top" style="background:${s.color||"#1a936f"};">
+        <div class="rush-card-icon">${s.emoji||"⚡"}</div>
+        <div class="rush-card-info">
+          <div class="rush-card-title">${s.label||"Custom Rush"}</div>
+          <div class="rush-card-sub">Custom session</div>
+        </div>
+      </div>
+      <div class="rush-card-window">⏱ ${s.windowMinutes||20} min shared window</div>
+      <div class="rush-tasks-preview">
+        ${(s.tasks||[]).map(t=>`
+          <div class="rush-task-row">
+            <span class="rush-task-emoji">${t.emoji||"✅"}</span>
+            <span class="rush-task-name">${t.title}</span>
+            <span class="rush-task-stars">up to ${(t.stars||1)*3}⭐</span>
+          </div>`).join("")}
+      </div>
+      <div class="rush-card-actions">
+        <button class="rush-btn-edit" onclick="openEditRush('${s.id}')">✏️ Edit</button>
+        <button class="rush-btn-delete" onclick="deleteRushSession('${s.id}')">🗑</button>
+        <button class="rush-btn-start" onclick="startRushSession('${s.id}')">▶ Start</button>
+      </div>
+    </div>`).join("");
+};
+
+window.saveRushEdits = async () => {
+  if (!window.editingRushSession) return;
+  const sid      = document.getElementById("edit-rush-session-id").value;
+  const time     = parseInt(document.getElementById("edit-rush-time").value) || 20;
+  const isCustom = !DEFAULT_RUSH_SESSIONS[sid];
+
+  // Capture current task values from DOM inputs before saving
+  const taskRows = document.querySelectorAll("#edit-rush-tasks-list > div");
+  if (taskRows.length > 0) {
+    taskRows.forEach((row, i) => {
+      const inputs = row.querySelectorAll("input");
+      if (inputs[0] && window.editingRushSession.tasks[i]) {
+        window.editingRushSession.tasks[i].emoji = inputs[0].value || "✅";
+        window.editingRushSession.tasks[i].title = inputs[1]?.value || "Task";
+        window.editingRushSession.tasks[i].stars = parseInt(inputs[2]?.value) || 2;
+      }
+    });
+  }
+  window.editingRushSession.windowMinutes = time;
+
+  if (isCustom) {
+    // Save name/emoji/color for custom
+    window.editingRushSession.label = document.getElementById("edit-rush-name")?.value || "Custom Rush";
+    window.editingRushSession.emoji = document.getElementById("edit-rush-emoji")?.value || "⚡";
+    window.editingRushSession.color = document.getElementById("edit-rush-color")?.value || "#6C63FF";
+    const btn = document.querySelector(".modal-box .btn--primary");
+    if (btn) { btn.disabled=true; btn.textContent="Saving…"; }
+    try {
+      const savedId = await saveCustomRushSession(window.editingRushSession);
+      window.editingRushSession.id = savedId;
+      // Update or add in local array
+      const idx = customRushSessions.findIndex(s=>s.id===savedId);
+      if (idx>=0) customRushSessions[idx] = window.editingRushSession;
+      else customRushSessions.push({...window.editingRushSession, id:savedId});
+      toast("✅ Rush session saved!", "success");
+      console.log("customRushSessions after save:", customRushSessions.length);
+    } catch(e) { toast("Failed to save: " + (e.message||e), "error"); console.error("saveRushEdits error:", e); return; }
+    finally { if (btn) { btn.disabled=false; btn.textContent="Save Changes ✅"; } }
+  } else {
+    DEFAULT_RUSH_SESSIONS[sid].windowMinutes = time;
+    DEFAULT_RUSH_SESSIONS[sid].tasks = window.editingRushSession.tasks;
+    toast("✅ Rush session updated!", "success");
+  }
+  closeEditRush();
+  await loadRushTab();
+  renderCustomRushSessions();
+};
+
+window.deleteRushSession = async (sessionId) => {
+  if (!confirm("Delete this rush session?")) return;
+  try {
+    await deleteCustomRushSession(sessionId);
+    renderCustomRushSessions();
+    toast("Deleted.", "info");
+  } catch(e) { toast("Failed to delete.", "error"); }
+};
+
+window.editRushSession = window.openEditRush;
+
+// ── Rush History ─────────────────────────────────────────────
+function saveRushHistory(rush, session, progress) {
+  try {
+    const history = JSON.parse(localStorage.getItem("sk_rush_history")||"[]");
+    const entry = {
+      date:      new Date().toLocaleDateString(),
+      time:      new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}),
+      sessionId: session.id,
+      label:     session.label,
+      emoji:     session.emoji,
+      kids: kidsList.map(kid => {
+        const kp    = progress[kid.id] || {};
+        const done  = Object.values(kp).filter(p=>p.done).length;
+        const stars = Object.values(kp).reduce((s,p)=>s+(p.stars||0),0);
+        return { name:kid.name, done, total:(rush.tasks||[]).length, stars };
+      })
+    };
+    history.unshift(entry); // newest first
+    // Keep last 30 entries
+    localStorage.setItem("sk_rush_history", JSON.stringify(history.slice(0,30)));
+  } catch(e) { console.error("saveRushHistory:", e); }
+}
+
+function loadRushHistory() {
+  const el = document.getElementById("rush-history-list");
+  if (!el) return;
+  try {
+    const history = JSON.parse(localStorage.getItem("sk_rush_history")||"[]");
+    if (!history.length) { el.innerHTML = "<p style='color:var(--color-muted);font-size:0.82rem;text-align:center;padding:12px;'>No rush history yet. Complete your first rush!</p>"; return; }
+    el.innerHTML = history.map(h => `
+      <div class="rush-history-entry">
+        <div class="rush-history-header">
+          <span class="rush-history-emoji">${h.emoji}</span>
+          <div>
+            <div class="rush-history-label">${h.label}</div>
+            <div class="rush-history-date">${h.date} at ${h.time}</div>
+          </div>
+        </div>
+        <div class="rush-history-kids">
+          ${h.kids.map(k => `
+            <div class="rush-history-kid">
+              <span>${k.name}</span>
+              <span class="${k.done===k.total?"rush-kid-done":"rush-kid-partial"}">${k.done===k.total?"✅":"⚠️"} ${k.done}/${k.total} tasks</span>
+              <span class="rush-kid-stars">⭐ ${k.stars}</span>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+  } catch(e) { el.innerHTML = ""; }
+}
+
+// ── Daily Rush Tracking ──────────────────────────────────────
+function getRushDoneToday(sessionId) {
+  try {
+    const key  = "sk_rush_done_" + sessionId;
+    const data = JSON.parse(localStorage.getItem(key) || "{}");
+    const today = new Date().toDateString();
+    return data.date === today;
+  } catch(e) { return false; }
+}
+
+function markRushDoneToday(sessionId) {
+  try {
+    const key  = "sk_rush_done_" + sessionId;
+    localStorage.setItem(key, JSON.stringify({ date: new Date().toDateString() }));
+  } catch(e) {}
+}
+
+function clearRushDoneToday(sessionId) {
+  localStorage.removeItem("sk_rush_done_" + sessionId);
+}
+
+// ── Rush start sound ─────────────────────────────────────────
+function playRushStartSound() {
+  try {
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    // Fanfare — ascending notes
+    const notes = [523, 659, 784, 1047, 784, 1047, 1175];
+    const times = [0, 0.15, 0.30, 0.45, 0.60, 0.70, 0.80];
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "square";
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + times[i]);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + times[i] + 0.14);
+      osc.start(ctx.currentTime + times[i]);
+      osc.stop(ctx.currentTime + times[i] + 0.15);
+    });
+  } catch(e) {}
+}
+
+// ── Approval notification ding ────────────────────────────────
+function playApprovalDing() {
+  try {
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    // Warm two-tone ding — friendly, not alarming
+    const notes = [880, 1108];
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.18);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.18 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.5);
+      osc.start(ctx.currentTime + i * 0.18);
+      osc.stop(ctx.currentTime + i * 0.18 + 0.55);
+    });
+  } catch(e) {}
+}
+
+// ── Kid side ──────────────────────────────────────────────────
+// ── Top Performer Award notification on kid dashboard ────────
+async function checkTopPerformerAward(kid) {
+  try {
+    const fm = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const q  = fm.query(
+      fm.collection(db,"praise"),
+      fm.where("kidId","==",kid.id),
+      fm.where("isTopPerformer","==",true),
+      fm.where("read","==",false)
+    );
+    const snap = await fm.getDocs(q);
+    if (snap.empty) return;
+    // Show celebration on kid screen
+    const doc = snap.docs[0];
+    celebrate("🏆 You are this week's\nTOP PERFORMER!\n+50 Bonus Stars!", "🏆⭐🌟");
+    // Mark as read
+    await fm.updateDoc(fm.doc(db,"praise",doc.id), {read:true});
+    // Refresh stars
+    setTimeout(() => refreshKidDashboard(), 2000);
+  } catch(e) {}
+}
+
+window.checkForActiveRush = async (kid) => {
+  try {
+    const rush = await getActiveRushForKid(kid.parentId);
+    if (!rush) return;
+    if (!rush.kidIds?.includes(kid.id)) return;
+    if (rush.status !== "active") return;
+    const rushTasks = rush.tasks || [];
+    if (rushTasks.length === 0) return;
+
+    // ── Check if rush TIME has expired ───────────────────────
+    const session = DEFAULT_RUSH_SESSIONS[rush.sessionId] || customRushSessions.find(s=>s.id===rush.sessionId) || {};
+    const windowMins = rush.windowMinutes || session.windowMinutes || 30;
+    let expired = false;
+    if (rush.endAtMs && rush.endAtMs > 1000000000000) {
+      expired = Date.now() >= rush.endAtMs;
+    } else if (rush.startAtMs && rush.startAtMs > 1000000000000) {
+      expired = (Date.now() - rush.startAtMs) >= (windowMins * 60 * 1000);
+    }
+    if (expired) {
+      // Time's up — mark rush ended in Firestore so it stops popping up
+      try {
+        const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await updateDoc(fsDoc(db, "activeRush", rush.id), { status: "ended", endedAt: Date.now() });
+      } catch(e) {}
+      return;
+    }
+
+    // ── Check if THIS kid finished all their tasks ───────────
+    const myProg = rush.progress?.[kid.id] || {};
+    const myDone = rushTasks.filter(t => myProg[t.id]?.done).length;
+    if (myDone === rushTasks.length) return; // this kid is done — don't re-show
+
+    if (kidRushId === rush.id) return; // already showing
+    console.log("✅ Showing family rush overlay");
+    kidRushId   = rush.id;
+    kidRushData = rush;
+    playRushStartSound();
+    showKidRushOverlay(rush);
+  } catch(e) { console.error("Rush check error:", e); }
+};
+
+function showKidRushOverlay(rush) {
+  const session   = DEFAULT_RUSH_SESSIONS[rush.sessionId] || customRushSessions.find(s=>s.id===rush.sessionId) || {};
+  const overlay   = document.getElementById("kid-rush-overlay");
+  const container = document.getElementById("rush-tasks-container");
+  if (!overlay || !container) return;
+
+  document.getElementById("rush-overlay-emoji").textContent = session.emoji || "⚡";
+  document.getElementById("rush-overlay-title").textContent = session.label || "Family Rush!";
+  overlay.style.display = "block";
+
+  // Get all kids involved in this rush from localStorage
+  const allKids = window.SK ? window.SK.getKids() : [];
+  const rushKids = rush.kidIds
+    ? allKids.filter(k => rush.kidIds.includes(k.id))
+    : (currentKid ? [currentKid] : []);
+
+  function render() {
+    const windowMins = kidRushData.windowMinutes || session.windowMinutes || 30;
+    const totalSec   = windowMins * 60;
+    const now        = Date.now();
+    let remaining;
+    if (kidRushData.endAtMs && kidRushData.endAtMs > 1000000000000) {
+      remaining = Math.max(0, Math.floor((kidRushData.endAtMs - now) / 1000));
+    } else if (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) {
+      const elapsed = Math.floor((now - kidRushData.startAtMs) / 1000);
+      remaining = Math.max(0, totalSec - elapsed);
+    } else {
+      remaining = totalSec;
+    }
+    const mins     = Math.floor(remaining / 60);
+    const secs     = remaining % 60;
+    const pctLeft  = Math.max(0, (remaining / totalSec) * 100);
+    const timerCol = remaining < 60 ? "#FF6B6B" : remaining < 180 ? "#FF9F43" : "#FFD93D";
+    const bonus    = pctLeft > 66 ? "🌟 3× stars if done now!" : pctLeft > 33 ? "⭐ 2× stars if done now!" : "✅ Finish before time runs out!";
+
+    // Count total done across all kids
+    const totalTasks = rush.tasks.length * rushKids.length;
+    let totalDone = 0;
+    rushKids.forEach(k => {
+      const prog = kidRushData.progress?.[k.id] || {};
+      totalDone += rush.tasks.filter(t => prog[t.id]?.done).length;
+    });
+
+    let html = `
+      <div style="background:rgba(255,255,255,0.08);border-radius:16px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:2.8rem;font-weight:700;color:${timerCol};font-variant-numeric:tabular-nums;">
+          ${mins}:${String(secs).padStart(2,"0")}
+        </div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">time remaining</div>
+        <div style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+          <div style="width:${pctLeft}%;height:100%;background:${timerCol};border-radius:4px;transition:width 1s linear;"></div>
+        </div>
+        <div style="font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:8px;">${bonus}</div>
+      </div>
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;text-align:center;">
+        ${totalDone}/${totalTasks} done across ${rushKids.length} kid${rushKids.length>1?"s":""}
+      </div>`;
+
+    // Render each kid's task list
+    rushKids.forEach(kid => {
+      const progress  = kidRushData.progress?.[kid.id] || {};
+      const kidDone   = rush.tasks.filter(t => progress[t.id]?.done).length;
+      const allKidDone = kidDone === rush.tasks.length;
+      const av = kid.photo
+        ? `<img src="${kid.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />`
+        : `<span style="font-size:1.2rem;">${kid.emoji||"🌟"}</span>`;
+
+      html += `
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,255,255,0.06);border-radius:12px;">
+            ${av}
+            <div style="flex:1;">
+              <div style="color:#fff;font-weight:700;font-size:0.9rem;">${kid.name}</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:0.72rem;">${kidDone}/${rush.tasks.length} done</div>
+            </div>
+            ${allKidDone ? `<span style="color:#6bcb77;font-weight:700;font-size:0.8rem;">🏆 Done!</span>` : ""}
+          </div>`;
+
+      rush.tasks.forEach(t => {
+        const done   = progress[t.id]?.done;
+        const earned = progress[t.id]?.stars || 0;
+        if (done) {
+          html += `<div style="background:rgba(26,147,111,0.2);border:1px solid #1a936f;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.5rem;">${t.emoji}</span>
+            <div style="flex:1;"><div style="color:#fff;font-weight:600;font-size:0.85rem;">${t.title}</div>
+            <div style="color:#1a936f;font-size:0.75rem;">✅ Done! +${earned}⭐</div></div></div>`;
+        } else if (remaining === 0) {
+          html += `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;opacity:0.4;">
+            <span style="font-size:1.5rem;">${t.emoji}</span>
+            <div style="flex:1;color:rgba(255,255,255,0.5);font-size:0.85rem;">${t.title}</div>
+            <span style="font-size:0.75rem;color:#FF6B6B;">⏰</span></div>`;
+        } else {
+          html += `<div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.5rem;">${t.emoji}</span>
+            <div style="flex:1;"><div style="color:#fff;font-weight:600;font-size:0.85rem;">${t.title}</div>
+            <div style="color:rgba(255,255,255,0.5);font-size:0.72rem;">up to ${t.stars*3}⭐</div></div>
+            <button onclick="completeKidRushTask('${kid.id}','${t.id}',${t.stars},${kidRushData.endAtMs||0},${totalSec})"
+              style="background:#FF9F43;border:none;border-radius:10px;padding:7px 12px;color:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
+              ✅ Done!
+            </button></div>`;
+        }
+      });
+      html += `</div>`;
+    });
+
+    const allFamilyDone = totalDone === totalTasks;
+    if (allFamilyDone) html += `<div style="text-align:center;padding:16px;color:#FFD93D;font-size:1rem;font-weight:700;">🏆 Everyone finished! Amazing family!</div>`;
+    container.innerHTML = html;
+  }
+
+  render();
+  if (kidRushInterval) clearInterval(kidRushInterval);
+  kidRushInterval = setInterval(() => {
+    const windowMins = (kidRushData.windowMinutes || session.windowMinutes || 30);
+    const totalSec   = windowMins * 60;
+    const now2       = Date.now();
+    let timeUp;
+    if (kidRushData.endAtMs && kidRushData.endAtMs > 1000000000000) {
+      timeUp = now2 >= kidRushData.endAtMs;
+    } else if (kidRushData.startAtMs && kidRushData.startAtMs > 1000000000000) {
+      timeUp = Math.floor((now2 - kidRushData.startAtMs) / 1000) >= totalSec && totalSec > 0;
+    } else {
+      timeUp = false;
+    }
+
+    // Check if all kids done
+    let totalDone = 0;
+    const totalTasks = rush.tasks.length * rushKids.length;
+    rushKids.forEach(k => {
+      const prog = kidRushData.progress?.[k.id] || {};
+      totalDone += rush.tasks.filter(t => prog[t.id]?.done).length;
+    });
+    const allFamilyDone = totalDone === totalTasks;
+
+    if (allFamilyDone) {
+      clearInterval(kidRushInterval); kidRushInterval = null;
+      render();
+      setTimeout(() => {
+        overlay.style.display = "none";
+        kidRushId = null; kidRushData = null;
+        let totalStars = 0;
+        rushKids.forEach(k => {
+          totalStars += Object.values(kidRushData?.progress?.[k.id]||{}).reduce((s,p)=>s+(p.stars||0),0);
+        });
+        celebrate(`🏆 Rush Complete!
+Family earned stars!`);
+        if (currentKid) refreshKidDashboard();
+      }, 2500);
+    } else if (timeUp) {
+      clearInterval(kidRushInterval); kidRushInterval = null;
+      render();
+      setTimeout(() => {
+        overlay.style.display = "none";
+        kidRushId = null; kidRushData = null;
+        toast("⏰ Rush time ended!", "info");
+        if (currentKid) refreshKidDashboard();
+      }, 2000);
+    } else {
+      render();
+    }
+  }, 1000);
+}
+
+window.completeKidRushTask = async (kidId, taskId, baseStars, endAtMs, totalSecs) => {
+  if (!kidRushId) return;
+  try {
+    const remaining = Math.max(0, Math.floor((endAtMs - Date.now()) / 1000));
+    const elapsed   = Math.max(0, totalSecs - remaining);
+    const earned    = calculateRushStars(baseStars, elapsed, totalSecs);
+
+    // ── Optimistic UI update immediately ──────────────────────
+    if (!kidRushData.progress)          kidRushData.progress = {};
+    if (!kidRushData.progress[kidId])   kidRushData.progress[kidId] = {};
+    kidRushData.progress[kidId][taskId] = {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned};
+    toast(`⭐ +${earned} stars earned!`, "success");
+
+    if (!navigator.onLine) {
+      // Queue for sync when back online
+      window._offlineQueue.push({
+        type: "rushTask", rushId: kidRushId,
+        kidId, taskId, elapsed, earned
+      });
+      saveOfflineQueue();
+      return;
+    }
+
+    const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await updateDoc(fsDoc(db, "activeRush", kidRushId), {
+      [`progress.${kidId}.${taskId}`]: {done:true, doneAtMs:Date.now(), elapsedSecs:elapsed, stars:earned}
+    });
+    // Stars credited instantly — Rush is self-reported
+    await addBonusStars(kidId, earned);
+    // ── Update display if this is the current kid on screen ──
+    if (currentKid && currentKid.id === kidId) {
+      const newStars = await getStarBalance(kidId);
+      const el1 = document.getElementById("kid-dashboard-stars");
+      const el2 = document.getElementById("kid-dashboard-money");
+      if (el1) el1.textContent = `⭐ ${newStars} Stars`;
+      if (el2) el2.textContent = `💰 ${starsToMoney(newStars, financeSettings)}`;
+    }
+  } catch(e) { toast("Error. Try again.", "error"); console.error(e); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION / NAVIGATION / BOOT
+// ═══════════════════════════════════════════════════════════════
+function saveKidSession(kid)  { localStorage.setItem("sk_kid", JSON.stringify(kid)); }
+function loadKidSession()     { try { const d=localStorage.getItem("sk_kid"); return d?JSON.parse(d):null; } catch(e){return null;} }
+function clearKidSession() {
+  localStorage.removeItem("sk_kid");
+  localStorage.removeItem("sk_current_kid");
+  if (window._midnightTimer) { clearTimeout(window._midnightTimer); window._midnightTimer = null; }
+}
+
+document.getElementById("btn-kid-logout")?.addEventListener("click",()=>{
+  clearKidSession(); currentKid=null;
+  if (window._rushPollInterval) clearInterval(window._rushPollInterval);
+  if (kidRushInterval) clearInterval(kidRushInterval);
+  kidRushId = null; kidRushData = null;
+  document.getElementById("kid-rush-overlay").style.display="none";
+  document.getElementById("kid-code-input").value="";
+  showScreen("screen-home");
+  SK_renderKids();
+  toast("See you soon! 👋","info");
+});
+
+// Photo fullscreen
+window.showPhotoFull = (url) => {
+  const el = document.getElementById("photo-fullscreen");
+  document.getElementById("photo-fullscreen-img").src = url;
+  el.style.display = "flex";
+};
+window.closePhotoFull = () => { document.getElementById("photo-fullscreen").style.display = "none"; };
+
+// ── Saved kids profiles ──────────────────────────────────────
+function getSavedKids() {
+  try { return JSON.parse(localStorage.getItem("sk_saved_kids") || "[]"); }
+  catch(e) { return []; }
+}
+function saveKidProfile(kid) {
+  const saved = getSavedKids();
+  const idx   = saved.findIndex(k => k.id === kid.id);
+  const profile = {
+    id: kid.id, name: kid.name,
+    avatarEmoji: kid.avatarEmoji || "🌟",
+    photoURL: kid.photoURL || null,
+    code: kid.code,
+    parentId: kid.parentId
+  };
+  if (idx !== -1) saved[idx] = profile;
+  else saved.push(profile);
+  localStorage.setItem("sk_saved_kids", JSON.stringify(saved));
+  console.log("Kid profile saved:", profile.name);
+}
+function removeSavedKid(kidId) {
+  const saved = getSavedKids().filter(k => k.id !== kidId);
+  localStorage.setItem("sk_saved_kids", JSON.stringify(saved));
+}
+
+// ── Render saved kids on home screen ─────────────────────────
+function renderSavedKidsSelector() {
+  // Use the SK_renderKids defined in HTML inline script
+  if (typeof window.SK_renderKids === "function") window.SK_renderKids();
+}
+
+window.SK_loginKid = async (kidId, code) => {
+  // Require code entry ONCE per device (ever) for each kid
+  const verifyKey = `sk_kid_verified_${kidId}`;
+  const verified  = localStorage.getItem(verifyKey);
+  if (verified === code) {
+    // Already verified on this device — log in directly forever
+    return window.loginSavedKid(kidId, code);
+  }
+  // First time on this device — ask for code
+  promptKidCode(kidId, code);
+};
+
+// ── Kid code verification prompt ──────────────────────────────
+function promptKidCode(kidId, correctCode) {
+  const kids = window.SK ? window.SK.getKids() : [];
+  const kid  = kids.find(k => k.id === kidId);
+  const name = kid?.name || "your";
+  const entered = prompt(`First time on this device!\nEnter ${name}'s 6-digit login code:`);
+  if (entered === null) return; // cancelled
+  if (entered.trim() === correctCode) {
+    localStorage.setItem(`sk_kid_verified_${kidId}`, correctCode);
+    window.loginSavedKid(kidId, correctCode);
+  } else {
+    toast("Wrong code. Try again.", "error");
+  }
+}
+
+window.loginSavedKid = async (kidId, code) => {
+  try {
+    const kid = await loginKidByCode(code);
+    if (!kid) { toast("Could not log in. Try entering code manually.", "error"); goToKidLogin(); return; }
+    currentKid=kid;
+    saveKidSession(kid);
+    saveKidProfile(kid);
+    if (window.SK) window.SK.saveKid(kid);
+    // Mark verified permanently on this device
+    localStorage.setItem(`sk_kid_verified_${kidId}`, code);
+    financeSettings = await getFinanceSettings(kid.parentId);
+    await showKidDashboard(kid);
+    toast(`Hi ${kid.name}! 🌟`, "success");
+  } catch(e) { toast("Error. Try entering code manually.", "error"); goToKidLogin(); }
+};
+
+window.removeSavedKidProfile = (kidId) => {
+  removeSavedKid(kidId);
+  if (currentKid?.id === kidId) clearKidSession();
+  renderSavedKidsSelector();
+};
+
+// ── Switch Kid Panel ───────────────────────────────────────────
+window.showSwitchKidPanel = () => {
+  const panel = document.getElementById("switch-kid-panel");
+  const list  = document.getElementById("switch-kid-list");
+  if (!panel || !list) return;
+
+  const kids = window.SK ? window.SK.getKids() : [];
+  if (!kids.length) { toast("No saved kids. Use the home screen to add kids.", "info"); return; }
+
+  list.innerHTML = kids.map(k => {
+    const av = k.photo
+      ? `<img src="${k.photo}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);" />`
+      : `<span style="font-size:2rem;">${k.emoji || "🌟"}</span>`;
+    const isCurrent = currentKid && currentKid.id === k.id;
+    return `<div onclick="window.switchToKid('${k.id}','${k.code}')"
+      style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;opacity:${isCurrent ? "0.5" : "1"};">
+      <div style="width:60px;height:60px;border-radius:50%;background:var(--color-bg-2);display:flex;align-items:center;justify-content:center;overflow:hidden;">${av}</div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--color-text);">${k.name}${isCurrent ? " ✓" : ""}</div>
+    </div>`;
+  }).join("");
+
+  panel.style.display = "block";
+};
+
+window.hideSwitchKidPanel = () => {
+  const panel = document.getElementById("switch-kid-panel");
+  if (panel) panel.style.display = "none";
+};
+
+window.switchToKid = async (kidId, code) => {
+  window.hideSwitchKidPanel();
+  if (currentKid && currentKid.id === kidId) return;
+  toast("Switching kid…", "info");
+  // Reset rush state so overlay re-renders fresh for the new kid
+  kidRushId   = null;
+  kidRushData = null;
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
+  await window.loginSavedKid(kidId, code);
+};
+
+// ══════════════════════════════════════════════════════════════
+// PARENT PIN SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+// ── PIN stored in Firestore parent profile (travels across devices) ──
+function hashPIN(pin) {
+  let h = 0;
+  for (let i = 0; i < pin.length; i++) {
+    h = ((h << 5) - h) + pin.charCodeAt(i);
+    h |= 0;
+  }
+  return String(h);
+}
+
+function hasPINSet() {
+  // Check Firestore profile (already loaded into currentParent)
+  return !!(currentParent?.pinHash);
+}
+
+function verifyPIN(pin) {
+  return currentParent?.pinHash && currentParent.pinHash === hashPIN(pin);
+}
+
+async function savePIN(pin) {
+  const hash = hashPIN(pin);
+  // Update local state IMMEDIATELY so UI never blocks on network
+  currentParent.pinHash = hash;
+  // Sync to Firestore in background — don't await, don't block the UI
+  updateParentProfile(currentParent.uid, { pinHash: hash }).catch(e => {
+    console.error("PIN sync to Firestore failed (will retry next login):", e);
+  });
+}
+
+// ── PIN entry state ───────────────────────────────────────────
+let _pinBuffer       = "";
+let _pinAttempts     = 0;
+let _pinLockoutUntil = 0;
+let _pinMode         = "enter"; // "enter" | "setup-first" | "setup-confirm"
+let _pinFirstEntry   = "";
+
+window.openParentPIN = () => {
+  // If not authenticated with Firebase at all, go to login first
+  if (!currentParent) {
+    // Check if Firebase Auth session exists
+    if (typeof goToParentAuth === "function") goToParentAuth("login");
+    else showScreen("screen-login");
+    return;
+  }
+  // If no PIN set yet — go to setup
+  if (!hasPINSet()) {
+    openPINSetup();
+    return;
+  }
+  // Show PIN entry
+  _pinBuffer = ""; _pinAttempts = 0;
+  updatePINDots("pin-dot", 0);
+  document.getElementById("pin-error").textContent = "";
+  document.getElementById("pin-overlay-title").textContent = "Parent Portal";
+  document.getElementById("pin-overlay-sub").textContent = "Enter your 4-digit PIN";
+  document.getElementById("pin-overlay").style.display = "flex";
+};
+
+window.closePINOverlay = () => {
+  document.getElementById("pin-overlay").style.display = "none";
+  _pinBuffer = "";
+  updatePINDots("pin-dot", 0);
+};
+
+function updatePINDots(prefix, count, error = false) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById(`${prefix}-${i}`);
+    if (!dot) continue;
+    dot.classList.remove("filled", "error");
+    if (i < count) dot.classList.add(error ? "error" : "filled");
+  }
+}
+
+window.pinInput = (digit) => {
+  // Check lockout
+  if (Date.now() < _pinLockoutUntil) {
+    const secs = Math.ceil((_pinLockoutUntil - Date.now()) / 1000);
+    document.getElementById("pin-lockout").textContent = `Too many attempts. Wait ${secs}s`;
+    document.getElementById("pin-lockout").style.display = "block";
+    return;
+  }
+  if (_pinBuffer.length >= 4) return;
+  _pinBuffer += digit;
+  updatePINDots("pin-dot", _pinBuffer.length);
+  if (_pinBuffer.length === 4) {
+    setTimeout(() => {
+      if (verifyPIN(_pinBuffer)) {
+        document.getElementById("pin-overlay").style.display = "none";
+        _pinBuffer = ""; _pinAttempts = 0;
+        updatePINDots("pin-dot", 0);
+        // Go to parent dashboard
+        goToParentDashboard();
+      } else {
+        _pinAttempts++;
+        updatePINDots("pin-dot", 4, true);
+        document.getElementById("pin-error").textContent =
+          `Wrong PIN. ${3 - _pinAttempts} attempt${3 - _pinAttempts === 1 ? "" : "s"} left.`;
+        if (_pinAttempts >= 3) {
+          _pinLockoutUntil = Date.now() + 30000;
+          document.getElementById("pin-lockout").style.display = "block";
+          document.getElementById("pin-lockout").textContent = "Too many attempts. Locked for 30s.";
+          // Count down
+          const timer = setInterval(() => {
+            const secs = Math.ceil((_pinLockoutUntil - Date.now()) / 1000);
+            if (secs <= 0) {
+              clearInterval(timer);
+              _pinAttempts = 0;
+              document.getElementById("pin-lockout").style.display = "none";
+              document.getElementById("pin-error").textContent = "";
+            } else {
+              document.getElementById("pin-lockout").textContent = `Too many attempts. Wait ${secs}s`;
+            }
+          }, 1000);
+        }
+        setTimeout(() => { _pinBuffer = ""; updatePINDots("pin-dot", 0); }, 600);
+      }
+    }, 150);
+  }
+};
+
+window.pinBackspace = () => {
+  if (_pinBuffer.length > 0) {
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    updatePINDots("pin-dot", _pinBuffer.length);
+  }
+};
+
+window.pinForgot = () => {
+  document.getElementById("pin-overlay").style.display = "none";
+  _pinBuffer = "";
+  // Clear PIN from Firestore — parent must reset after email login
+  if (currentParent) {
+    updateParentProfile(currentParent.uid, { pinHash: null }).catch(()=>{});
+    currentParent.pinHash = null;
+  }
+  showScreen("screen-login");
+  toast("Log in with email to reset your PIN", "info");
+};
+
+// ── PIN Setup ─────────────────────────────────────────────────
+let _setupBuffer = "";
+let _setupFirst  = "";
+let _setupStep   = 1; // 1 = enter new PIN, 2 = confirm
+
+function openPINSetup() {
+  _setupBuffer = ""; _setupFirst = ""; _setupStep = 1;
+  document.getElementById("pin-setup-title").textContent = "Set Your Parent PIN";
+  document.getElementById("pin-setup-sub").textContent = "Choose a 4-digit PIN to protect the parent portal";
+  document.getElementById("pin-setup-error").textContent = "";
+  updatePINDots("pin-setup-dot", 0);
+  document.getElementById("pin-setup-overlay").style.display = "flex";
+}
+
+window.pinSetupInput = async (digit) => {
+  if (_setupBuffer.length >= 4) return;
+  _setupBuffer += digit;
+  updatePINDots("pin-setup-dot", _setupBuffer.length);
+  if (_setupBuffer.length === 4) {
+    setTimeout(async () => {
+      if (_setupStep === 1) {
+        _setupFirst = _setupBuffer;
+        _setupBuffer = "";
+        _setupStep = 2;
+        document.getElementById("pin-setup-title").textContent = "Confirm Your PIN";
+        document.getElementById("pin-setup-sub").textContent = "Enter the same PIN again";
+        updatePINDots("pin-setup-dot", 0);
+      } else {
+        if (_setupBuffer === _setupFirst) {
+          try {
+            await savePIN(_setupBuffer);
+          } catch(e) { console.error("savePIN error:", e); }
+          document.getElementById("pin-setup-overlay").style.display = "none";
+          toast("PIN set! Parent portal is now protected 🔒", "success");
+          // New parent → show onboarding; returning parent → go to dashboard
+          if (window._pendingOnboarding) {
+            window._pendingOnboarding = false;
+            showOnboarding();
+          } else {
+            goToParentDashboard();
+          }
+        } else {
+          document.getElementById("pin-setup-error").textContent = "PINs don't match. Try again.";
+          updatePINDots("pin-setup-dot", 4, true);
+          setTimeout(() => {
+            _setupBuffer = ""; _setupStep = 1; _setupFirst = "";
+            document.getElementById("pin-setup-title").textContent = "Set Your Parent PIN";
+            document.getElementById("pin-setup-sub").textContent = "Choose a 4-digit PIN";
+            document.getElementById("pin-setup-error").textContent = "";
+            updatePINDots("pin-setup-dot", 0);
+          }, 800);
+        }
+      }
+    }, 150);
+  }
+};
+
+window.pinSetupBackspace = () => {
+  if (_setupBuffer.length > 0) {
+    _setupBuffer = _setupBuffer.slice(0, -1);
+    updatePINDots("pin-setup-dot", _setupBuffer.length);
+  }
+};
+
+window.pinSetupBack = () => {
+  if (_setupStep === 2) {
+    _setupStep = 1; _setupFirst = ""; _setupBuffer = "";
+    document.getElementById("pin-setup-title").textContent = "Set Your Parent PIN";
+    document.getElementById("pin-setup-sub").textContent = "Choose a 4-digit PIN";
+    updatePINDots("pin-setup-dot", 0);
+  } else {
+    document.getElementById("pin-setup-overlay").style.display = "none";
+  }
+};
+
+// Also add PIN change option inside parent settings
+window.changeParentPIN = () => {
+  if (currentParent) currentParent.pinHash = null;
+  openPINSetup();
+};
+
+// ── Midnight auto-refresh ─────────────────────────────────────
+// Schedules a dashboard refresh at exactly 00:00 so daily tasks
+// reset automatically without the kid needing to reload the page
+function scheduleMidnightRefresh() {
+  const now       = new Date();
+  const midnight  = new Date(now);
+  midnight.setHours(24, 0, 5, 0); // 00:00:05 next day (5s buffer)
+  const msUntil   = midnight - now;
+  if (window._midnightTimer) clearTimeout(window._midnightTimer);
+  window._midnightTimer = setTimeout(async () => {
+    if (currentKid) {
+      toast("🌙 New day! Refreshing your tasks...", "info");
+      await resetRecurringTasks(currentKid.id);
+      await loadKidTasks(currentKid);
+      await loadKidJobsSection(currentKid.id);
+    }
+    // Schedule again for the next midnight
+    scheduleMidnightRefresh();
+  }, msUntil);
+}
+
+// ── Logout All Kids (clears all saved profiles from this device) ──
+// ── Full logout from home — clean slate for a new parent ──────
+window.fullLogoutFromHome = async () => {
+  if (!confirm("Log out completely? This removes all saved kids and signs out the parent so a new account can be used on this device.")) return;
+  try {
+    // Clear all kid data
+    localStorage.removeItem("sk_kids");
+    localStorage.removeItem("sk_saved_kids");
+    localStorage.removeItem("sk_current_kid");
+    localStorage.removeItem("sk_kid");
+    // Clear all kid verification flags
+    Object.keys(localStorage).filter(k => k.startsWith("sk_kid_verified_")).forEach(k => localStorage.removeItem(k));
+    // Clear saved parent credentials
+    clearCredentials();
+    // Clear session state
+    if (typeof clearKidSession === "function") clearKidSession();
+    currentKid = null;
+    currentParent = null;
+    // Sign out of Firebase Auth
+    try { await logoutParent(); } catch(e) {}
+    toast("Logged out. The device is ready for a new account. 🚪", "success");
+    if (typeof window.SK_renderKids === "function") window.SK_renderKids();
+    showScreen("screen-home");
+  } catch(e) { toast("Logout failed. Try again.", "error"); console.error(e); }
+};
+
+window.logoutAllKids = () => {
+  if (!confirm("Remove all kid profiles from this device?")) return;
+  // Clear all kid data from localStorage
+  localStorage.removeItem("sk_kids");
+  localStorage.removeItem("sk_saved_kids");
+  localStorage.removeItem("sk_current_kid");
+  localStorage.removeItem("sk_kid");
+  // Clear all kid verification flags so re-added kids must enter code again
+  Object.keys(localStorage).filter(k => k.startsWith("sk_kid_verified_")).forEach(k => localStorage.removeItem(k));
+  // Clear session state
+  clearKidSession(); currentKid = null;
+  if (window._rushPollInterval) clearInterval(window._rushPollInterval);
+  if (kidRushInterval) { clearInterval(kidRushInterval); kidRushInterval = null; }
+  kidRushId = null; kidRushData = null;
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  document.getElementById("kid-code-input").value = "";
+  showScreen("screen-home");
+  SK_renderKids();
+  toast("All kids removed from this device 🚪", "info");
+};
+
+// ── Exit Rush Overlay without ending the session ──────────────
+window.exitRushEarly = () => {
+  document.getElementById("kid-rush-overlay").style.display = "none";
+  // Rush keeps running in Firestore — re-entering shows it again via checkForActiveRush
+};
+
+

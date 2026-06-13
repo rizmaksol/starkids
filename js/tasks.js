@@ -79,17 +79,14 @@ export async function resetRecurringTasks(kidId) {
 
 // ── Default tasks ─────────────────────────────────────────────
 function getDefaultTasks(age) {
+  // NOTE: Tasks already covered by Rush sessions (brush teeth, make bed,
+  // tidy room, wash hands, breakfast/lunch/dinner, get dressed, read/quran)
+  // are intentionally EXCLUDED here to avoid duplication.
   const all = [
-    // Daily
-    { title: "Brush teeth 🦷",            desc: "Morning and night — 2 minutes each!", stars: 1, minAge: 3, type: TASK_TYPE.DAILY   },
-    { title: "Make your bed 🛏",           desc: "Straighten the blanket and pillow",   stars: 1, minAge: 4, type: TASK_TYPE.DAILY   },
-    { title: "Tidy your room 🧹",          desc: "Put toys and clothes in their place",  stars: 2, minAge: 4, type: TASK_TYPE.DAILY   },
-    { title: "Wash your hands 🤲",         desc: "Before meals and after bathroom",      stars: 1, minAge: 3, type: TASK_TYPE.DAILY   },
+    // Daily — habits NOT in Rush
     { title: "Drink 6 glasses of water 💧",desc: "Stay hydrated all day!",              stars: 1, minAge: 4, type: TASK_TYPE.DAILY   },
     { title: "Say something kind 💛",      desc: "Give someone a genuine compliment",    stars: 1, minAge: 3, type: TASK_TYPE.DAILY   },
-    // Daily (older)
     { title: "Do homework ✏️",             desc: "Finish all school assignments",        stars: 3, minAge: 6, type: TASK_TYPE.DAILY   },
-    { title: "Read a book 📚",             desc: "Read for at least 15 minutes",         stars: 2, minAge: 5, type: TASK_TYPE.DAILY   },
     { title: "Exercise 🏃",               desc: "30 minutes of physical activity",      stars: 2, minAge: 6, type: TASK_TYPE.DAILY   },
     // Weekly
     { title: "Help with groceries 🛒",    desc: "Help carry or put away groceries",     stars: 3, minAge: 6, type: TASK_TYPE.WEEKLY  },
@@ -211,29 +208,15 @@ async function addStarsToWallet(kidId, stars) {
   const ref  = doc(db, "wallets", kidId);
   const snap = await getDoc(ref);
   if (snap.exists()) {
-    const current      = snap.data().stars || 0;
-    const currentTotal = snap.data().totalEarned || current; // migrate existing wallets
-    await updateDoc(ref, {
-      stars:        current + stars,
-      totalEarned:  currentTotal + stars,
-      lastUpdated:  serverTimestamp()
-    });
+    await updateDoc(ref, { stars: (snap.data().stars||0) + stars, lastUpdated: serverTimestamp() });
   } else {
-    await setDoc(ref, { kidId, stars, totalEarned: stars, lastUpdated: serverTimestamp() });
+    await setDoc(ref, { kidId, stars, lastUpdated: serverTimestamp() });
   }
 }
 
 export async function getStarBalance(kidId) {
   const snap = await getDoc(doc(db, "wallets", kidId));
   return snap.exists() ? (snap.data().stars || 0) : 0;
-}
-
-export async function getTotalEarned(kidId) {
-  const snap = await getDoc(doc(db, "wallets", kidId));
-  if (!snap.exists()) return 0;
-  const d = snap.data();
-  // Fall back to stars if totalEarned not yet set (migration)
-  return d.totalEarned || d.stars || 0;
 }
 
 // ── Reject task with reason ───────────────────────────────────

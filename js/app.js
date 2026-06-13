@@ -6,7 +6,7 @@ import { db } from "./firebase.js?v=12";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=12";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=12";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
-import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, getTotalEarned, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=14";
+import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, getTotalEarned, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=15";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=13";
 import { getRewardsForParent, createReward, updateReward, deleteReward, seedDefaultRewards, requestRedemption, approveRedemption, rejectRedemption } from "./rewards.js?v=13";
 import { getFinanceSettings, saveFinanceSettings, starsToMoney, getEntrepreneurJobs, seedDefaultJobs, createJob, deleteJob, claimJob } from "./finance.js?v=12";
@@ -777,7 +777,13 @@ async function loadKidPraise(kidId) {
 // ═══════════════════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════════════════
+window._parentTabHistory = ["kids"];
 window.showTab = (tab) => {
+  // Track history for Back button
+  if (window._parentTabHistory[window._parentTabHistory.length-1] !== tab) {
+    window._parentTabHistory.push(tab);
+    if (window._parentTabHistory.length > 10) window._parentTabHistory.shift();
+  }
   document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
   document.getElementById(`tab-btn-${tab}`)?.classList.add("active");
@@ -790,6 +796,30 @@ window.showTab = (tab) => {
   if (tab==="report")    loadWeeklyReports();
   if (tab==="profile")   loadProfileTab();
   if (tab==="rush")      { loadRushTab(); loadRushHistory(); }
+};
+
+// ── Back button — go to previous tab ──────────────────────────
+window.parentGoBack = () => {
+  if (window._parentTabHistory.length > 1) {
+    window._parentTabHistory.pop(); // remove current
+    const prev = window._parentTabHistory[window._parentTabHistory.length-1];
+    // Show without re-pushing
+    const tab = prev;
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    document.getElementById(`tab-btn-${tab}`)?.classList.add("active");
+    document.getElementById(`tab-${tab}`)?.classList.add("active");
+    if (tab==="approvals") loadPendingApprovals();
+    if (tab==="wallets")   loadWalletsOverview();
+    if (tab==="rewards")   loadRewardsCatalog();
+    if (tab==="finance")   loadFinanceSettings();
+    if (tab==="values")    loadValuesTab();
+    if (tab==="report")    loadWeeklyReports();
+    if (tab==="profile")   loadProfileTab();
+    if (tab==="rush")      { loadRushTab(); loadRushHistory(); }
+  } else {
+    lockParentPortal(); // already at first tab → go home
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1341,14 +1371,8 @@ async function showKidDashboard(kid) {
         if (!currentKid) return;
         if (!data.kidIds?.includes(currentKid.id)) return;
         if (kidRushId === data.rushId) return;
-        // Fetch fresh rush data and show immediately
-        getActiveRushForKid(currentKid.parentId).then(rush => {
-          if (!rush) return;
-          kidRushId   = rush.id;
-          kidRushData = rush;
-          playRushStartSound();
-          showKidRushOverlay(rush);
-        }).catch(()=>{});
+        // Use checkForActiveRush so all the same rules (expiry, done) apply
+        checkForActiveRush(currentKid).catch(()=>{});
       } catch(err) {}
     };
     window.addEventListener("storage", window._rushBroadcastListener);
@@ -1368,13 +1392,15 @@ async function loadKidTasks(kid) {
   let html="";
   if (!tasks.length) html=`<p class="empty-state">No tasks yet! Ask your parent. 🌟</p>`;
 
-  if (active.length) {
+  if (active.length || tasks.some(t => t.isFaith)) {
     // Split regular vs entrepreneur
     const regular = active.filter(t => !t.isEntrepreneur);
     const jobs    = active.filter(t => t.isEntrepreneur);
-    if (regular.length) {
-      // Separate faith tasks from regular tasks
-      const faithTasks   = regular.filter(t => t.isFaith);
+    {
+      // Faith tasks: include ALL (pending + submitted + approved) so done ones
+      // show as "Done!" for the rest of the day instead of vanishing/repeating
+      const allFaith     = tasks.filter(t => t.isFaith && t.status !== STATUS.REJECTED);
+      const faithTasks   = allFaith;
       const normalTasks  = regular.filter(t => !t.isFaith);
 
       if (faithTasks.length) {
@@ -1452,9 +1478,9 @@ async function loadKidTasks(kid) {
       }).join("");
     }
   }
-  if (waiting.length) {
+  if (waiting.filter(t=>!t.isFaith).length) {
     html+=`<div class="task-section-title">⏳ Waiting Approval</div>`;
-    html+=waiting.map(t=>`<div class="task-card task-card--submitted">
+    html+=waiting.filter(t=>!t.isFaith).map(t=>`<div class="task-card task-card--submitted">
       <div class="task-card__info">
         <div class="task-card__title">${t.title}</div>
         <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
@@ -1702,7 +1728,10 @@ async function loadKidGoalsView(kidId, currentStars) {
         <div class="progress-label">⭐ ${currentStars} / ${active.targetStars} — ${pct}% there!</div>
         ${reached?`<button class="btn btn--success mt-8" onclick="handleRequestRedeem('${active.id}','${active.title}')">🎁 I'm Ready! Ask Parent to Redeem</button>`:""}
       </div>
-      <button class="goal-delete-btn" title="Change goal" onclick="openPickGoal()">✏️</button>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button class="goal-delete-btn" title="Change goal" onclick="openPickGoal()">✏️</button>
+        <button class="goal-delete-btn" title="Remove goal" onclick="handleDeleteGoal('${active.id}','${active.title}')" style="color:#FF6B6B;">🗑️</button>
+      </div>
     </div>`;
   }
   if (requested.length) {
@@ -1915,6 +1944,16 @@ window.handleClaimJob = async (jobId) => {
   } catch(err) { toast("Failed to claim job.", "error"); console.error(err); }
 };
 
+window.handleDeleteGoal = async (goalId, title) => {
+  if (!confirm(`Remove "${title}" as your goal? You can pick a new one anytime.`)) return;
+  try {
+    await deleteGoal(goalId);
+    toast(`Goal removed. Pick a new one! 🎯`, "info");
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
+  } catch(e) { toast("Could not remove goal.", "error"); console.error(e); }
+};
+
 window.handleRequestRedeem = async (goalId,title) => {
   try { await requestRedemption(goalId,currentKid.id,title,0); toast("🎁 Redemption requested! Ask your parent.","success"); const stars=await getStarBalance(currentKid.id); await loadKidGoalsView(currentKid.id,stars); }
   catch(err) { toast("Something went wrong.","error"); console.error(err); }
@@ -1946,7 +1985,13 @@ window.handlePickGoal=async(rewardId)=>{
 };
 
 // ── Kid tabs ──────────────────────────────────────────────────
+window._kidTabHistory = ["tasks"];
 window.showKidTab=(tab)=>{
+  // Track history for Back button
+  if (window._kidTabHistory[window._kidTabHistory.length-1] !== tab) {
+    window._kidTabHistory.push(tab);
+    if (window._kidTabHistory.length > 10) window._kidTabHistory.shift();
+  }
   document.querySelectorAll(".kid-tab-btn").forEach(b=>b.classList.remove("active"));
   document.querySelectorAll(".kid-tab-panel").forEach(p=>p.classList.remove("active"));
   document.getElementById(`kid-tab-btn-${tab}`)?.classList.add("active");
@@ -1970,6 +2015,23 @@ window.showKidTab=(tab)=>{
   // Load earnings tab
   if (tab==="earnings" && currentKid) {
     loadKidEarnings(currentKid);
+  }
+};
+
+// ── Kid Back button — go to previous tab ──────────────────────
+window.kidGoBack = () => {
+  if (window._kidTabHistory.length > 1) {
+    window._kidTabHistory.pop();
+    const prev = window._kidTabHistory[window._kidTabHistory.length-1];
+    // Show without re-pushing to history
+    const saved = [...window._kidTabHistory];
+    showKidTab(prev);
+    window._kidTabHistory = saved; // restore so we don't double-count
+  } else {
+    // Already at first tab → go home
+    if (typeof clearKidSession === "function") {} // keep session
+    showScreen("screen-home");
+    if (typeof SK_renderKids === "function") SK_renderKids();
   }
 };
 
@@ -3226,16 +3288,31 @@ window.checkForActiveRush = async (kid) => {
     if (rush.status !== "active") return;
     const rushTasks = rush.tasks || [];
     if (rushTasks.length === 0) return;
-    // Check if ALL kids in rush are done — if so don't re-show
-    const allKids = window.SK ? window.SK.getKids().filter(k => rush.kidIds?.includes(k.id)) : [kid];
-    const totalTasks = rushTasks.length * allKids.length;
-    let totalDone = 0;
-    allKids.forEach(k => {
-      const prog = rush.progress?.[k.id] || {};
-      totalDone += rushTasks.filter(t => prog[t.id]?.done).length;
-    });
-    if (totalDone === totalTasks && totalTasks > 0) return;
-    if (kidRushId === rush.id) return;
+
+    // ── Check if rush TIME has expired ───────────────────────
+    const session = DEFAULT_RUSH_SESSIONS[rush.sessionId] || customRushSessions.find(s=>s.id===rush.sessionId) || {};
+    const windowMins = rush.windowMinutes || session.windowMinutes || 30;
+    let expired = false;
+    if (rush.endAtMs && rush.endAtMs > 1000000000000) {
+      expired = Date.now() >= rush.endAtMs;
+    } else if (rush.startAtMs && rush.startAtMs > 1000000000000) {
+      expired = (Date.now() - rush.startAtMs) >= (windowMins * 60 * 1000);
+    }
+    if (expired) {
+      // Time's up — mark rush ended in Firestore so it stops popping up
+      try {
+        const { updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await updateDoc(fsDoc(db, "activeRush", rush.id), { status: "ended", endedAt: Date.now() });
+      } catch(e) {}
+      return;
+    }
+
+    // ── Check if THIS kid finished all their tasks ───────────
+    const myProg = rush.progress?.[kid.id] || {};
+    const myDone = rushTasks.filter(t => myProg[t.id]?.done).length;
+    if (myDone === rushTasks.length) return; // this kid is done — don't re-show
+
+    if (kidRushId === rush.id) return; // already showing
     console.log("✅ Showing family rush overlay");
     kidRushId   = rush.id;
     kidRushData = rush;
@@ -3598,9 +3675,12 @@ function verifyPIN(pin) {
 
 async function savePIN(pin) {
   const hash = hashPIN(pin);
-  // Save to Firestore so it works on all devices
-  await updateParentProfile(currentParent.uid, { pinHash: hash });
+  // Update local state IMMEDIATELY so UI never blocks on network
   currentParent.pinHash = hash;
+  // Sync to Firestore in background — don't await, don't block the UI
+  updateParentProfile(currentParent.uid, { pinHash: hash }).catch(e => {
+    console.error("PIN sync to Firestore failed (will retry next login):", e);
+  });
 }
 
 // ── PIN entry state ───────────────────────────────────────────
@@ -3742,7 +3822,9 @@ window.pinSetupInput = async (digit) => {
         updatePINDots("pin-setup-dot", 0);
       } else {
         if (_setupBuffer === _setupFirst) {
-          await savePIN(_setupBuffer);
+          try {
+            await savePIN(_setupBuffer);
+          } catch(e) { console.error("savePIN error:", e); }
           document.getElementById("pin-setup-overlay").style.display = "none";
           toast("PIN set! Parent portal is now protected 🔒", "success");
           // New parent → show onboarding; returning parent → go to dashboard

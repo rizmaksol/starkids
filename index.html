@@ -930,6 +930,16 @@ window.addRushTask = window.addRushTask || function() {
       <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:14px;">Earn achievements by building great habits!</p>
       <div id="kid-achievements-list"><p class="empty-state">Loading…</p></div>
     </div>
+
+    <!-- Real-World Achievements / Trophy Shelf -->
+    <div class="card" style="margin-top:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 class="kids-list-header" style="margin:0;">🎖️ My Trophy Shelf</h3>
+        <button class="btn btn--kid" style="width:auto;font-size:0.8rem;padding:6px 14px;" onclick="openAddAchievement()">＋ Add</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--color-muted);margin-bottom:14px;">Got good grades, a certificate, or won something? Show your parent! 🌟</p>
+      <div id="kid-trophy-shelf"><p class="empty-state">Loading…</p></div>
+    </div>
   </div>
   <div class="kid-tab-panel w-full" id="kid-tab-praise">
     <div class="card">
@@ -1070,6 +1080,83 @@ window.addRushTask = window.addRushTask || function() {
     <div class="modal-actions">
       <button class="btn btn--secondary" onclick="closeSubmitTaskModal()">Cancel</button>
       <button class="btn btn--success" id="btn-confirm-submit-task" onclick="confirmSubmitTask()">🚀 Send to Parent!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADD ACHIEVEMENT MODAL ════════════════ -->
+<div class="modal-overlay" id="modal-add-achievement" onclick="handleModalClick(event,'modal-add-achievement')">
+  <div class="modal-box">
+    <h3 class="modal-title">🎖️ Add an Achievement</h3>
+    <p class="modal-subtitle">Share something you're proud of!</p>
+    <div class="form-group">
+      <label>What did you achieve? 🌟</label>
+      <input id="ach-title" type="text" placeholder="e.g. Came 1st in Math test" maxlength="80" />
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;" id="ach-category-row">
+        <button type="button" class="ach-cat-btn" data-cat="📚 Academic" onclick="selectAchCat(this)">📚 Academic</button>
+        <button type="button" class="ach-cat-btn" data-cat="🏆 Sports" onclick="selectAchCat(this)">🏆 Sports</button>
+        <button type="button" class="ach-cat-btn" data-cat="🕌 Quran/Islamic" onclick="selectAchCat(this)">🕌 Quran</button>
+        <button type="button" class="ach-cat-btn" data-cat="🎨 Arts" onclick="selectAchCat(this)">🎨 Arts</button>
+        <button type="button" class="ach-cat-btn" data-cat="⭐ Other" onclick="selectAchCat(this)">⭐ Other</button>
+      </div>
+      <input type="hidden" id="ach-category" value="⭐ Other" />
+    </div>
+    <div class="form-group">
+      <label>Add a photo (optional) 📸</label>
+      <p style="font-size:0.78rem;color:var(--color-muted);margin-bottom:8px;">A certificate, medal, or report card!</p>
+      <div class="photo-upload-area" onclick="document.getElementById('ach-photo-input').click()" style="height:80px;">
+        <img id="ach-photo-preview" src="" alt="" style="display:none;width:100%;height:80px;object-fit:cover;border-radius:var(--radius-sm);" />
+        <div id="ach-photo-placeholder" class="photo-placeholder">
+          <span class="photo-icon">📷</span>
+          <span class="photo-hint">Tap to add a photo<br><small>Optional</small></span>
+        </div>
+      </div>
+      <input id="ach-photo-input" type="file" accept="image/*" style="display:none;" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--secondary" onclick="closeAddAchievement()">Cancel</button>
+      <button class="btn btn--success" id="btn-submit-achievement" onclick="submitAchievement()">🚀 Send to Parent!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ APPROVE ACHIEVEMENT MODAL (parent) ═══════ -->
+<div class="modal-overlay" id="modal-approve-achievement" onclick="handleModalClick(event,'modal-approve-achievement')">
+  <div class="modal-box">
+    <h3 class="modal-title">🎖️ Celebrate Achievement</h3>
+    <div id="approve-ach-content"></div>
+    <div class="form-group">
+      <label>Write a compliment 💛</label>
+      <input id="ach-compliment" type="text" placeholder="e.g. So proud of you, Ahmed!" maxlength="120" />
+    </div>
+    <div class="form-group">
+      <label>Pick a badge</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="ach-badge-row">
+        <button type="button" class="ach-badge-btn" data-badge="🥇" onclick="selectAchBadge(this)">🥇</button>
+        <button type="button" class="ach-badge-btn" data-badge="🌟" onclick="selectAchBadge(this)">🌟</button>
+        <button type="button" class="ach-badge-btn" data-badge="🏅" onclick="selectAchBadge(this)">🏅</button>
+        <button type="button" class="ach-badge-btn" data-badge="🎖️" onclick="selectAchBadge(this)">🎖️</button>
+        <button type="button" class="ach-badge-btn" data-badge="👑" onclick="selectAchBadge(this)">👑</button>
+        <button type="button" class="ach-badge-btn" data-badge="💎" onclick="selectAchBadge(this)">💎</button>
+      </div>
+      <input type="hidden" id="ach-badge" value="🌟" />
+    </div>
+    <div class="form-group">
+      <label>Award stars ⭐</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+        <button type="button" class="ach-star-btn" onclick="setAchStars(10,this)">10</button>
+        <button type="button" class="ach-star-btn" onclick="setAchStars(25,this)">25</button>
+        <button type="button" class="ach-star-btn" onclick="setAchStars(50,this)">50</button>
+        <button type="button" class="ach-star-btn" onclick="setAchStars(100,this)">100</button>
+      </div>
+      <input id="ach-stars" type="number" min="0" placeholder="or type a custom amount" style="margin-top:8px;" oninput="document.querySelectorAll('.ach-star-btn').forEach(b=>b.classList.remove('active'))" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn--danger" onclick="rejectAchievement()">Not yet</button>
+      <button class="btn btn--success" id="btn-give-achievement" onclick="approveAchievement()">🎉 Celebrate & Award</button>
     </div>
   </div>
 </div>
@@ -1265,7 +1352,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=49"></script>
+<script type="module" src="./js/app.js?v=52"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately
@@ -1329,7 +1416,7 @@ window.addRushTask = window.addRushTask || function() {
   }
   function handleModalClick(e, id) {
     if (e.target.id !== id) return;
-    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob, "modal-add-value": closeAddValue, "modal-faith-tasks": closeFaithTasks, "modal-send-praise": closeSendPraise, "modal-reject-task": closeRejectModal, "modal-submit-task": closeSubmitTaskModal, "modal-edit-rush": closeEditRush };
+    const map = { "modal-add-task": closeAddTask, "modal-bonus": closeBonusStars, "modal-add-reward": closeAddReward, "modal-edit-reward": closeEditReward, "modal-pick-goal": closePickGoal, "modal-add-job": closeAddJob, "modal-add-value": closeAddValue, "modal-faith-tasks": closeFaithTasks, "modal-send-praise": closeSendPraise, "modal-reject-task": closeRejectModal, "modal-submit-task": closeSubmitTaskModal, "modal-edit-rush": closeEditRush, "modal-add-achievement": closeAddAchievement, "modal-approve-achievement": closeApproveAchievement };
     map[id]?.();
   }
   function adjustStars(inputId, delta) {

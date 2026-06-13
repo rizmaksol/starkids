@@ -36,6 +36,7 @@ service cloud.firestore {
     }
 
     match /achievements/{achievementId} { allow read, write: if true; }
+    match /trophies/{trophyId}          { allow read, write: if true; }
     match /rushSessions/{sessionId}    { allow read, write: if true; }
     match /activeRush/{rushId}         { allow read, write: if true; }
 

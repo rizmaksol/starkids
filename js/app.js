@@ -2,7 +2,7 @@
 // js/app.js — StarKids V10  Sprint 1+2+3+4+5+6
 // ============================================================
 
-import { db } from "./firebase.js?v=12";
+import { db, auth } from "./firebase.js?v=12";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=12";
 import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=13";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
@@ -1071,6 +1071,30 @@ window.obAddKid = async () => {
 };
 
 window.obFinish = () => { goToParentDashboard(); };
+
+// ── Forgot Password from login screen (before logging in) ─────
+window.forgotPasswordFromLogin = async () => {
+  const email = document.getElementById("login-email")?.value.trim();
+  if (!email) {
+    toast("Enter your email above first, then tap Forgot password.", "info");
+    document.getElementById("login-email")?.focus();
+    return;
+  }
+  try {
+    const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    await sendPasswordResetEmail(auth, email);
+    toast(`📧 Password reset link sent to ${email}. Check your inbox!`, "success");
+  } catch(e) {
+    if (e.code === "auth/user-not-found") {
+      toast("No account found with that email.", "error");
+    } else if (e.code === "auth/invalid-email") {
+      toast("Please enter a valid email address.", "error");
+    } else {
+      toast("Could not send reset email. Try again.", "error");
+    }
+    console.error(e);
+  }
+};
 
 // ── Forgot Password — send reset email ───────────────────────
 window.sendPasswordReset = async () => {

@@ -1896,6 +1896,41 @@ input:focus, select:focus {
   background: var(--color-primary);
 }
 
+/* ── Achievement / Trophy Shelf ───────────────────────────── */
+.ach-cat-btn, .ach-badge-btn, .ach-star-btn {
+  background: var(--color-bg-2);
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.ach-badge-btn { font-size: 1.5rem; padding: 6px 10px; }
+.ach-star-btn { min-width: 52px; }
+.ach-cat-btn.active, .ach-badge-btn.active, .ach-star-btn.active {
+  border-color: var(--color-primary);
+  background: rgba(108,99,255,0.12);
+}
+.trophy-card {
+  background: var(--color-bg-2);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border);
+}
+.trophy-card--pending { border-style: dashed; opacity: 0.85; }
+.trophy-photo {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
 /* ── PIN Overlay ──────────────────────────────────────────── */
 .pin-dot {
   width: 16px;
@@ -1969,14 +2004,20 @@ input:focus, select:focus {
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding-bottom: 6px;
-  scrollbar-width: none;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.4) transparent;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
 }
-.faith-strip__scroll::-webkit-scrollbar { display: none; }
+.faith-strip__scroll::-webkit-scrollbar { height: 5px; }
+.faith-strip__scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.faith-strip__scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 3px; }
 
 .faith-pill {
   flex: 0 0 auto;
   width: 90px;
+  scroll-snap-align: start;
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 14px;

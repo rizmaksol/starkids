@@ -79,7 +79,8 @@ export async function getParentProfile(uid) {
 
 // ── Update parent profile ─────────────────────────────────────
 export async function updateParentProfile(uid, fields) {
-  await updateDoc(doc(db, "parents", uid), fields);
+  // Use setDoc with merge so it works even if the doc doesn't exist yet
+  await setDoc(doc(db, "parents", uid), fields, { merge: true });
 }
 
 // ── Auth State Observer ───────────────────────────────────────

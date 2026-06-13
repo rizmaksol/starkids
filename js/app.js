@@ -4,7 +4,7 @@
 
 import { db } from "./firebase.js?v=12";
 import { fetchPrayerTimes, getNextPrayer, formatPrayerTime, startPrayerAlerts, stopPrayerAlerts, savePrayerCity, getPrayerCity } from "./prayer.js?v=12";
-import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=12";
+import { signUpParent, loginParent, logoutParent, getParentProfile, updateParentProfile, onAuthChange } from "./auth.js?v=13";
 import { addKid, getKidsByParent, deleteKid, regenerateKidCode, loginKidByCode, uploadKidPhoto, updateKidPhoto } from "./kid.js?v=12";
 import { createTask, createDefaultTasks, getTasksForKid, getPendingApprovals, getPendingApprovalsByKids, submitTask, submitTaskWithPhoto, uploadTaskPhoto, approveTask, rejectTask, rejectTaskWithReason, getStarBalance, getTotalEarned, resetRecurringTasks, STATUS, TASK_TYPE } from "./tasks.js?v=15";
 import { createGoalFromReward, getGoalsForKid, deleteGoal, checkGoalCompletion, addBonusStars, GOAL_STATUS } from "./goals.js?v=13";
@@ -879,6 +879,20 @@ function goToParentDashboard() {
 async function autoSyncKidsToLocalStorage() {
   try {
     const kids = await getKidsByParent(currentParent.uid);
+    const validIds = kids.map(k => k.id);
+    // ── Remove any localStorage kids that don't belong to this parent ──
+    try {
+      const existing = window.SK ? window.SK.getKids() : [];
+      existing.forEach(k => {
+        // Remove if from a different parent OR no longer exists in this account
+        if (k.parentId !== currentParent.uid || !validIds.includes(k.id)) {
+          if (window.SK && typeof window.SK.removeKid === "function") {
+            window.SK.removeKid(k.id);
+          }
+        }
+      });
+    } catch(e) {}
+    // Add/update current parent's kids
     kids.forEach(kid => {
       if (typeof window.SK_saveKidDirect === "function") {
         window.SK_saveKidDirect(kid.id, kid.name, kid.avatarEmoji||"🌟", kid.photoURL||null, kid.code, kid.parentId);
@@ -3587,8 +3601,32 @@ function renderSavedKidsSelector() {
 }
 
 window.SK_loginKid = async (kidId, code) => {
-  return window.loginSavedKid(kidId, code);
+  // Require code entry ONCE per device (ever) for each kid
+  const verifyKey = `sk_kid_verified_${kidId}`;
+  const verified  = localStorage.getItem(verifyKey);
+  if (verified === code) {
+    // Already verified on this device — log in directly forever
+    return window.loginSavedKid(kidId, code);
+  }
+  // First time on this device — ask for code
+  promptKidCode(kidId, code);
 };
+
+// ── Kid code verification prompt ──────────────────────────────
+function promptKidCode(kidId, correctCode) {
+  const kids = window.SK ? window.SK.getKids() : [];
+  const kid  = kids.find(k => k.id === kidId);
+  const name = kid?.name || "your";
+  const entered = prompt(`First time on this device!\nEnter ${name}'s 6-digit login code:`);
+  if (entered === null) return; // cancelled
+  if (entered.trim() === correctCode) {
+    localStorage.setItem(`sk_kid_verified_${kidId}`, correctCode);
+    window.loginSavedKid(kidId, correctCode);
+  } else {
+    toast("Wrong code. Try again.", "error");
+  }
+}
+
 window.loginSavedKid = async (kidId, code) => {
   try {
     const kid = await loginKidByCode(code);
@@ -3597,6 +3635,8 @@ window.loginSavedKid = async (kidId, code) => {
     saveKidSession(kid);
     saveKidProfile(kid);
     if (window.SK) window.SK.saveKid(kid);
+    // Mark verified permanently on this device
+    localStorage.setItem(`sk_kid_verified_${kidId}`, code);
     financeSettings = await getFinanceSettings(kid.parentId);
     await showKidDashboard(kid);
     toast(`Hi ${kid.name}! 🌟`, "success");
@@ -3903,6 +3943,8 @@ window.logoutAllKids = () => {
   localStorage.removeItem("sk_saved_kids");
   localStorage.removeItem("sk_current_kid");
   localStorage.removeItem("sk_kid");
+  // Clear all kid verification flags so re-added kids must enter code again
+  Object.keys(localStorage).filter(k => k.startsWith("sk_kid_verified_")).forEach(k => localStorage.removeItem(k));
   // Clear session state
   clearKidSession(); currentKid = null;
   if (window._rushPollInterval) clearInterval(window._rushPollInterval);

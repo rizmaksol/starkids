@@ -208,15 +208,28 @@ async function addStarsToWallet(kidId, stars) {
   const ref  = doc(db, "wallets", kidId);
   const snap = await getDoc(ref);
   if (snap.exists()) {
-    await updateDoc(ref, { stars: (snap.data().stars||0) + stars, lastUpdated: serverTimestamp() });
+    const current      = snap.data().stars || 0;
+    const currentTotal = snap.data().totalEarned || current; // migrate existing wallets
+    await updateDoc(ref, {
+      stars:        current + stars,
+      totalEarned:  currentTotal + stars,
+      lastUpdated:  serverTimestamp()
+    });
   } else {
-    await setDoc(ref, { kidId, stars, lastUpdated: serverTimestamp() });
+    await setDoc(ref, { kidId, stars, totalEarned: stars, lastUpdated: serverTimestamp() });
   }
 }
 
 export async function getStarBalance(kidId) {
   const snap = await getDoc(doc(db, "wallets", kidId));
   return snap.exists() ? (snap.data().stars || 0) : 0;
+}
+
+export async function getTotalEarned(kidId) {
+  const snap = await getDoc(doc(db, "wallets", kidId));
+  if (!snap.exists()) return 0;
+  const d = snap.data();
+  return d.totalEarned || d.stars || 0; // fall back to stars for migration
 }
 
 // ── Reject task with reason ───────────────────────────────────

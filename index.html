@@ -371,7 +371,10 @@ window.addRushTask = window.addRushTask || function() {
 <!-- ══════════════════════ PARENT DASHBOARD ══════════════════ -->
 <section class="screen" id="screen-parent-dashboard">
   <div class="app-bar w-full">
-    <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="lockParentPortal()">🏠 Home</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="parentGoBack()" title="Back">← Back</button>
+      <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="lockParentPortal()">🏠 Home</button>
+    </div>
     <span class="app-logo">Star<span>Kids</span></span>
     <button id="btn-logout" class="btn btn--ghost" style="width:auto;">Log out</button>
   </div>
@@ -855,7 +858,8 @@ window.addRushTask = window.addRushTask || function() {
 <section class="screen" id="screen-kid-dashboard">
   <div class="app-bar w-full">
     <span class="app-logo">Star<span>Kids</span></span>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="kidGoBack()" title="Back">← Back</button>
       <button id="btn-switch-kid" class="btn btn--ghost" style="width:auto;font-size:0.82rem;" onclick="showSwitchKidPanel()" title="Switch Kid">👤 Switch</button>
       <button id="btn-kid-logout" class="btn btn--ghost" style="width:auto;">🏠 Home</button>
       <button class="btn btn--ghost" style="width:auto;font-size:0.82rem;color:#FF6B6B;" onclick="logoutAllKids()" title="Logout All">🚪 All</button>
@@ -1249,7 +1253,7 @@ window.addRushTask = window.addRushTask || function() {
     document.getElementById("kid-tab-"+tab)?.classList.add("active");
   }
 </script>
-<script type="module" src="./js/app.js?v=44"></script>
+<script type="module" src="./js/app.js?v=45"></script>
 <script>
   // ── Splash screen animation ──────────────────────────────────
   // No splash — home screen shows immediately

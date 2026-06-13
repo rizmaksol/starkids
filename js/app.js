@@ -345,7 +345,8 @@ async function loadPendingApprovals() {
     }).join("");
   }
   if (allGoals.length) {
-    html += `<div class="task-section-title">🎁 Reward Redemptions</div>`;
+    window._pendingGoals = allGoals;
+    html += `<div class="task-section-title">🎁 Reward Redemptions${allGoals.length > 3 ? ` <button onclick="rejectAllRedemptions()" style="float:right;background:none;border:none;color:#FF6B6B;font-size:0.75rem;font-weight:700;cursor:pointer;">Clear All</button>` : ""}</div>`;
     html += allGoals.map(g => {
       const av = g.kidPhoto ? `<img src="${g.kidPhoto}" class="approval-avatar-img" />` : `<span>${g.kidEmoji||"🌟"}</span>`;
       return `<div class="approval-card approval-card--redeem">
@@ -547,9 +548,24 @@ function renderRewardsCatalog() {
   const el = document.getElementById("rewards-catalog-list");
   if (!el) return;
   if (!rewardsCatalog.length) { el.innerHTML = `<p class="empty-state">No rewards yet.</p>`; return; }
+
+  // Detect duplicates (same title + same stars)
+  const seen = {};
+  let dupCount = 0;
+  rewardsCatalog.forEach(r => {
+    const key = `${r.title}__${r.stars}`;
+    if (seen[key]) dupCount++; else seen[key] = true;
+  });
+
   const cats = {}; rewardsCatalog.forEach(r => { const c = r.category||"custom"; if(!cats[c]) cats[c]=[]; cats[c].push(r); });
   const labels = { treat:"🍬 Treats", outing:"🎡 Outings", toy:"🧸 Toys & Things", big:"🏆 Big Rewards", custom:"✨ Custom" };
   let html = "";
+  if (dupCount > 0) {
+    html += `<div style="background:#FFF3CD;border:1px solid #FFE69C;border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:0.82rem;color:#856404;font-weight:700;margin-bottom:6px;">⚠️ Found ${dupCount} duplicate reward${dupCount>1?"s":""}</div>
+      <button class="btn btn--sm btn--primary" onclick="removeDuplicateRewards()">🧹 Remove Duplicates</button>
+    </div>`;
+  }
   Object.entries(cats).forEach(([cat, rewards]) => {
     html += `<div class="reward-cat-title">${labels[cat]||cat}</div>`;
     html += rewards.map(r => `<div class="reward-catalog-item">
@@ -565,6 +581,25 @@ function renderRewardsCatalog() {
   });
   el.innerHTML = html;
 }
+
+// ── Remove duplicate rewards (keeps one of each title+stars) ──
+window.removeDuplicateRewards = async () => {
+  if (!confirm("Remove duplicate rewards? This keeps one copy of each and deletes the extras.")) return;
+  try {
+    const seen = {};
+    const toDelete = [];
+    rewardsCatalog.forEach(r => {
+      const key = `${r.title}__${r.stars}`;
+      if (seen[key]) toDelete.push(r.id);
+      else seen[key] = true;
+    });
+    for (const id of toDelete) {
+      await deleteReward(id);
+    }
+    await loadRewardsCatalog();
+    toast(`🧹 Removed ${toDelete.length} duplicate${toDelete.length>1?"s":""}!`, "success");
+  } catch(e) { toast("Could not remove duplicates.", "error"); console.error(e); }
+};
 let editRewardId = null;
 window.openEditReward  = (id,title,stars,emoji) => { editRewardId=id; document.getElementById("edit-reward-title").value=title; document.getElementById("edit-reward-stars").value=stars; document.getElementById("edit-reward-emoji").value=emoji; document.getElementById("edit-reward-emoji-preview").textContent=emoji; document.getElementById("modal-edit-reward").classList.add("open"); };
 window.closeEditReward = () => document.getElementById("modal-edit-reward").classList.remove("open");
@@ -596,6 +631,17 @@ window.handleApproveRedemption = async (goalId,kidId,stars,title,kidName) => {
   try { await approveRedemption(goalId,kidId,stars); toast(`🎁 "${title}" redeemed for ${kidName}!`,"success"); loadPendingApprovals(); loadWalletsOverview(); }
   catch(err) { toast("Failed.","error"); console.error(err); }
 };
+window.rejectAllRedemptions = async () => {
+  const goals = window._pendingGoals || [];
+  if (!goals.length) return;
+  if (!confirm(`Send back all ${goals.length} reward requests? The kids' stars stay safe and they can request again.`)) return;
+  try {
+    for (const g of goals) { await rejectRedemption(g.id); }
+    toast(`Sent back ${goals.length} requests.`, "info");
+    loadPendingApprovals();
+  } catch(e) { toast("Failed.", "error"); console.error(e); }
+};
+
 window.handleRejectRedemption = async (goalId,title) => {
   try { await rejectRedemption(goalId); toast(`"${title}" sent back.`,"info"); loadPendingApprovals(); }
   catch(err) { toast("Failed.","error"); }
@@ -1829,7 +1875,14 @@ async function loadKidGoalsView(kidId, currentStars) {
   }
   if (requested.length) {
     html+=`<div class="task-section-title">⏳ Waiting for Parent</div>`;
-    html+=requested.map(g=>`<div class="goal-card goal-card--waiting"><div class="goal-emoji">${g.emoji}</div><div class="goal-info"><div class="goal-title">${g.title}</div><div class="goal-target">🎁 Ask your parent to approve!</div></div></div>`).join("");
+    html+=requested.map(g=>`<div class="goal-card goal-card--waiting">
+      <div class="goal-emoji">${g.emoji}</div>
+      <div class="goal-info">
+        <div class="goal-title">${g.title}</div>
+        <div class="goal-target">⭐ ${g.targetStars} — 🎁 Ask your parent to approve!</div>
+      </div>
+      <button class="goal-delete-btn" title="Cancel this request" onclick="handleCancelRequest('${g.id}','${g.title}')" style="color:#FF6B6B;">🗑️</button>
+    </div>`).join("");
   }
   if (completed.length) {
     html+=`<div class="task-section-title">🏆 Goal Reached!</div>`;
@@ -2035,6 +2088,16 @@ window.handleClaimJob = async (jobId) => {
     await loadKidGoalsView(currentKid.id, stars);
     await loadKidTasks(currentKid);
   } catch(err) { toast("Failed to claim job.", "error"); console.error(err); }
+};
+
+window.handleCancelRequest = async (goalId, title) => {
+  if (!confirm(`Cancel your request for "${title}"? You can request it again later.`)) return;
+  try {
+    await deleteGoal(goalId);
+    toast(`Request cancelled. Your stars are safe! ⭐`, "info");
+    const stars = await getStarBalance(currentKid.id);
+    await loadKidGoalsView(currentKid.id, stars);
+  } catch(e) { toast("Could not cancel.", "error"); console.error(e); }
 };
 
 window.handleDeleteGoal = async (goalId, title) => {

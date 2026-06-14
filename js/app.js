@@ -1416,13 +1416,15 @@ window.handleApprove = async (taskId,kidId,stars,title,currentStreak) => {
     const newStars=await getStarBalance(kidId);
     const completed=await checkGoalCompletion(kidId,newStars);
     completed.forEach(g=>celebrate(`🎉 Goal Reached!\n"${g.title}"`));
+    // If this is the kid's first ever earning, flag it so the celebration
+    // shows on the KID's screen (not here on the parent's screen).
     if (newStars === stars && !localStorage.getItem(`sk_first_salary_${kidId}`)) {
-      const savedKids = window.SK ? window.SK.getKids() : [];
-      const prevKid   = currentKid;
-      const matchKid  = savedKids.find(k => k.id === kidId);
-      if (matchKid) currentKid = matchKid;
-      showFirstSalary(title, stars);
-      currentKid = prevKid;
+      try {
+        const { setDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await setDoc(fsDoc(db, "wallets", kidId), {
+          pendingFirstSalary: { title, stars, at: Date.now() }
+        }, { merge: true });
+      } catch(e) { console.error("first-salary flag failed:", e); }
     }
     loadPendingApprovals();
   } catch(err) { toast("Failed.","error"); console.error(err); }
@@ -1517,6 +1519,8 @@ async function showKidDashboard(kid) {
 
   await loadKidTasks(kid);
   await loadKidGoalsView(kid.id, stars);
+  // Check if parent approved this kid's first earning while they were away
+  checkPendingFirstSalary(kid.id);
   // Load family values
   try { familyValues = await getFamilyValues(kid.parentId); } catch(e) {}
   showKidTab("tasks");
@@ -1837,6 +1841,7 @@ window.refreshKidDashboard = async () => {
   const btn = document.getElementById("btn-kid-refresh");
   if (btn) { btn.textContent = "⏳ Checking…"; btn.disabled = true; }
   try {
+    await checkPendingFirstSalary(kid.id);
     await resetRecurringTasks(kid.id);
     const stars = await getStarBalance(kid.id);
     const money = starsToMoney(stars, financeSettings);
@@ -1959,28 +1964,37 @@ async function loadKidJobsSection(kidId) {
   if (!jobs.length) { el.innerHTML=`<p class="empty-state">No jobs available yet.</p>`; return; }
   el.innerHTML = jobs.map(j => {
     const task = jobTaskMap[j.id];
-    let actionHtml;
+    let actionHtml, statusRibbon = "", stateClass = "", noteHtml = "";
+
     if (!task) {
-      // Not taken yet
+      // ── AVAILABLE ──
       actionHtml = `<button class="btn btn--sm btn--accent" onclick="handleClaimJob('${j.id}')">Take Job</button>`;
     } else if (task.status === "pending") {
-      // Taken but not submitted — let them submit right here
-      actionHtml = `<button class="btn btn--sm btn--success" onclick="handleJobDone('${task.id}')">✅ I Did It!</button>`;
+      // ── IN PROGRESS (claimed, not yet submitted) ──
+      stateClass   = "job-kid-item--active";
+      statusRibbon = `<div class="job-status-ribbon ribbon-progress">🔧 IN PROGRESS</div>`;
+      noteHtml     = `<div class="job-progress-note">Do the job, then tap below 👇</div>`;
+      actionHtml   = `<button class="btn btn--sm btn--success job-done-btn" onclick="handleJobDone('${task.id}')">✅ I Did It!</button>`;
     } else {
-      // Submitted — waiting for parent
-      actionHtml = `<span class="task-badge task-badge--waiting">⏳ Waiting</span>`;
+      // ── WAITING for parent approval ──
+      stateClass   = "job-kid-item--waiting";
+      statusRibbon = `<div class="job-status-ribbon ribbon-waiting">⏳ WAITING FOR PARENT</div>`;
+      noteHtml     = `<div class="job-progress-note">Sent to your parent for approval</div>`;
+      actionHtml   = `<span class="task-badge task-badge--waiting">⏳ Sent</span>`;
     }
-    const stateClass = task ? (task.status === "submitted" ? "job-kid-item--waiting" : "job-kid-item--active") : "";
+
     return `<div class="job-kid-item ${stateClass}">
-      <span class="job-emoji">${j.emoji}</span>
-      <div class="job-info">
-        <div class="job-title">${j.title}</div>
-        ${j.description?`<div class="job-desc">${j.description}</div>`:""}
-        <div class="job-stars">⭐ ${j.stars} = ${starsToMoney(j.stars,financeSettings)}</div>
-        ${task && task.status==="pending" ? `<div class="job-progress-note">📋 In progress — tap "I Did It!" when done</div>` : ""}
-        ${task && task.status==="submitted" ? `<div class="job-progress-note">⏳ Sent to parent for approval</div>` : ""}
+      ${statusRibbon}
+      <div class="job-row">
+        <span class="job-emoji">${j.emoji}</span>
+        <div class="job-info">
+          <div class="job-title">${j.title}</div>
+          ${j.description?`<div class="job-desc">${j.description}</div>`:""}
+          <div class="job-stars">⭐ ${j.stars} = ${starsToMoney(j.stars,financeSettings)}</div>
+          ${noteHtml}
+        </div>
+        ${actionHtml}
       </div>
-      ${actionHtml}
     </div>`;
   }).join("");
 }
@@ -2134,6 +2148,22 @@ function showFirstSalary(taskTitle, stars) {
   modal.style.display = "flex";
 }
 
+// ── Check if parent approved this kid's first earning → celebrate ──
+async function checkPendingFirstSalary(kidId) {
+  if (localStorage.getItem(`sk_first_salary_${kidId}`)) return; // already celebrated on this device
+  try {
+    const { getDoc, doc: fsDoc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await getDoc(fsDoc(db, "wallets", kidId));
+    if (!snap.exists()) return;
+    const pending = snap.data().pendingFirstSalary;
+    if (pending && pending.title) {
+      showFirstSalary(pending.title, pending.stars);
+      // Clear the flag in Firestore so it doesn't fire again
+      try { await updateDoc(fsDoc(db, "wallets", kidId), { pendingFirstSalary: null }); } catch(e) {}
+    }
+  } catch(e) { console.error("first-salary check failed:", e); }
+}
+
 window.closeFirstSalary = () => {
   const modal = document.getElementById("modal-first-salary");
   if (modal) modal.style.display = "none";
@@ -2145,7 +2175,7 @@ window.handleClaimJob = async (jobId) => {
   if (!job) return;
   try {
     await claimJob(currentKid.parentId, currentKid.id, job);
-    toast(`💼 Job claimed: "${job.title}"! Complete it to earn ⭐${job.stars}`, "success");
+    toast(`💼 You took "${job.title}"! Now go do it — then tap "✅ I Did It!" 🌟`, "success");
     const stars = await getStarBalance(currentKid.id);
     await loadKidGoalsView(currentKid.id, stars);
     await loadKidTasks(currentKid);
@@ -2827,7 +2857,20 @@ async function loadWeeklyReports() {
   let html = "";
 
   // ── Family Summary Card ──
-  const totalStarsWeek  = data.reduce((s,d) => s + (d.report.starsEarned||0), 0);
+  // Compute weekly stars from each kid's dailyMap (current Mon–Sun) so it
+  // matches the per-kid "earned this week" and the day bars.
+  const weekStarsFromMap = (dailyMap) => {
+    const today = new Date();
+    const dow   = (today.getDay() + 6) % 7;
+    const monday = new Date(today); monday.setDate(today.getDate() - dow); monday.setHours(0,0,0,0);
+    let s = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      s += (dailyMap[d.toISOString().slice(0,10)]?.stars || 0);
+    }
+    return s;
+  };
+  const totalStarsWeek  = data.reduce((s,d) => s + weekStarsFromMap(d.monthly.dailyMap || {}), 0);
   const totalTasksWeek  = data.reduce((s,d) => s + (d.report.tasksCompleted||0), 0);
   const totalStarsMonth = data.reduce((s,d) => s + (d.monthly.starsMonth||0), 0);
   const totalTasksMonth = data.reduce((s,d) => s + (d.monthly.total||0), 0);
@@ -2867,7 +2910,7 @@ async function loadWeeklyReports() {
         ${topAv}
         <div style="flex:1;">
           <div class="rpt-top-name">${topKid.kid.name}</div>
-          <div class="rpt-top-stars">⭐ ${topStars} stars this ${period==="week"?"week":"month"}</div>
+          <div class="rpt-top-stars">⭐ ${topStars} total balance</div>
         </div>
         ${!alreadyAwarded ? `
         <button class="rpt-award-btn" onclick="awardTopPerformer('${topKid.kid.id}','${topKid.kid.name}','${period}')">
@@ -2889,9 +2932,26 @@ async function loadWeeklyReports() {
   data.forEach(({kid, report, monthly}, kidIndex) => {
     const r          = period === "week" ? report : monthly;
     const tasks      = period === "week" ? r.tasksCompleted : r.total;
-    const periodStars= period === "week" ? r.starsEarned    : r.starsMonth;
     const walletStars= report.totalStars || 0; // wallet balance — source of truth
     const money      = starsToMoney(walletStars, financeSettings);
+
+    // ── Period stars computed from the SAME dailyMap the calendar uses ──
+    // so the "earned this week/month" total always matches the day bars.
+    const dailyMap = monthly.dailyMap || {};
+    let periodStars = 0;
+    if (period === "week") {
+      // Current calendar week: Monday → Sunday
+      const today = new Date();
+      const dow   = (today.getDay() + 6) % 7; // 0=Mon
+      const monday = new Date(today); monday.setDate(today.getDate() - dow); monday.setHours(0,0,0,0);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
+        const key = d.toISOString().slice(0,10);
+        periodStars += (dailyMap[key]?.stars || 0);
+      }
+    } else {
+      periodStars = Object.values(dailyMap).reduce((s,d)=>s+(d.stars||0), 0);
+    }
     const periodMoney= starsToMoney(periodStars, financeSettings);
     const faith      = period === "week" ? r.faithTasks     : r.faithMonth;
     const jobs       = period === "week" ? (r.jobsDone||0)  : 0;
@@ -2936,7 +2996,7 @@ async function loadWeeklyReports() {
           <div class="rpt-metric-lbl">Active Days</div>
         </div>
       </div>
-      ${periodStars > 0 ? `<div style="font-size:0.72rem;color:var(--color-muted);margin-bottom:8px;">⭐ ${periodStars} earned this ${period==="week"?"week":"month"} = ${periodMoney}</div>` : ""}
+      ${periodStars > 0 ? `<div style="font-size:0.72rem;color:var(--color-muted);margin-bottom:8px;">⭐ ${periodStars} earned this ${period==="week"?"week":"month"} (${periodMoney}) · balance reflects spending</div>` : ""}
 
       ${report.topTask ? `<div class="rpt-top-task">🏆 Best: <strong>${report.topTask}</strong></div>` : ""}
       ${report.pendingTasks > 0 ? `<div class="rpt-pending">⏳ ${report.pendingTasks} task${report.pendingTasks>1?"s":""} waiting approval</div>` : ""}

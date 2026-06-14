@@ -307,93 +307,151 @@ async function loadPendingApprovals() {
     }
   }
   if (!el) return;
-  let html = "";
-  if (pending.length) {
-    html += `<div class="task-section-title">📋 Task Approvals</div>`;
-    html += pending.map(task => {
-      const kid = kidsList.find(k => k.id === task.kidId);
-      const av  = kid?.photoURL ? `<img src="${kid.photoURL}" class="approval-avatar-img" />` : `<span>${kid?.avatarEmoji||"🌟"}</span>`;
-      const typeLabel = task.taskType==="daily"?"🔄":task.taskType==="weekly"?"📅":task.isEntrepreneur?"💼":"1️⃣";
-      const streakInfo = task.streak ? ` · 🔥 ${task.streak} streak` : "";
-      // ── Submitted date/time label ───────────────────────────
-      let submittedLabel = "";
-      if (task.submittedAt) {
-        const subDate = task.submittedAt.toDate ? task.submittedAt.toDate() : new Date(task.submittedAt);
-        const now     = new Date();
-        const diffMs  = now - subDate;
-        const diffMin = Math.floor(diffMs / 60000);
-        const diffHr  = Math.floor(diffMs / 3600000);
-        const diffDay = Math.floor(diffMs / 86400000);
-        if (diffMin < 1)        submittedLabel = "just now";
-        else if (diffMin < 60)  submittedLabel = `${diffMin}m ago`;
-        else if (diffHr < 24)   submittedLabel = `${diffHr}h ago`;
-        else if (diffDay === 1) submittedLabel = "yesterday";
-        else                    submittedLabel = `${diffDay} days ago`;
-      }
-      return `<div class="approval-card">
-        <div class="approval-avatar">${av}</div>
-        <div class="approval-info">
-          <div class="approval-kid">${kid?.name||"?"} ${submittedLabel ? `<span style="font-size:0.72rem;color:var(--color-muted);font-weight:500;">· ${submittedLabel}</span>` : ""}</div>
-          <div class="approval-task">${typeLabel} ${task.title}${streakInfo}</div>
-          <div class="approval-stars">⭐ ${task.stars} stars = ${starsToMoney(task.stars, financeSettings)}</div>
-          <div id="photo-wrap-${task.id}" class="task-photo-wrap"></div>
-        </div>
-        <div class="approval-actions">
-          <button class="btn btn--sm btn--success" onclick="handleApprove('${task.id}','${task.kidId}',${task.stars},'${task.title}',${task.streak||0})">✅ Approve</button>
-          <button class="btn btn--sm btn--danger"  onclick="handleReject('${task.id}','${task.title}')">❌ Reject</button>
-        </div></div>`;
-    }).join("");
-  }
-  if (allGoals.length) {
-    window._pendingGoals = allGoals;
-    html += `<div class="task-section-title">🎁 Reward Redemptions${allGoals.length > 3 ? ` <button onclick="rejectAllRedemptions()" style="float:right;background:none;border:none;color:#FF6B6B;font-size:0.75rem;font-weight:700;cursor:pointer;">Clear All</button>` : ""}</div>`;
-    html += allGoals.map(g => {
-      const av = g.kidPhoto ? `<img src="${g.kidPhoto}" class="approval-avatar-img" />` : `<span>${g.kidEmoji||"🌟"}</span>`;
-      return `<div class="approval-card approval-card--redeem">
-        <div class="approval-avatar">${av}</div>
-        <div class="approval-info">
-          <div class="approval-kid">${g.kidName}</div>
-          <div class="approval-task">${g.emoji} ${g.title}</div>
-          <div class="approval-stars">⭐ ${g.targetStars} stars = ${starsToMoney(g.targetStars, financeSettings)}</div>
-        </div>
-        <div class="approval-actions">
-          <button class="btn btn--sm btn--success" onclick="handleApproveRedemption('${g.id}','${g.kidId}',${g.targetStars},'${g.title}','${g.kidName}')">🎁 Give!</button>
-          <button class="btn btn--sm btn--danger"  onclick="handleRejectRedemption('${g.id}','${g.title}')">❌ Not yet</button>
-        </div></div>`;
-    }).join("");
-  }
-  // ── Achievement trophies awaiting celebration ──
-  if (pendingTrophies.length) {
-    html += `<div class="task-section-title">🎖️ Achievements to Celebrate</div>`;
-    html += pendingTrophies.map(t => {
-      const av = t.kidPhoto ? `<img src="${t.kidPhoto}" class="approval-avatar-img" />` : `<span>${t.kidEmoji||"🌟"}</span>`;
-      return `<div class="approval-card approval-card--redeem">
-        <div class="approval-avatar">${av}</div>
-        <div class="approval-info">
-          <div class="approval-kid">${t.kidName}</div>
-          <div class="approval-task">${t.category} — ${t.title}</div>
-          ${t.photo ? `<div style="font-size:0.72rem;color:var(--color-muted);">📷 Photo attached</div>` : ""}
-        </div>
-        <div class="approval-actions">
-          <button class="btn btn--sm btn--success" onclick="openApproveAchievement('${t.id}')">🎉 Celebrate</button>
-        </div>
-      </div>`;
-    }).join("");
-  }
-  if (!total) html = `<p class="empty-state">Nothing pending 🎉</p>`;
-  el.innerHTML = html;
 
-  // Load submission photos asynchronously after rendering
-  for (const task of pending) {
-    const wrap = document.getElementById(`photo-wrap-${task.id}`);
-    if (!wrap) continue;
-    const photo = await loadTaskPhoto(task.id);
-    if (photo) {
-      wrap.innerHTML = `<img src="${photo}" class="submission-photo" onclick="showPhotoFull(this.src)" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer;" />`;
-    }
-  }
+  // Store all pending items globally so filter chips can re-render
+  window._approvalData = { pending, allGoals, pendingTrophies };
+  window._pendingGoals = allGoals;
+  if (!window._approvalFilter) window._approvalFilter = "all";
+
+  renderApprovalsFiltered();
 }
 
+// ── Build HTML for one task approval card ─────────────────────
+function buildTaskCard(task) {
+  const kid = kidsList.find(k => k.id === task.kidId);
+  const av  = kid?.photoURL ? `<img src="${kid.photoURL}" class="approval-avatar-img" />` : `<span>${kid?.avatarEmoji||"🌟"}</span>`;
+  const typeLabel = task.taskType==="daily"?"🔄":task.taskType==="weekly"?"📅":task.isEntrepreneur?"💼":"1️⃣";
+  const streakInfo = task.streak ? ` · 🔥 ${task.streak} streak` : "";
+  let submittedLabel = "";
+  if (task.submittedAt) {
+    const subDate = task.submittedAt.toDate ? task.submittedAt.toDate() : new Date(task.submittedAt);
+    const diffMs  = new Date() - subDate;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr  = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+    if (diffMin < 1)        submittedLabel = "just now";
+    else if (diffMin < 60)  submittedLabel = `${diffMin}m ago`;
+    else if (diffHr < 24)   submittedLabel = `${diffHr}h ago`;
+    else if (diffDay === 1) submittedLabel = "yesterday";
+    else                    submittedLabel = `${diffDay} days ago`;
+  }
+  return `<div class="approval-card">
+    <div class="approval-avatar">${av}</div>
+    <div class="approval-info">
+      <div class="approval-kid">${kid?.name||"?"} ${submittedLabel ? `<span style="font-size:0.72rem;color:var(--color-muted);font-weight:500;">· ${submittedLabel}</span>` : ""}</div>
+      <div class="approval-task">${typeLabel} ${task.title}${streakInfo}</div>
+      <div class="approval-stars">⭐ ${task.stars} stars = ${starsToMoney(task.stars, financeSettings)}</div>
+      <div id="photo-wrap-${task.id}" class="task-photo-wrap"></div>
+    </div>
+    <div class="approval-actions">
+      <button class="btn btn--sm btn--success" onclick="handleApprove('${task.id}','${task.kidId}',${task.stars},'${task.title}',${task.streak||0})">✅ Approve</button>
+      <button class="btn btn--sm btn--danger"  onclick="handleReject('${task.id}','${task.title}')">❌ Reject</button>
+    </div></div>`;
+}
+
+function buildRedeemCard(g) {
+  const av = g.kidPhoto ? `<img src="${g.kidPhoto}" class="approval-avatar-img" />` : `<span>${g.kidEmoji||"🌟"}</span>`;
+  return `<div class="approval-card approval-card--redeem">
+    <div class="approval-avatar">${av}</div>
+    <div class="approval-info">
+      <div class="approval-kid">${g.kidName}</div>
+      <div class="approval-task">${g.emoji} ${g.title}</div>
+      <div class="approval-stars">⭐ ${g.targetStars} stars = ${starsToMoney(g.targetStars, financeSettings)}</div>
+    </div>
+    <div class="approval-actions">
+      <button class="btn btn--sm btn--success" onclick="handleApproveRedemption('${g.id}','${g.kidId}',${g.targetStars},'${g.title}','${g.kidName}')">🎁 Give!</button>
+      <button class="btn btn--sm btn--danger"  onclick="handleRejectRedemption('${g.id}','${g.title}')">❌ Not yet</button>
+    </div></div>`;
+}
+
+function buildTrophyCard(t) {
+  const av = t.kidPhoto ? `<img src="${t.kidPhoto}" class="approval-avatar-img" />` : `<span>${t.kidEmoji||"🌟"}</span>`;
+  return `<div class="approval-card approval-card--redeem">
+    <div class="approval-avatar">${av}</div>
+    <div class="approval-info">
+      <div class="approval-kid">${t.kidName}</div>
+      <div class="approval-task">${t.category} — ${t.title}</div>
+      ${t.photo ? `<div style="font-size:0.72rem;color:var(--color-muted);">📷 Photo attached</div>` : ""}
+    </div>
+    <div class="approval-actions">
+      <button class="btn btn--sm btn--success" onclick="openApproveAchievement('${t.id}')">🎉 Celebrate</button>
+    </div>
+  </div>`;
+}
+
+window.setApprovalFilter = (kidId) => {
+  window._approvalFilter = kidId;
+  renderApprovalsFiltered();
+};
+
+function renderApprovalsFiltered() {
+  const el = document.getElementById("approvals-list");
+  if (!el || !window._approvalData) return;
+  const { pending, allGoals, pendingTrophies } = window._approvalData;
+  const filter = window._approvalFilter || "all";
+
+  // Count pending items per kid (across all three types)
+  const countFor = (kid) => {
+    const t = pending.filter(p => p.kidId === kid.id).length;
+    const g = allGoals.filter(x => x.kidId === kid.id).length;
+    const r = pendingTrophies.filter(x => x.kidId === kid.id).length;
+    return t + g + r;
+  };
+  const totalAll = pending.length + allGoals.length + pendingTrophies.length;
+
+  // ── Filter chip bar ──
+  let chips = `<div class="approval-chips">`;
+  chips += `<button class="appr-chip ${filter==="all"?"active":""}" onclick="setApprovalFilter('all')">All ${totalAll?`<span class="chip-count">${totalAll}</span>`:""}</button>`;
+  kidsList.forEach(kid => {
+    const c = countFor(kid);
+    chips += `<button class="appr-chip ${filter===kid.id?"active":""}" onclick="setApprovalFilter('${kid.id}')">${kid.avatarEmoji||"🌟"} ${kid.name} ${c?`<span class="chip-count">${c}</span>`:""}</button>`;
+  });
+  chips += `</div>`;
+
+  // ── Helper to render one kid's grouped section ──
+  const renderKidGroup = (kid) => {
+    const kidTasks    = pending.filter(p => p.kidId === kid.id);
+    const kidGoals    = allGoals.filter(g => g.kidId === kid.id);
+    const kidTrophies = pendingTrophies.filter(t => t.kidId === kid.id);
+    if (!kidTasks.length && !kidGoals.length && !kidTrophies.length) return "";
+    let s = `<div class="appr-kid-header">${kid.avatarEmoji||"🌟"} ${kid.name}</div>`;
+    if (kidTasks.length)    { s += `<div class="appr-subtitle">📋 Tasks</div>`        + kidTasks.map(buildTaskCard).join(""); }
+    if (kidGoals.length)    { s += `<div class="appr-subtitle">🎁 Rewards</div>`      + kidGoals.map(buildRedeemCard).join(""); }
+    if (kidTrophies.length) { s += `<div class="appr-subtitle">🎖️ Achievements</div>` + kidTrophies.map(buildTrophyCard).join(""); }
+    return s;
+  };
+
+  let html = chips;
+  if (!totalAll) {
+    html += `<p class="empty-state">Nothing pending 🎉</p>`;
+  } else if (filter === "all") {
+    // Group by kid
+    const groups = kidsList.map(renderKidGroup).filter(Boolean).join("");
+    html += groups || `<p class="empty-state">Nothing pending 🎉</p>`;
+  } else {
+    const kid = kidsList.find(k => k.id === filter);
+    const group = kid ? renderKidGroup(kid) : "";
+    html += group || `<p class="empty-state">Nothing pending for ${kid?.name||"this kid"} 🎉</p>`;
+  }
+  el.innerHTML = html;
+
+  // Load submission photos asynchronously for visible task cards
+  const visibleTasks = (filter === "all")
+    ? pending
+    : pending.filter(p => p.kidId === filter);
+  visibleTasks.forEach(async (task) => {
+    const wrap = document.getElementById(`photo-wrap-${task.id}`);
+    if (!wrap) return;
+    try {
+      const photo = await loadTaskPhoto(task.id);
+      if (photo) {
+        wrap.innerHTML = `<img src="${photo}" class="submission-photo" onclick="showPhotoFull(this.src)" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer;" />`;
+      }
+    } catch(e) {}
+  });
+}
+
+// (old inline rendering removed — handled by renderApprovalsFiltered)
 // ═══════════════════════════════════════════════════════════════
 // WALLETS OVERVIEW — now shows money value
 // ═══════════════════════════════════════════════════════════════
@@ -1593,26 +1651,13 @@ async function loadKidTasks(kid) {
         }).join("");
       }
     }
-    if (jobs.length) {
-      html += `<div class="task-section-title">💼 Entrepreneur Jobs</div>`;
-      html += jobs.map(t => {
-        const rejReason = t.status===STATUS.REJECTED && t.rejectionReason
-          ? `<div class="rejection-reason">❌ Parent says: <em>"${t.rejectionReason}"</em></div>` : "";
-        return `<div class="task-card task-card--job ${t.status===STATUS.REJECTED?"task-card--rejected":""}">
-          <div class="task-card__info">
-            <div class="task-card__title">${t.title}</div>
-            ${t.description?`<div class="task-card__desc">${t.description}</div>`:""}
-            <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
-            ${rejReason}
-          </div>
-          <button class="btn btn--sm btn--success" onclick="handleJobDone('${t.id}')">✅ Done!</button>
-        </div>`;
-      }).join("");
-    }
+    // NOTE: Entrepreneur jobs are NOT shown here anymore — they live entirely
+    // in the Jobs tab (claim, do, and submit all happen there). This keeps the
+    // Tasks view for daily/weekly tasks only and avoids confusion.
   }
-  if (waiting.filter(t=>!t.isFaith).length) {
+  if (waiting.filter(t=>!t.isFaith && !t.isEntrepreneur).length) {
     html+=`<div class="task-section-title">⏳ Waiting Approval</div>`;
-    html+=waiting.filter(t=>!t.isFaith).map(t=>`<div class="task-card task-card--submitted">
+    html+=waiting.filter(t=>!t.isFaith && !t.isEntrepreneur).map(t=>`<div class="task-card task-card--submitted">
       <div class="task-card__info">
         <div class="task-card__title">${t.title}</div>
         <div class="task-card__stars">⭐ ${t.stars} = ${starsToMoney(t.stars,financeSettings)}</div>
@@ -1765,6 +1810,7 @@ window.confirmSubmitTask = async () => {
 
     closeSubmitTaskModal();
     await loadKidTasks(currentKid);
+    await loadKidJobsSection(currentKid.id); // refresh Jobs so claimed→waiting updates there too
   } catch(err) {
     toast("Failed: " + (err.message||err.code||"error"), "error");
     console.error("Submit failed:", err);
@@ -1901,24 +1947,40 @@ async function loadKidJobsSection(kidId) {
   const el = document.getElementById("kid-jobs-list"); if (!el) return;
   const jobs    = await getEntrepreneurJobs(currentKid.parentId);
   const myTasks = await getTasksForKid(kidId);
-  const claimed = myTasks.filter(t => t.isEntrepreneur && (t.status==="pending"||t.status==="submitted")).map(t => t.jobId);
-  // Show badge on Jobs tab with available job count
-  const available = jobs.filter(j => !claimed.includes(j.id)).length;
+  // Map jobId -> the active entrepreneur task (pending = needs submit, submitted = waiting)
+  const jobTaskMap = {};
+  myTasks.filter(t => t.isEntrepreneur && (t.status==="pending"||t.status==="submitted")).forEach(t => {
+    jobTaskMap[t.jobId] = t;
+  });
+  // Available = jobs not currently claimed
+  const available = jobs.filter(j => !jobTaskMap[j.id]).length;
   const badge = document.getElementById("kid-jobs-badge");
   if (badge) { badge.textContent = available; badge.style.display = available > 0 ? "inline-flex" : "none"; }
   if (!jobs.length) { el.innerHTML=`<p class="empty-state">No jobs available yet.</p>`; return; }
   el.innerHTML = jobs.map(j => {
-    const isClaimed = claimed.includes(j.id);
-    return `<div class="job-kid-item ${isClaimed?"job-kid-item--claimed":""}">
+    const task = jobTaskMap[j.id];
+    let actionHtml;
+    if (!task) {
+      // Not taken yet
+      actionHtml = `<button class="btn btn--sm btn--accent" onclick="handleClaimJob('${j.id}')">Take Job</button>`;
+    } else if (task.status === "pending") {
+      // Taken but not submitted — let them submit right here
+      actionHtml = `<button class="btn btn--sm btn--success" onclick="handleJobDone('${task.id}')">✅ I Did It!</button>`;
+    } else {
+      // Submitted — waiting for parent
+      actionHtml = `<span class="task-badge task-badge--waiting">⏳ Waiting</span>`;
+    }
+    const stateClass = task ? (task.status === "submitted" ? "job-kid-item--waiting" : "job-kid-item--active") : "";
+    return `<div class="job-kid-item ${stateClass}">
       <span class="job-emoji">${j.emoji}</span>
       <div class="job-info">
         <div class="job-title">${j.title}</div>
         ${j.description?`<div class="job-desc">${j.description}</div>`:""}
         <div class="job-stars">⭐ ${j.stars} = ${starsToMoney(j.stars,financeSettings)}</div>
+        ${task && task.status==="pending" ? `<div class="job-progress-note">📋 In progress — tap "I Did It!" when done</div>` : ""}
+        ${task && task.status==="submitted" ? `<div class="job-progress-note">⏳ Sent to parent for approval</div>` : ""}
       </div>
-      ${isClaimed
-        ? `<span class="task-badge task-badge--waiting">Claimed</span>`
-        : `<button class="btn btn--sm btn--accent" onclick="handleClaimJob('${j.id}')">Take Job</button>`}
+      ${actionHtml}
     </div>`;
   }).join("");
 }
@@ -4399,6 +4461,31 @@ function scheduleMidnightRefresh() {
 }
 
 // ── Logout All Kids (clears all saved profiles from this device) ──
+// ── Full logout from home — clean slate for a new parent ──────
+window.fullLogoutFromHome = async () => {
+  if (!confirm("Log out completely? This removes all saved kids and signs out the parent so a new account can be used on this device.")) return;
+  try {
+    // Clear all kid data
+    localStorage.removeItem("sk_kids");
+    localStorage.removeItem("sk_saved_kids");
+    localStorage.removeItem("sk_current_kid");
+    localStorage.removeItem("sk_kid");
+    // Clear all kid verification flags
+    Object.keys(localStorage).filter(k => k.startsWith("sk_kid_verified_")).forEach(k => localStorage.removeItem(k));
+    // Clear saved parent credentials
+    clearCredentials();
+    // Clear session state
+    if (typeof clearKidSession === "function") clearKidSession();
+    currentKid = null;
+    currentParent = null;
+    // Sign out of Firebase Auth
+    try { await logoutParent(); } catch(e) {}
+    toast("Logged out. The device is ready for a new account. 🚪", "success");
+    if (typeof window.SK_renderKids === "function") window.SK_renderKids();
+    showScreen("screen-home");
+  } catch(e) { toast("Logout failed. Try again.", "error"); console.error(e); }
+};
+
 window.logoutAllKids = () => {
   if (!confirm("Remove all kid profiles from this device?")) return;
   // Clear all kid data from localStorage

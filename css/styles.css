@@ -1302,6 +1302,21 @@ input:focus, select:focus {
   opacity: 0.6;
   cursor: default;
 }
+.job-kid-item--active {
+  border-color: var(--color-primary, #6C63FF);
+  background: linear-gradient(135deg, #f3f1ff, #faf9ff);
+}
+.job-kid-item--waiting {
+  border-color: var(--color-secondary);
+  opacity: 0.85;
+}
+.job-progress-note {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-primary, #6C63FF);
+  margin-top: 4px;
+}
+.job-kid-item--waiting .job-progress-note { color: var(--color-secondary, #FF9F43); }
 
 /* ── Entrepreneur task card ───────────────────────────────── */
 .task-card--job {
@@ -1929,6 +1944,48 @@ input:focus, select:focus {
   object-fit: cover;
   border-radius: 10px;
   margin: 8px 0;
+}
+
+/* ── Approval filter chips & grouping ─────────────────────── */
+.approval-chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 16px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border, #eee);
+}
+.appr-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--color-bg-2, #f3f1ff);
+  border: 1.5px solid transparent;
+  border-radius: 20px; padding: 7px 14px;
+  font-size: 0.82rem; font-weight: 700;
+  color: var(--color-text, #2D2A4A); cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.appr-chip:hover { background: rgba(108,99,255,0.1); }
+.appr-chip.active {
+  background: var(--color-primary, #6C63FF); color: #fff;
+  border-color: var(--color-primary, #6C63FF);
+}
+.appr-chip .chip-count {
+  background: #FF6B6B; color: #fff;
+  font-size: 0.68rem; font-weight: 800;
+  min-width: 18px; height: 18px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 5px;
+}
+.appr-chip.active .chip-count { background: #fff; color: var(--color-primary, #6C63FF); }
+.appr-kid-header {
+  font-size: 1rem; font-weight: 800;
+  color: var(--color-primary, #6C63FF);
+  margin: 18px 0 8px; padding-bottom: 6px;
+  border-bottom: 2px solid rgba(108,99,255,0.15);
+}
+.appr-kid-header:first-of-type { margin-top: 4px; }
+.appr-subtitle {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--color-muted, #8b8b9b);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin: 12px 0 8px;
 }
 
 /* ── PIN Overlay ──────────────────────────────────────────── */
